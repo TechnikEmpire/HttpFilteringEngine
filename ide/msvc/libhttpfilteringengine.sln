@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libhttpfilteringengine", "libhttpfilteringengine.vcxproj", "{A91768BF-1314-41FE-9E6F-A4B4D3A777B4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug x64|Win = Debug x64|Win
+		Debug x86|Win = Debug x86|Win
+		Release x64|Win = Release x64|Win
+		Release x86|Win = Release x86|Win
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A91768BF-1314-41FE-9E6F-A4B4D3A777B4}.Debug x64|Win.ActiveCfg = Debug x64|x64
+		{A91768BF-1314-41FE-9E6F-A4B4D3A777B4}.Debug x64|Win.Build.0 = Debug x64|x64
+		{A91768BF-1314-41FE-9E6F-A4B4D3A777B4}.Debug x86|Win.ActiveCfg = Debug x86|Win32
+		{A91768BF-1314-41FE-9E6F-A4B4D3A777B4}.Debug x86|Win.Build.0 = Debug x86|Win32
+		{A91768BF-1314-41FE-9E6F-A4B4D3A777B4}.Release x64|Win.ActiveCfg = Release x64|x64
+		{A91768BF-1314-41FE-9E6F-A4B4D3A777B4}.Release x64|Win.Build.0 = Release x64|x64
+		{A91768BF-1314-41FE-9E6F-A4B4D3A777B4}.Release x86|Win.ActiveCfg = Release x86|Win32
+		{A91768BF-1314-41FE-9E6F-A4B4D3A777B4}.Release x86|Win.Build.0 = Release x86|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

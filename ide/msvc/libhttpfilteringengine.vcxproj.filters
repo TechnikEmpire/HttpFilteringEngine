@@ -1,0 +1,271 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Header Files\te">
+      <UniqueIdentifier>{ec17d511-d726-44bb-a084-c0b03edce58e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine">
+      <UniqueIdentifier>{16263cd8-3df0-4958-a475-d8c5fc60ebce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\filtering">
+      <UniqueIdentifier>{e44368bc-543c-43c9-882d-f5687635ab18}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\mitm">
+      <UniqueIdentifier>{dd6582fd-244f-4551-a439-e54a4aebf1ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\pipm">
+      <UniqueIdentifier>{e623b7c7-4636-4a61-b1b8-5549afb1ef17}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\util">
+      <UniqueIdentifier>{9b399964-c3d2-46c9-ba9d-1be512dbcf25}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\filtering\http">
+      <UniqueIdentifier>{efe0e1aa-4bac-4b22-a973-2d380f916ae4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\filtering\network">
+      <UniqueIdentifier>{bd60437f-27d7-42ce-bb9b-cdfcdc59c8db}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\mitm\diversion">
+      <UniqueIdentifier>{db9527f7-90aa-4658-abdf-e51ea99853e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\mitm\http">
+      <UniqueIdentifier>{6c32126d-b697-48ac-b94d-733bc10103c5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\mitm\secure">
+      <UniqueIdentifier>{3e176e38-e222-4831-a8bd-0f96168cd462}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\mitm\diversion\impl">
+      <UniqueIdentifier>{e9c585c6-4145-4c23-bac5-476eb73a62c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\mitm\diversion\impl\win">
+      <UniqueIdentifier>{641ebfe8-8bf9-4c0e-a3c0-5c9eeb77f71c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\mitm\diversion\impl\osx">
+      <UniqueIdentifier>{73bb55a9-f04e-41c6-8b3d-39ff0fcd9254}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\mitm\diversion\impl\ios">
+      <UniqueIdentifier>{9821f760-8df5-460a-b9ab-e35918f7445b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\mitm\diversion\impl\android">
+      <UniqueIdentifier>{f3810d57-f583-421d-a483-5d6bbd769f20}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te">
+      <UniqueIdentifier>{b53f717f-0ab0-4a82-b8ea-dae9c35428e1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine">
+      <UniqueIdentifier>{dbf5fdf8-f54d-41ef-a448-89c5a97e04d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\filtering">
+      <UniqueIdentifier>{68eb6a51-d941-4c94-8d54-4afbcacd47fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\mitm">
+      <UniqueIdentifier>{9e8d0530-7d6f-40cc-b9f0-ded5dd7ffac5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\pipm">
+      <UniqueIdentifier>{13c68c24-d84a-4a27-aaf8-b660ac9d53da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\util">
+      <UniqueIdentifier>{6d80804a-f452-41b5-8238-d0defc412262}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\filtering\http">
+      <UniqueIdentifier>{323c9586-dead-44c0-8839-63f0fc6d0780}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\filtering\network">
+      <UniqueIdentifier>{39af7c9f-d0a4-447e-836f-2a0c8a7dd5e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\mitm\diversion">
+      <UniqueIdentifier>{c5b3cb05-10ff-4f0c-93e9-f814ca23db57}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\mitm\http">
+      <UniqueIdentifier>{a03296c3-dc8f-4a0b-891e-62fe964e9cb5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\mitm\secure">
+      <UniqueIdentifier>{aa70866e-440a-43f5-aa57-087e1b5afcf5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\mitm\diversion\impl">
+      <UniqueIdentifier>{95e8c639-9124-48aa-af39-1576e57cedf2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\mitm\diversion\impl\android">
+      <UniqueIdentifier>{505603d6-a0ca-4fda-bbf2-a84dd0d84438}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\mitm\diversion\impl\ios">
+      <UniqueIdentifier>{e9d0d897-6f06-4fdd-95c2-702cca732d52}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\mitm\diversion\impl\osx">
+      <UniqueIdentifier>{83bb836d-7e65-4bd0-b9d9-e254d9cf3e42}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\mitm\diversion\impl\win">
+      <UniqueIdentifier>{8e183d8a-3978-4c97-b891-05141717e672}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\mitm\diversion\impl\linux">
+      <UniqueIdentifier>{9a260226-b0de-497c-bda0-04fa904d1d20}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\mitm\diversion\impl\linux">
+      <UniqueIdentifier>{d434c2fc-3298-40dc-ab7e-018637b9e92e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\util\cb">
+      <UniqueIdentifier>{8db7b7dc-b6cf-44f8-9eb1-b39d51cd1a72}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\filtering\options">
+      <UniqueIdentifier>{d76ef698-4f08-49fe-a288-66ced10d4430}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\filtering\options">
+      <UniqueIdentifier>{cc8b4585-f0a7-4ba1-8bf7-c4060030796d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\te\httpengine\util\html">
+      <UniqueIdentifier>{a4d860c7-90a5-4834-8474-258ac22250b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\util\html">
+      <UniqueIdentifier>{65a197f8-474b-40bc-8fcf-86a08f8422df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\util">
+      <UniqueIdentifier>{48551d6c-a96f-42cf-b3bb-a2c8eff0c455}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\util\string">
+      <UniqueIdentifier>{2dea4f1c-f87d-4411-bde3-75756a9389f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\util\http">
+      <UniqueIdentifier>{5d0fbd45-a510-41a7-af00-b833575f43a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\te\httpengine\network">
+      <UniqueIdentifier>{3059cba7-bbc2-40ca-8180-740d0013d21b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpFilteringEngine.hpp">
+      <Filter>Header Files\te\httpengine\filtering\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpBaseFilter.hpp">
+      <Filter>Header Files\te\httpengine\filtering\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpExceptionFilter.hpp">
+      <Filter>Header Files\te\httpengine\filtering\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpInclusionFilter.hpp">
+      <Filter>Header Files\te\httpengine\filtering\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\mitm\http\BaseHttpTransaction.hpp">
+      <Filter>Header Files\te\httpengine\mitm\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\mitm\http\HttpRequest.hpp">
+      <Filter>Header Files\te\httpengine\mitm\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\mitm\http\HttpResponse.hpp">
+      <Filter>Header Files\te\httpengine\mitm\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\util\cb\EventReporter.hpp">
+      <Filter>Header Files\te\httpengine\util\cb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\filtering\options\ProgramWideOptions.hpp">
+      <Filter>Header Files\te\httpengine\filtering\options</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\filtering\options\HttpFilteringOptions.hpp">
+      <Filter>Header Files\te\httpengine\filtering\options</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\filtering\http\CategorizedCssSelector.hpp">
+      <Filter>Header Files\te\httpengine\filtering\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\util\http\KnownHttpHeaders.hpp">
+      <Filter>Header Files\te\util\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\util\string\StringRefUtil.hpp">
+      <Filter>Header Files\te\util\string</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpBridge.hpp">
+      <Filter>Header Files\te\httpengine\mitm\secure</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.hpp">
+      <Filter>Header Files\te\httpengine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineCtl.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\BaseDiverter.hpp">
+      <Filter>Header Files\te\httpengine\mitm\diversion</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpListener.hpp">
+      <Filter>Header Files\te\httpengine\mitm\secure</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\network\SocketTypes.hpp">
+      <Filter>Header Files\te\httpengine\network</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="AssemblyInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpFilteringEngine.cpp">
+      <Filter>Source Files\te\httpengine\filtering\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpAbpBaseFilter.cpp">
+      <Filter>Source Files\te\httpengine\filtering\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpAbpExceptionFilter.cpp">
+      <Filter>Source Files\te\httpengine\filtering\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpAbpInclusionFilter.cpp">
+      <Filter>Source Files\te\httpengine\filtering\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\mitm\http\BaseHttpTransaction.cpp">
+      <Filter>Source Files\te\httpengine\mitm\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\mitm\http\HttpRequest.cpp">
+      <Filter>Source Files\te\httpengine\mitm\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\mitm\http\HttpResponse.cpp">
+      <Filter>Source Files\te\httpengine\mitm\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\filtering\options\ProgramWideOptions.cpp">
+      <Filter>Source Files\te\httpengine\filtering\options</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\filtering\http\CategorizedCssSelector.cpp">
+      <Filter>Source Files\te\httpengine\filtering\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpBridge.cpp">
+      <Filter>Source Files\te\httpengine\mitm\secure</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.cpp">
+      <Filter>Source Files\te\httpengine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineCtl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\mitm\diversion\BaseDiverter.cpp">
+      <Filter>Source Files\te\httpengine\mitm\diversion</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpListener.cpp">
+      <Filter>Source Files\te\httpengine\mitm\secure</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="app.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="app.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+</Project>
