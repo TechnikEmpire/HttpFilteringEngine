@@ -75,12 +75,51 @@ namespace te
 	namespace httpengine
 	{
 
-		HttpFilteringEngineCtl::HttpFilteringEngineCtl()
+		struct HttpFilteringEngineCtl::HttpListenerPimpl
+		{
+
+		};
+
+		struct HttpFilteringEngineCtl::HttpsListenerPimpl
+		{
+
+		};
+
+		HttpFilteringEngineCtl::HttpFilteringEngineCtl(
+			FirewallCheckCallback firewallCb,
+			ReportMessageCallback onInfo,
+			ReportMessageCallback onWarn,
+			ReportMessageCallback onError,
+			ReportBlockedRequestCallback onRequestBlocked,
+			ReportBlockedElementsCallback onElementsBlocked
+			) : 
+			m_firewallCheckCb(firewallCb),
+			m_onInfoCb(onInfo),
+			m_onWarnCb(onWarn),
+			m_onErrorCb(onError),
+			m_onRequestBlockedCb(onRequestBlocked),
+			m_onElementsBlockedCb(onElementsBlocked)
+
 		{
 
 		}
 
 		HttpFilteringEngineCtl::~HttpFilteringEngineCtl()
+		{
+
+		}
+
+		void HttpFilteringEngineCtl::Start()
+		{
+
+		}
+
+		void HttpFilteringEngineCtl::Stop()
+		{
+
+		}
+
+		bool HttpFilteringEngineCtl::IsRunning() const
 		{
 
 		}
@@ -92,74 +131,205 @@ namespace te
 // C API. XXX TODO - Perhaps this should be separated out to another file?
 
 te::httpengine::HttpFilteringEngineCtl* fe_ctl_create(
-	FirewallCheckCallback cb,
-	ReportMessageCallback onError,
+	FirewallCheckCallback firewallCb,
+	ReportMessageCallback onInfo,
 	ReportMessageCallback onWarn,
-	ReportMessageCallback onInfo
+	ReportMessageCallback onError,
+	ReportBlockedRequestCallback onRequestBlocked,
+	ReportBlockedElementsCallback onElementsBlocked
 	)
 {
 
+	#if BOOST_OS_WINDOWS
+		#ifndef NDEBUG
+			assert(firewallCb != nullptr && u8"In fe_ctl_create(FirewallCheckCallback, ReportMessageCallback, \
+						ReportMessageCallback, ReportMessageCallback, ReportBlockedRequestCallback, \
+						ReportBlockedElementsCallback) - On Windows, a valid firewall callback is required!");
+		#else
+			if (firewallCb == nullptr)
+			{
+				throw new std::runtime_error(u8"In fe_ctl_create(FirewallCheckCallback, ReportMessageCallback, \
+						ReportMessageCallback, ReportMessageCallback, ReportBlockedRequestCallback, \
+						ReportBlockedElementsCallback) - On Windows, a valid firewall callback is required!");
+			}
+		#endif
+	#endif
+
+	te::httpengine::HttpFilteringEngineCtl* inst = new te::httpengine::HttpFilteringEngineCtl(
+		firewallCb,
+		onInfo,
+		onWarn,
+		onError,
+		onRequestBlocked,
+		onElementsBlocked
+		);
+
+	#ifndef NDEBUG
+		assert(inst != nullptr && u8"In fe_ctl_create(FirewallCheckCallback, ReportMessageCallback, \
+				ReportMessageCallback, ReportMessageCallback, ReportBlockedRequestCallback, \
+				ReportBlockedElementsCallback) - Failed to allocate new HttpFilteringEngineCtl instance!");
+	#else
+		if (inst == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_create(FirewallCheckCallback, ReportMessageCallback, \
+				ReportMessageCallback, ReportMessageCallback, ReportBlockedRequestCallback, \
+				ReportBlockedElementsCallback) - Failed to allocate new HttpFilteringEngineCtl instance!");
+		}
+	#endif
+
+	return inst;
 }
 
 void fe_ctl_destroy(te::httpengine::HttpFilteringEngineCtl* ptr)
-{
-
+{	
+	delete ptr;
 }
 
 void fe_ctl_start(te::httpengine::HttpFilteringEngineCtl* ptr)
 {
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_start(te::httpengine::HttpFilteringEngineCtl*) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+	#else
+		if (ptr == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_start(te::httpengine::HttpFilteringEngineCtl*) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		}
+	#endif
 
+	ptr->Start();
 }
 
 void fe_ctl_stop(te::httpengine::HttpFilteringEngineCtl* ptr)
 {
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_stop(te::httpengine::HttpFilteringEngineCtl*) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+	#else
+		if (ptr == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_stop(te::httpengine::HttpFilteringEngineCtl*) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		}
+	#endif
 
+	ptr->Stop();
 }
 
 bool fe_ctl_is_running(te::httpengine::HttpFilteringEngineCtl* ptr)
 {
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_is_running(te::httpengine::HttpFilteringEngineCtl*) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+	#else
+		if (ptr == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_is_running(te::httpengine::HttpFilteringEngineCtl*) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		}
+	#endif
 
+	return ptr->IsRunning();
 }
 
 uint16_t fe_ctl_get_http_listener_port(te::httpengine::HttpFilteringEngineCtl* ptr)
 {
-
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_get_http_listener_port(te::httpengine::HttpFilteringEngineCtl*) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+	#else
+		if (ptr == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_get_http_listener_port(te::httpengine::HttpFilteringEngineCtl*) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		}
+	#endif
 }
 
 void fe_ctl_set_http_listener_port(te::httpengine::HttpFilteringEngineCtl* ptr, const uint16_t val)
 {
 	// If we're already running, user has to restart to see changes take effect. User is amply
 	// notified in header comments.
+
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_set_http_listener_port(te::httpengine::HttpFilteringEngineCtl*, const uint16_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+	#else
+		if (ptr == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_set_http_listener_port(te::httpengine::HttpFilteringEngineCtl*, const uint16_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		}
+	#endif
 }
 
 uint16_t fe_ctl_get_https_listener_port(te::httpengine::HttpFilteringEngineCtl* ptr)
 {
-
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_get_https_listener_port(te::httpengine::HttpFilteringEngineCtl*) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+	#else
+		if (ptr == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_get_https_listener_port(te::httpengine::HttpFilteringEngineCtl*) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		}
+	#endif
 }
 
 void fe_ctl_set_https_listener_port(te::httpengine::HttpFilteringEngineCtl* ptr, const uint16_t val)
 {
 	// If we're already running, user has to restart to see changes take effect. User is amply
 	// notified in header comments.
+
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_set_https_listener_port(te::httpengine::HttpFilteringEngineCtl*, const uint16_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+	#else
+		if (ptr == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_set_https_listener_port(te::httpengine::HttpFilteringEngineCtl*, const uint16_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		}
+	#endif
 }
 
 bool fe_ctl_get_option(te::httpengine::HttpFilteringEngineCtl* ptr, const uint32_t optionId)
 {
-
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_get_option(te::httpengine::HttpFilteringEngineCtl*, const uint32_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+	#else
+		if (ptr == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_get_option(te::httpengine::HttpFilteringEngineCtl*, const uint32_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		}
+	#endif
 }
 
 void fe_ctl_set_option(te::httpengine::HttpFilteringEngineCtl* ptr, const uint32_t optionId, const bool val)
 {
-
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_set_option(te::httpengine::HttpFilteringEngineCtl*, const uint32_t, const bool) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+	#else
+		if (ptr == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_set_option(te::httpengine::HttpFilteringEngineCtl*, const uint32_t, const bool) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		}
+	#endif
 }
 
 bool fe_ctl_get_category(te::httpengine::HttpFilteringEngineCtl* ptr, const uint8_t categoryId)
 {
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_get_category(te::httpengine::HttpFilteringEngineCtl*, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+	#else
+		if (ptr == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_get_category(te::httpengine::HttpFilteringEngineCtl*, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		}
+	#endif
+
 
 }
 
 void fe_ctl_set_category(te::httpengine::HttpFilteringEngineCtl* ptr, const uint8_t categoryId, const bool val)
 {
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_set_category(te::httpengine::HttpFilteringEngineCtl*, const uint8_t, const bool) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+	#else
+		if (ptr == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_set_category(te::httpengine::HttpFilteringEngineCtl*, const uint8_t, const bool) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		}
+	#endif
+
 
 }
 
@@ -170,7 +340,19 @@ bool fe_ctl_load_list_from_file(
 	const uint8_t listCategory
 	)
 {
-
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_load_list_from_file(te::httpengine::HttpFilteringEngineCtl*, const char*, const size_t, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		assert(filePath != nullptr && u8"In fe_ctl_load_list_from_file(te::httpengine::HttpFilteringEngineCtl*, const char*, const size_t, const uint8_t) - Supplied file path ptr is nullptr!");
+	#else
+		if (ptr == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_set_category(te::httpengine::HttpFilteringEngineCtl*, const char*, const size_t, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		}
+		if (filePath == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_set_category(te::httpengine::HttpFilteringEngineCtl*, const char*, const size_t, const uint8_t) - Supplied file path ptr is nullptr!");
+		}
+	#endif
 }
 
 bool fe_ctl_load_list_from_string(
@@ -180,5 +362,18 @@ bool fe_ctl_load_list_from_string(
 	const uint8_t listCategory
 	)
 {
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_load_list_from_file(te::httpengine::HttpFilteringEngineCtl*, const char*, const size_t, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		assert(listString != nullptr && u8"In fe_ctl_load_list_from_file(te::httpengine::HttpFilteringEngineCtl*, const char*, const size_t, const uint8_t) - Supplied list string ptr is nullptr!");
+	#else
+		if (ptr == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_set_category(te::httpengine::HttpFilteringEngineCtl*, const char*, const size_t, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		}
+		if (listString == nullptr)
+		{
+			throw new std::runtime_error(u8"In fe_ctl_set_category(te::httpengine::HttpFilteringEngineCtl*, const char*, const size_t, const uint8_t) - Supplied list string ptr is nullptr!");
+		}
+	#endif
 
 }

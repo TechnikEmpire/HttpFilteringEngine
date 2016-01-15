@@ -32,6 +32,90 @@
 #pragma once
 
 #include "../../network/SocketTypes.hpp"
+#include <memory>
+
+/*
+*					TLS Bridge Control Flow
+*
+*    +------------------------------+
+*    |                              |
+*    |    Client socket connects.   +-------------+
+*    |                              |             |
+*    +------------------------------+             |
+*                                                 |
+*    +---------------------------+     +----------v-------------+
+*    |                           <--+  | Read host information  |
+* +--+ Connect upstream to host. |  |  | from TLS client hello. +--^
+* |  |                           |  |  +------------------------+  |
+* |  +---------------------------+  |  +------------------------+  |
+* |                                 |  | Resolve the extracted  |  |
+* |  +---------------------------+  +--+ host address.          <--+
+* +-->                           |     +------------------------+
+*    | Perform handshake with    |
+*    | the upstream server. Get  |     +------------------------+
+*    | the server's certificate. +---->+ Ask cert store to spoof+--+
+*    |                           |     | or get existing cert.  |  |
+*    +---------------------------+     +------------------------+  |
+*                                                                  |
+*    +---------------------------+     +------------------------+  |
+*    | Read downstream client    <-----+ Perform downstream     +^-+
+*    | request headers. Adjust   |     | client handshake.      |
+*    | socket options such as    |     +------------------------+
+*    | keep-alive etc to match   |
+*    | the client settings.      |     +---------------------------+
+*    |                           +-----> Attempt to filter the     |
+*    +---------------------------+     | request immediately based |
+*                                      | solely on the host and    |
+*   +----------------------------+     | request URI information.  |
+*   | Read server response       |     | Write client headers to   |
+*   | headers. Attempt to filter <-----+ upstream server.          |
+*   | the request again by using |     +---------------------------+
+*   | content-type info.         |
+*   | If response body, and      |     +---------------------------+
+*   | inspection desired, read   +-----> If body inspected, filter |
+*   | from server again until    |     | when read complete, write |
+*   | the entire chunked response|     | to client.                |
+*   | has been read, or total    |     +-------------+-------------+
+*   | bytes read  equals content |                   |
+*   | length header value.       |     +-------------v-------------+
+*   |                            |     | When response is fully    |
+*   | If inspection is not wanted|     | written to client, if     |
+*   | then write to client, then |     | keep-alive specified,     |
+*   | initate read from server,  |     | re-initiate process at    |
+*   | write to client volley     +---->+ reading client headers    |
+*   | until transfer complete.   |     | stage.                    |
+*   +----------------------------+     +---------------------------+
+*/
+
+/// <summary>
+/// Forward declarations separate, looks cleaner.
+/// </summary>
+namespace te
+{
+	namespace httpengine
+	{
+		namespace filtering
+		{
+			namespace http
+			{
+
+				class HttpFilteringEngine;
+
+			} /* namespace http */
+		} /* namespace filtering */
+
+		namespace mitm
+		{
+			namespace http
+			{
+
+				class HttpRequest;
+				class HttpResponse;
+
+			} /* namespace http */
+		} /* namespace mitm */
+	} /* namespace httpengine */
+}
 
 namespace te
 {
@@ -40,15 +124,145 @@ namespace te
 		namespace mitm
 		{
 			namespace secure
-			{
+			{		
 
-				class TlsCapableHttpBridge
+				/// <summary>
+				/// Forward declaration of BaseInMemoryCertificateStore exists here because the
+				/// namespace is the same.
+				/// </summary>
+				class BaseInMemoryCertificateStore;
+
+				/// <summary>
+				/// 
+				/// </summary>
+				template<class BridgeSocketType>
+				class TlsCapableHttpBridge : std::enable_shared_from_this< TlsCapableHttpBridge<BridgeSocketType> >
 				{
+
+				/// <summary>
+				/// Enforce use of this class to the only two types of sockets it is intended to be
+				/// used with.
+				/// </summary>
+				static_assert(
+					(std::is_same<BridgeSocketType, network::TcpSocket> ::value || std::is_same<BridgeSocketType, network::SslSocket>::value) &&
+					u8"TlsCapableHttpBridge can only accept boost::asio::ip::tcp::socket or boost::asio::ssl::stream<boost::asio::ip::tcp::socket> as valid template parameters."
+					);
 
 				public:
 					
-					TlsCapableHttpBridge();
-					~TlsCapableHttpBridge();
+					TlsCapableHttpBridge(
+						boost::asio::io_service* service,
+						BaseInMemoryCertificateStore* certStore,
+						const HttpFilteringEngine* filteringEngine,
+						boost::asio::ssl::context* defaultServerContext = nullptr,
+						boost::asio::ssl::context* clientContext = nullptr
+						);
+
+					/// <summary>
+					/// No copy no move no thx.
+					/// </summary>
+					TlsCapableHttpBridge(const TlsCapableHttpBridge&) = delete;
+					TlsCapableHttpBridge(TlsCapableHttpBridge&&) = delete;
+					TlsCapableHttpBridge& operator=(const TlsCapableHttpBridge&) = delete;
+
+					~TlsCapableHttpBridge()
+					{
+						m_request.reset();
+						m_response.reset();
+					}
+
+				private:
+
+					std::unique_ptr<HttpRequest> m_request = nullptr;
+
+					std::unique_ptr<HttpResponse> m_response = nullptr;
+
+					const HttpFilteringEngine* m_filteringEngine = nullptr;
+
+					BridgeSocketType m_upstreamSocket;
+
+					SocketType m_downstreamSocket;
+
+					boost::asio::strand m_upstreamStrand;
+
+					boost::asio::strand m_downstreamStrand;
+
+					boost::asio::deadline_timer m_streamTimer;
+
+				public:
+
+					const boost::asio::ip::tcp::socket& DownstreamSocket() const;
+
+					const boost::asio::ip::tcp::socket& UpstreamSocket() const;
+
+					void Start();
+
+				private:
+
+					void OnResolve(const boost::system::error_code& err, boost::asio::ip::tcp::resolver::iterator endpoint_iterator);
+
+					void OnUpstreamConnect(const boost::system::error_code& error);
+
+					void OnUpstreamHeaders(const boost::system::error_code& error, const size_t bytes_transferred)
+					{
+
+					}
+
+					void OnUpstreamRead(const boost::system::error_code& error, const size_t bytes_transferred)
+					{
+
+					}
+
+					void OnUpstreamWrite(const boost::system::error_code& error)
+					{
+
+					}
+
+					void OnDownstreamHeaders(const boost::system::error_code& error, const size_t bytes_transferred)
+					{
+
+					}
+
+					void OnDownstreamRead(const boost::system::error_code& error, const size_t bytes_transferred)
+					{
+
+					}
+
+					void OnDownstreamWrite(const boost::system::error_code& error)
+					{
+
+					}
+
+					void OnStreamTimeout(const boost::system::error_code& e)
+					{
+
+					}
+
+					void SetStreamTimeout(uint32_t millisecondsFromNow)
+					{
+
+					}
+
+					void OnUpstreamHandshake(const boost::system::error_code& error)
+					{
+
+					}
+
+					void OnDownstreamHandshake(const boost::system::error_code& error)
+					{
+
+					}
+
+					bool VerifyServerCertificateCallback(bool preverified, boost::asio::ssl::verify_context& ctx)
+					{
+
+					}
+
+					void SetKeepAlive(SocketType& socket, const bool value);
+
+					void SetLinger(SocketType& socket, const bool value);
+
+					void SetNoDelay(SocketType& socket, const bool value);
 
 				};
 

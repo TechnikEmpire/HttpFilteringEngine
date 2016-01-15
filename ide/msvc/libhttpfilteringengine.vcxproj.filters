@@ -201,11 +201,11 @@
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpListener.hpp">
       <Filter>Header Files\te\httpengine\mitm\secure</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\network\SocketTypes.hpp">
       <Filter>Header Files\te\httpengine\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.hpp">
+      <Filter>Header Files\te\httpengine\mitm\secure</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -255,7 +255,7 @@
       <Filter>Source Files\te\httpengine\mitm\secure</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\te\httpengine\mitm\secure</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
