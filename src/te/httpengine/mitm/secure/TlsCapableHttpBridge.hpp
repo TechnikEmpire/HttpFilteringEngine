@@ -34,59 +34,6 @@
 #include "../../network/SocketTypes.hpp"
 #include <memory>
 
-/*
-*					TLS Bridge Control Flow
-*
-*    +------------------------------+
-*    |                              |
-*    |    Client socket connects.   +-------------+
-*    |                              |             |
-*    +------------------------------+             |
-*                                                 |
-*    +---------------------------+     +----------v-------------+
-*    |                           <--+  | Read host information  |
-* +--+ Connect upstream to host. |  |  | from TLS client hello. +--^
-* |  |                           |  |  +------------------------+  |
-* |  +---------------------------+  |  +------------------------+  |
-* |                                 |  | Resolve the extracted  |  |
-* |  +---------------------------+  +--+ host address.          <--+
-* +-->                           |     +------------------------+
-*    | Perform handshake with    |
-*    | the upstream server. Get  |     +------------------------+
-*    | the server's certificate. +---->+ Ask cert store to spoof+--+
-*    |                           |     | or get existing cert.  |  |
-*    +---------------------------+     +------------------------+  |
-*                                                                  |
-*    +---------------------------+     +------------------------+  |
-*    | Read downstream client    <-----+ Perform downstream     +^-+
-*    | request headers. Adjust   |     | client handshake.      |
-*    | socket options such as    |     +------------------------+
-*    | keep-alive etc to match   |
-*    | the client settings.      |     +---------------------------+
-*    |                           +-----> Attempt to filter the     |
-*    +---------------------------+     | request immediately based |
-*                                      | solely on the host and    |
-*   +----------------------------+     | request URI information.  |
-*   | Read server response       |     | Write client headers to   |
-*   | headers. Attempt to filter <-----+ upstream server.          |
-*   | the request again by using |     +---------------------------+
-*   | content-type info.         |
-*   | If response body, and      |     +---------------------------+
-*   | inspection desired, read   +-----> If body inspected, filter |
-*   | from server again until    |     | when read complete, write |
-*   | the entire chunked response|     | to client.                |
-*   | has been read, or total    |     +-------------+-------------+
-*   | bytes read  equals content |                   |
-*   | length header value.       |     +-------------v-------------+
-*   |                            |     | When response is fully    |
-*   | If inspection is not wanted|     | written to client, if     |
-*   | then write to client, then |     | keep-alive specified,     |
-*   | initate read from server,  |     | re-initiate process at    |
-*   | write to client volley     +---->+ reading client headers    |
-*   | until transfer complete.   |     | stage.                    |
-*   +----------------------------+     +---------------------------+
-*/
-
 /// <summary>
 /// Forward declarations separate, looks cleaner.
 /// </summary>
@@ -173,15 +120,41 @@ namespace te
 
 				private:
 
+					/// <summary>
+					/// HTTP request object which is read from the connected client and written to
+					/// the upstream host.
+					/// </summary>
 					std::unique_ptr<HttpRequest> m_request = nullptr;
 
+					/// <summary>
+					/// HTTP response object which is read from the upstream host and written to the
+					/// downstream client.
+					/// </summary>
 					std::unique_ptr<HttpResponse> m_response = nullptr;
 
+					/// <summary>
+					/// Every bridge requires a valid pointer to a filtering engine which may or may
+					/// not be shared, for subjecting HTTP requests and responses to filtering.
+					/// </summary>
 					const HttpFilteringEngine* m_filteringEngine = nullptr;
 
+					/// <summary>
+					/// Socket used to connect to the client's desired host.
+					/// </summary>
 					BridgeSocketType m_upstreamSocket;
 
-					SocketType m_downstreamSocket;
+					/// <summary>
+					/// Socket used for connecting to the client.
+					/// </summary>
+					BridgeSocketType m_downstreamSocket;
+
+					/// <summary>
+					/// Stores the current host whenever a new request is processed by the bridge.
+					/// For every subsequent request, the host information in the request headers is
+					/// compared to the host we presently have an upstream connection with. If the
+					/// new request host does not match, the bridge is terminated.
+					/// </summary>
+					std::string m_upstreamHost;
 
 					boost::asio::strand m_upstreamStrand;
 
@@ -191,10 +164,33 @@ namespace te
 
 				public:
 
+					/// <summary>
+					/// It's necessary for HTTP and HTTPS listeners to have access to the underlying
+					/// TCP socket, for the purpose of accepting clients to initiate a new
+					/// transaction. This method uses template specialization in the in the source,
+					/// as accessing the correct layer varies between socket types.
+					/// </summary>
+					/// <returns>
+					/// The underlying TCP socket.
+					/// </returns>
 					const boost::asio::ip::tcp::socket& DownstreamSocket() const;
 
+					/// <summary>
+					/// It's necessary for HTTP and HTTPS listeners to have access to the underlying
+					/// TCP socket, for the purpose of accepting clients to initiate a new
+					/// transaction. This method uses template specialization in the in the source,
+					/// as accessing the correct layer varies between socket types.
+					/// </summary>
+					/// <returns>
+					/// The underlying TCP socket.
+					/// </returns>
 					const boost::asio::ip::tcp::socket& UpstreamSocket() const;
 
+					/// <summary>
+					/// Initiates the process of reading and writing between client and server.
+					/// After this call, the bridge maintains its own lifecycle via shared_from_this
+					/// passed to async method handlers.
+					/// </summary>
 					void Start();
 
 				private:
@@ -205,7 +201,7 @@ namespace te
 
 					void OnUpstreamHeaders(const boost::system::error_code& error, const size_t bytes_transferred)
 					{
-
+						SSL_CTX_set_tlsext_servername_callback()
 					}
 
 					void OnUpstreamRead(const boost::system::error_code& error, const size_t bytes_transferred)
@@ -251,6 +247,34 @@ namespace te
 					void OnDownstreamHandshake(const boost::system::error_code& error)
 					{
 
+					}
+
+					static int OnTlsServerName(SSL* ssl, int* ad, void* arg)
+					{						
+						assert(ssl != nullptr && u8"In TlsCapableHttpBridge::OnTlsServerName(SSL*, int*, void*) - SSL context is nullptr!");
+
+						if (!ssl)
+						{
+							return SSL_TLSEXT_ERR_NOACK;
+						}
+
+						BaseInMemoryCertificateStore* memCertStore = static_cast<BaseInMemoryCertificateStore*>(arg);
+						
+						assert(memCertStore != nullptr && u8"In TlsCapableHttpBridge::OnTlsServerName(SSL*, int*, void*) - BaseInMemoryCertificateStore* via void* arg param is nullptr!");
+
+						if (!memCertStore)
+						{
+							return SSL_TLSEXT_ERR_NOACK;
+						}
+
+						const char* hostName = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+
+						if (!hostName || || servername[0] == '\0')
+						{
+							return SSL_TLSEXT_ERR_NOACK;
+						}
+												
+						return SSL_TLSEXT_ERR_OK;
 					}
 
 					bool VerifyServerCertificateCallback(bool preverified, boost::asio::ssl::verify_context& ctx)

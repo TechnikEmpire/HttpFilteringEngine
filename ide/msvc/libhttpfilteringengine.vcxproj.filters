@@ -207,6 +207,9 @@
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.hpp">
       <Filter>Header Files\te\httpengine\mitm\secure</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\mitm\secure\WindowsInMemoryCertificateStore.hpp">
+      <Filter>Header Files\te\httpengine\mitm\secure</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp">
@@ -255,6 +258,9 @@
       <Filter>Source Files\te\httpengine\mitm\secure</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.cpp">
+      <Filter>Source Files\te\httpengine\mitm\secure</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\mitm\secure\WindowsInMemoryCertificateStore.cpp">
       <Filter>Source Files\te\httpengine\mitm\secure</Filter>
     </ClCompile>
   </ItemGroup>

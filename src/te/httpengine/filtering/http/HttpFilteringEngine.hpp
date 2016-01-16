@@ -117,15 +117,15 @@ namespace te
 
 				private:
 										
-					typedef boost::shared_lock<boost::shared_mutex> Reader;
-					typedef boost::unique_lock<boost::shared_mutex> Writer;
+					using Reader = boost::shared_lock<boost::shared_mutex>;
+					using Writer = boost::unique_lock<boost::shared_mutex>;
 					
 
-					typedef std::shared_ptr<HttpAbpInclusionFilter> SharedInclusionFilter;
-					typedef std::shared_ptr<HttpAbpExceptionFilter> SharedExceptionFilter;
-					typedef std::shared_ptr<HttpAbpBaseFilter> SharedFilter;
+					using SharedInclusionFilter = std::shared_ptr<HttpAbpInclusionFilter>;
+					using SharedExceptionFilter = std::shared_ptr<HttpAbpExceptionFilter>;
+					using SharedFilter = std::shared_ptr<HttpAbpBaseFilter>;
 
-					typedef std::shared_ptr<CategorizedCssSelector> SharedCategorizedCssSelector;
+					using SharedCategorizedCssSelector = std::shared_ptr<CategorizedCssSelector>;
 
 				public:
 

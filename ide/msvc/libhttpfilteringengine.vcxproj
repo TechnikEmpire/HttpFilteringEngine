@@ -458,6 +458,7 @@
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpBridge.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpListener.hpp" />
+    <ClInclude Include="..\..\src\te\httpengine\mitm\secure\WindowsInMemoryCertificateStore.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\network\SocketTypes.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\util\cb\EventReporter.hpp" />
     <ClInclude Include="..\..\src\te\util\http\KnownHttpHeaders.hpp" />
@@ -489,6 +490,7 @@
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpBridge.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpListener.cpp" />
+    <ClCompile Include="..\..\src\te\httpengine\mitm\secure\WindowsInMemoryCertificateStore.cpp" />
     <ClCompile Include="AssemblyInfo.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x64|Win32'">true</CompileAsManaged>
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x86|Win32'">true</CompileAsManaged>

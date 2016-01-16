@@ -31,13 +31,7 @@
 
 #pragma once
 
-#include <string>
-#include <unordered_map>
-#include <openssl/obj_mac.h>
-#include <boost/predef.h>
-#include "../../network/SocketTypes.hpp"
-#include <boost/thread/lock_types.hpp>
-#include <boost/thread/shared_mutex.hpp>
+#include "BaseInMemoryCertificateStore.hpp"
 
 namespace te
 {
@@ -47,39 +41,42 @@ namespace te
 		{
 			namespace secure
 			{
-
-				class BaseInMemoryCertificateStore
+				
+				/// <summary>
+				/// The WindowsInMemoryCertificateStore offers no functionality over the
+				/// BaseInMemoryCertificateStore class, except to implement the platform specific,
+				/// pure virtual functions declared in BaseInMemoryCertificateStore.
+				/// </summary>
+				class WindowsInMemoryCertificateStore : public BaseInMemoryCertificateStore
 				{
 
 				public:
 
-					BaseInMemoryCertificateStore(boost::asio::io_service* service);
+					WindowsInMemoryCertificateStore(boost::asio::io_service* service);
 
-					BaseInMemoryCertificateStore(
-						boost::asio::io_service* service, 
-						const std::string& countryCode, 
-						const std::string& organizationName, 
+					WindowsInMemoryCertificateStore(
+						boost::asio::io_service* service,
+						const std::string& countryCode,
+						const std::string& organizationName,
 						const std::string& commonName
 						);
 
-					virtual ~BaseInMemoryCertificateStore();
-
-					boost::asio::ssl::context* GetServerContext(const char* hostName);
+					virtual ~WindowsInMemoryCertificateStore();
 
 					/// <summary>
 					/// Attempts to install the current temporary root CA certificate for
 					/// transparent filtering to the appropriate OS specific filesystem certificate
 					/// store. This must be overridden in an os specific derrived class.
+					/// 
+					/// This method is assumed to throw in all derrived types, so runtime_errors
+					/// need to be expected and correctly handled.
 					/// </summary>
 					/// <returns>
 					/// True if the operation succeeded and the current temporary root CA
 					/// certificate was installed to the appropriate OS filesystem certificate
 					/// store. False otherwise.
-					/// 
-					/// This method is assumed to throw in all derrived types, so runtime_errors
-					/// need to be expected and correctly handled.
 					/// </returns>
-					virtual bool EstablishOsTrust() = 0;
+					virtual bool EstablishOsTrust();
 
 					/// <summary>
 					/// Searches the OS filesystem certificate store for any installed root CA
@@ -93,42 +90,12 @@ namespace te
 					/// This method is assumed to throw in all derrived types, so runtime_errors
 					/// need to be expected and correctly handled.
 					/// </summary>
-					virtual void RevokeOsTrust() = 0;
+					virtual void RevokeOsTrust();
 
-				protected:
-
-					using Reader = boost::shared_lock<boost::shared_mutex>;
-					using ConditionalReader = boost::upgrade_lock<boost::shared_mutex>;
-					using Writer = boost::unique_lock<boost::shared_mutex>;
-
-					boost::shared_mutex m_sharedLock;
-
-					boost::asio::ssl::context* SpoofCertificate(const std::string&, X509* certificate);
-
-					EVP_PKEY* GenerateEcKey(const int namedCurveId = NID_X9_62_prime256v1);
-
-					X509* GenerateSelfSignedCert(EVP_PKEY* issuerKeypair, const std::string& countryCode, const std::string& organizationName, const std::string& commonName);
-
-					X509* IssueCertificate(EVP_PKEY* certificateKeypair, EVP_PKEY* issuerKeypair, const bool isCA, const std::string& countryCode, const std::string& organizationName, const std::string& commonName);
-
-					bool Addx509Extension(X509* cert, int nid, std::string strValue);
-
-					std::string m_caCountryCode;
-
-					std::string m_caCommonName;
-
-					std::string m_caOrgName;
-
-					X509* m_thisCa;
-
-					EVP_PKEY* m_thisCaKeyPair;
-
-					std::unordered_map<std::string, boost::asio::ssl::context*> m_hostContexts;
-
-					static const std::string ContextCipherList;
 				};
 
 			} /* namespace secure */
 		} /* namespace mitm */
 	} /* namespace httpengine */
 } /* namespace te */
+
