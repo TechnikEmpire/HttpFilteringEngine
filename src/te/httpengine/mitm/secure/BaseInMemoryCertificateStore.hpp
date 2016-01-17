@@ -125,7 +125,52 @@ namespace te
 					/// context is returned. If no server context for the supplied host name is
 					/// found, nullptr is returned.
 					/// </returns>
-					boost::asio::ssl::context* GetServerContext(const char* hostName);
+					boost::asio::ssl::context* GetServerContext(const char* hostName);					
+
+					/// <summary>
+					/// Attempts to clone the supplied certificate insofar as is necessary to pass
+					/// inspection once signed with our CA. This means that the subject and subject
+					/// alt names are copied. Once the certificate is spoofed successfully, a
+					/// boost::asio::ssl::context is allocated and the generated certificate,
+					/// keypair, and temporary negotiation EC_KEY are assigned to the newly
+					/// allocated boost::asio::ssl::context.
+					/// 
+					/// The boost::asio::ssl::context is then stored, using the host name and all
+					/// extracted subject alt names as keys to point to the same generated
+					/// boost::asio::ssl::context. This is so that the same context can be
+					/// discovered for every single host that the certificate is meant to handle.
+					/// 
+					/// Every generated boost::asio::ssl::context is set to be a TLS1.2 server context.
+					/// 
+					/// As with basically every other method in this class, this can throw
+					/// runtime_error in the event that even a single openSSL operation does not
+					/// return a value indicating a successful operation. The ::what() member of the
+					/// thrown exception will provide detailed information about what went wrong.
+					/// These must be handled and the messages routed through any available
+					/// callbacks, as the design of this library is to provide a C API for certain targets.
+					/// </summary>
+					/// <param name="host">
+					/// The host that the supplied certificate structure was received from. This
+					/// will be used, along with all discovered SAN's in the supplied X509
+					/// structure, to index the final generated server SSL context for lookup by
+					/// future users.
+					/// </param>
+					/// <param name="certificate">
+					/// A valid pointer to the received upstream certificate to spoof. Note that
+					/// users should have used the upstream SSL context, which loads the
+					/// cURL/Mozilla ca-bundle for validation, to validate certificates before
+					/// spoofing them. This method, this entire object, does no validation of
+					/// certificates supplied to it. As such, take care to use the proper mechanisms
+					/// to validate certificates before spoofing them, lets your clients curse you
+					/// for transparently feeding them bad certificates which will pass as good
+					/// certificates once issued from here.
+					/// </param>
+					/// <returns>
+					/// A pointer to the generated boost::asio::ssl::context object that been
+					/// configured to utilize the successfully spoofed certificate, keypair and
+					/// temporary negotiation EC key in a server context.
+					/// </returns>
+					boost::asio::ssl::context* SpoofCertificate(const std::string& host, X509* certificate);
 
 					/// <summary>
 					/// Attempts to install the current temporary root CA certificate for
@@ -210,52 +255,7 @@ namespace te
 					/// <summary>
 					/// Holds the cipher list that is set on every generated context.
 					/// </summary>
-					static const std::string ContextCipherList;
-
-					/// <summary>
-					/// Attempts to clone the supplied certificate insofar as is necessary to pass
-					/// inspection once signed with our CA. This means that the subject and subject
-					/// alt names are copied. Once the certificate is spoofed successfully, a
-					/// boost::asio::ssl::context is allocated and the generated certificate,
-					/// keypair, and temporary negotiation EC_KEY are assigned to the newly
-					/// allocated boost::asio::ssl::context.
-					/// 
-					/// The boost::asio::ssl::context is then stored, using the host name and all
-					/// extracted subject alt names as keys to point to the same generated
-					/// boost::asio::ssl::context. This is so that the same context can be
-					/// discovered for every single host that the certificate is meant to handle.
-					/// 
-					/// Every generated boost::asio::ssl::context is set to be a TLS1.2 server context.
-					/// 
-					/// As with basically every other method in this class, this can throw
-					/// runtime_error in the event that even a single openSSL operation does not
-					/// return a value indicating a successful operation. The ::what() member of the
-					/// thrown exception will provide detailed information about what went wrong.
-					/// These must be handled and the messages routed through any available
-					/// callbacks, as the design of this library is to provide a C API for certain targets.
-					/// </summary>
-					/// <param name="host">
-					/// The host that the supplied certificate structure was received from. This
-					/// will be used, along with all discovered SAN's in the supplied X509
-					/// structure, to index the final generated server SSL context for lookup by
-					/// future users.
-					/// </param>
-					/// <param name="certificate">
-					/// A valid pointer to the received upstream certificate to spoof. Note that
-					/// users should have used the upstream SSL context, which loads the
-					/// cURL/Mozilla ca-bundle for validation, to validate certificates before
-					/// spoofing them. This method, this entire object, does no validation of
-					/// certificates supplied to it. As such, take care to use the proper mechanisms
-					/// to validate certificates before spoofing them, lets your clients curse you
-					/// for transparently feeding them bad certificates which will pass as good
-					/// certificates once issued from here.
-					/// </param>
-					/// <returns>
-					/// A pointer to the generated boost::asio::ssl::context object that been
-					/// configured to utilize the successfully spoofed certificate, keypair and
-					/// temporary negotiation EC key in a server context.
-					/// </returns>
-					boost::asio::ssl::context* SpoofCertificate(const std::string& host, X509* certificate);
+					static const std::string ContextCipherList;					
 
 					/// <summary>
 					/// Generates an EC key with the given named curve. As with basically every

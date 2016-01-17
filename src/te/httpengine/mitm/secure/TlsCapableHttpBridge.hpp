@@ -32,37 +32,11 @@
 #pragma once
 
 #include "../../network/SocketTypes.hpp"
+#include "BaseInMemoryCertificateStore.hpp"
+#include "../../filtering/http/HttpFilteringEngine.hpp"
+#include "../http/HttpRequest.hpp"
+#include "../http/HttpResponse.hpp"
 #include <memory>
-
-/// <summary>
-/// Forward declarations separate, looks cleaner.
-/// </summary>
-namespace te
-{
-	namespace httpengine
-	{
-		namespace filtering
-		{
-			namespace http
-			{
-
-				class HttpFilteringEngine;
-
-			} /* namespace http */
-		} /* namespace filtering */
-
-		namespace mitm
-		{
-			namespace http
-			{
-
-				class HttpRequest;
-				class HttpResponse;
-
-			} /* namespace http */
-		} /* namespace mitm */
-	} /* namespace httpengine */
-}
 
 namespace te
 {
@@ -71,13 +45,7 @@ namespace te
 		namespace mitm
 		{
 			namespace secure
-			{		
-
-				/// <summary>
-				/// Forward declaration of BaseInMemoryCertificateStore exists here because the
-				/// namespace is the same.
-				/// </summary>
-				class BaseInMemoryCertificateStore;
+			{								
 
 				/// <summary>
 				/// 
@@ -100,7 +68,7 @@ namespace te
 					TlsCapableHttpBridge(
 						boost::asio::io_service* service,
 						BaseInMemoryCertificateStore* certStore,
-						const HttpFilteringEngine* filteringEngine,
+						const filtering::http::HttpFilteringEngine* filteringEngine,
 						boost::asio::ssl::context* defaultServerContext = nullptr,
 						boost::asio::ssl::context* clientContext = nullptr
 						);
@@ -130,13 +98,7 @@ namespace te
 					/// HTTP response object which is read from the upstream host and written to the
 					/// downstream client.
 					/// </summary>
-					std::unique_ptr<HttpResponse> m_response = nullptr;
-
-					/// <summary>
-					/// Every bridge requires a valid pointer to a filtering engine which may or may
-					/// not be shared, for subjecting HTTP requests and responses to filtering.
-					/// </summary>
-					const HttpFilteringEngine* m_filteringEngine = nullptr;
+					std::unique_ptr<HttpResponse> m_response = nullptr;					
 
 					/// <summary>
 					/// Socket used to connect to the client's desired host.
@@ -148,19 +110,30 @@ namespace te
 					/// </summary>
 					BridgeSocketType m_downstreamSocket;
 
+					boost::asio::strand m_upstreamStrand;
+
+					boost::asio::strand m_downstreamStrand;
+
+					// Used for resolving the target upstream host.
+					boost::asio::ip::tcp::resolver m_resolver;					
+
+					boost::asio::deadline_timer m_streamTimer;
+
+					BaseInMemoryCertificateStore* m_certStore;
+
+					/// <summary>
+					/// Every bridge requires a valid pointer to a filtering engine which may or may
+					/// not be shared, for subjecting HTTP requests and responses to filtering.
+					/// </summary>
+					const HttpFilteringEngine* m_filteringEngine = nullptr;									
+
 					/// <summary>
 					/// Stores the current host whenever a new request is processed by the bridge.
 					/// For every subsequent request, the host information in the request headers is
 					/// compared to the host we presently have an upstream connection with. If the
 					/// new request host does not match, the bridge is terminated.
 					/// </summary>
-					std::string m_upstreamHost;
-
-					boost::asio::strand m_upstreamStrand;
-
-					boost::asio::strand m_downstreamStrand;
-
-					boost::asio::deadline_timer m_streamTimer;
+					std::string m_upstreamHost;									
 
 				public:
 
@@ -249,33 +222,27 @@ namespace te
 
 					}
 
-					static int OnTlsServerName(SSL* ssl, int* ad, void* arg)
-					{						
-						assert(ssl != nullptr && u8"In TlsCapableHttpBridge::OnTlsServerName(SSL*, int*, void*) - SSL context is nullptr!");
-
-						if (!ssl)
-						{
-							return SSL_TLSEXT_ERR_NOACK;
-						}
-
-						BaseInMemoryCertificateStore* memCertStore = static_cast<BaseInMemoryCertificateStore*>(arg);
-						
-						assert(memCertStore != nullptr && u8"In TlsCapableHttpBridge::OnTlsServerName(SSL*, int*, void*) - BaseInMemoryCertificateStore* via void* arg param is nullptr!");
-
-						if (!memCertStore)
-						{
-							return SSL_TLSEXT_ERR_NOACK;
-						}
-
-						const char* hostName = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
-
-						if (!hostName || || servername[0] == '\0')
-						{
-							return SSL_TLSEXT_ERR_NOACK;
-						}
-												
-						return SSL_TLSEXT_ERR_OK;
-					}
+					/// <summary>
+					/// Callback used during the downstream client handshake when a TLS client
+					/// initially connects. The handshake is initiated immediately and during this
+					/// handshake, as the client hello is parsed, openSSL will invoke this callback.
+					/// Within this callback, we need to connect to the extracted host which the
+					/// client has requested, and attempt to look up the appropriate server context.
+					/// If no context for the host yet exists, then the bridge must be told to
+					/// resolve the host, connect upstream, verify the certificate and then ask the
+					/// in memory certificate store to spoof the cert and return a context.
+					/// 
+					/// This is specific of course to TLS templated versions of this object. As
+					/// such, we need to provide a specialization for this, which in turn means we
+					/// must provide a specialization for the TCP socket version of this object.
+					/// Unfortunately this is a waste, as no such specialization is required for
+					/// anything more than to silence compiler errors/warnings about unresolved
+					/// members during the linker phase.
+					/// 
+					/// Note that the TCP socket specialization will throw if invoked, as it simply
+					/// should not be used/called. XXX TODO find a better way.
+					/// </summary>
+					static int OnTlsServerName(SSL* ssl, int* ad, void* arg);					
 
 					bool VerifyServerCertificateCallback(bool preverified, boost::asio::ssl::verify_context& ctx)
 					{
