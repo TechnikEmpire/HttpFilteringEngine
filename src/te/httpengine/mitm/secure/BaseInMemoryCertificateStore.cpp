@@ -68,6 +68,23 @@ namespace te
 				BaseInMemoryCertificateStore::~BaseInMemoryCertificateStore()
 				{
 					RevokeOsTrust();
+
+					// XXX TODO - What about the temp EC key? Does it simply die as part of the
+					// context? Why is there no method to fetch it later? If it doesn't die with
+					// the context, then we need to store it separately. :(
+					for (const auto& pair : m_hostContexts)
+					{
+						auto* nativeHandle = pair.second->native_handle();
+						auto* contextCert = SSL_CTX_get0_certificate(nativeHandle);
+						auto* privkey = SSL_CTX_get0_privatekey(nativeHandle);
+
+						EVP_PKEY_free(privkey);
+						X509_free(contextCert);
+
+						delete pair.second;
+					}
+
+					m_hostContexts.clear();
 				}
 
 				boost::asio::ssl::context* BaseInMemoryCertificateStore::GetServerContext(const char* hostName)
@@ -78,7 +95,7 @@ namespace te
 					const auto& result = m_hostContexts.find(hostNameStr);
 
 					if (result != m_hostContexts.end())
-					{
+					{									
 						return result->second;
 					}
 
