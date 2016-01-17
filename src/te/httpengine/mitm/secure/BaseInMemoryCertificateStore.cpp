@@ -45,19 +45,24 @@ namespace te
 			{	
 				const std::string BaseInMemoryCertificateStore::ContextCipherList{ u8"HIGH:!SSLv2!SRP:!PSK" };
 
-				BaseInMemoryCertificateStore::BaseInMemoryCertificateStore(boost::asio::io_service* service)
+				BaseInMemoryCertificateStore::BaseInMemoryCertificateStore() :
+					BaseInMemoryCertificateStore(u8"US", u8"HttpFilteringEngine", u8"HttpFilteringEngine")
 				{
 
 				}
 
 				BaseInMemoryCertificateStore::BaseInMemoryCertificateStore(
-					boost::asio::io_service* service,
 					const std::string& countryCode, 
 					const std::string& organizationName, 
 					const std::string& commonName
-					)
+					) :
+					m_caCountryCode(countryCode),
+					m_caOrgName(organizationName),
+					m_caCommonName(commonName)
 				{
-
+					// Generate self signed CA cert.
+					m_thisCaKeyPair = GenerateEcKey();
+					m_thisCa = GenerateSelfSignedCert(m_thisCaKeyPair, m_caCountryCode, m_caOrgName, m_caCommonName);
 				}
 
 				BaseInMemoryCertificateStore::~BaseInMemoryCertificateStore()
@@ -67,7 +72,7 @@ namespace te
 
 				boost::asio::ssl::context* BaseInMemoryCertificateStore::GetServerContext(const char* hostName)
 				{
-					Reader lock(m_sharedLock);
+					PureReader lock(m_sharedLock);
 
 					std::string hostNameStr(hostName);
 					const auto& result = m_hostContexts.find(hostNameStr);
@@ -77,12 +82,10 @@ namespace te
 						return result->second;
 					}
 
-					// Have to do this to avoid a deadlock when we now try to find and spoof this
-					// certificate. SpoofCertificate itself calls for a write lock.
-					lock.unlock();
-
-					// We need to fetch this certificate.
-
+					// We're telling the client that we do not yet have a context for this host.
+					// Client must do the lifting of connecting to the host, getting the host
+					// certificate and then asking us again to spoof this certificate.
+					return nullptr;
 				}
 
 				boost::asio::ssl::context* BaseInMemoryCertificateStore::SpoofCertificate(const std::string& host, X509* certificate)
@@ -311,6 +314,7 @@ namespace te
 									EC_KEY_free(tmpNegotiationEcKey);
 									EVP_PKEY_free(spoofedCertKeypair);
 									X509_free(spoofedCert);
+									w.unlock();
 									throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Context already exists for specified host.");
 								}
 							}
@@ -328,6 +332,7 @@ namespace te
 							EC_KEY_free(tmpNegotiationEcKey);
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
+							w.unlock();
 							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Context already exists for specified host.");
 						}	
 
@@ -340,11 +345,11 @@ namespace te
 					}					
 				}
 
-				EVP_PKEY* BaseInMemoryCertificateStore::GenerateEcKey(const int namedCurveId)
+				EVP_PKEY* BaseInMemoryCertificateStore::GenerateEcKey(const int namedCurveId) const
 				{
 					EC_KEY *eckey = nullptr;
 
-					if ((eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1)) == nullptr || EC_KEY_generate_key(eckey) != 1)
+					if ((eckey = EC_KEY_new_by_curve_name(namedCurveId)) == nullptr || EC_KEY_generate_key(eckey) != 1)
 					{
 						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateEcKey(const int) - Failed to allocate EC_KEY structure.");
 					}
@@ -372,7 +377,12 @@ namespace te
 					return pkey;
 				}	
 
-				X509* BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY* issuerKeypair, const std::string& countryCode, const std::string& organizationName, const std::string& commonName)
+				X509* BaseInMemoryCertificateStore::GenerateSelfSignedCert(
+					EVP_PKEY* issuerKeypair, 
+					const std::string& countryCode, 
+					const std::string& organizationName, 
+					const std::string& commonName
+					) const
 				{
 					X509* selfSigned = IssueCertificate(issuerKeypair, issuerKeypair, true, countryCode, organizationName, commonName);
 
@@ -422,7 +432,14 @@ namespace te
 					return selfSigned;
 				}
 
-				X509* BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY* certificateKeypair, EVP_PKEY* issuerKeypair, const bool isCA, const std::string& countryCode, const std::string& organizationName, const std::string& commonName)
+				X509* BaseInMemoryCertificateStore::IssueCertificate(
+					EVP_PKEY* certificateKeypair, 
+					EVP_PKEY* issuerKeypair, 
+					const bool isCA, 
+					const std::string& countryCode, 
+					const std::string& organizationName, 
+					const std::string& commonName
+					) const
 				{
 					X509* x509 = X509_new();
 
@@ -560,7 +577,7 @@ namespace te
 					return x509;
 				}
 
-				bool BaseInMemoryCertificateStore::Addx509Extension(X509* cert, int nid, std::string strValue)
+				bool BaseInMemoryCertificateStore::Addx509Extension(X509* cert, int nid, std::string strValue) const
 				{
 					X509_EXTENSION* ex = nullptr;
 					X509V3_CTX ctx;
