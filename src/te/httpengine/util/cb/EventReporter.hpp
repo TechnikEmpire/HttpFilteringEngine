@@ -31,9 +31,8 @@
 
 #pragma once
 
-#include <boost/signals2.hpp>
-#include <string>
-#include <functional>
+#include "EngineCallbackTypes.h"
+#include <boost/utility/string_ref.hpp>
 
 namespace te
 {
@@ -45,220 +44,148 @@ namespace te
 			{
 
 				/// <summary>
-				/// The EventReporter class is meant to serve as a semi generic class for reporting
-				/// general information, warnings and errors to one or more unknown observers. We
-				/// don't care who is listening and thanks to boost::signals2 we have a nice measure
-				/// of decoupling here. The fact is one or more parties may be interested in
-				/// observing such output from arbitrary objects, and portions of this software
-				/// definitely are interested, we just don't want to be bound to them.
+				/// The EventReporter is a simple class meant to contain pointers to functions
+				/// designed for various purposes, and providing a simply interface to access these
+				/// functions. This class is simply included for convenience and to reduce code
+				/// duplication, as more than one class in this library attempts to provide
+				/// informational callbacks to users for handled events.
 				/// 
-				/// The original intention of this templated class was to allow any class to, in a
-				/// variably generic fashion, equip itself with the ability to give information or
-				/// instruction in a command pattern fashion. This class however, is presently
-				/// under-developed, and lacking, but is left included and used for the sole purpose
-				/// of having one-way messaging system between objects and interested observers. For
-				/// this purpose, it's overkill and could be replaced by a simple std::function.
-				/// 
-				/// Much of the library operates entirely independently of any outside interaction,
-				/// in fact in much of it, there is little that a third party (such as an
-				/// implementing UI application) can do but turn it on and observe. There does exist
-				/// an interface where functionality can be modified, but I'm speaking more from the
-				/// perspective of a programmer as a consumer. It's not acceptable for much of the
-				/// functionality of this library to stop and throw an unhandled error, because the
-				/// nature of the functionality is dealing entirely with unknown external input. So
-				/// the library handles most foreseeable issues itself safely, but without a
-				/// reporting interface like this, it would be entirely a blackbox to a programmer 
-				/// consumer.
+				/// The methods for setting functions and invoke them are marked virtual to allow
+				/// the possibility of implementations where these methods are given thread safety
+				/// and such, while keeping this basic class basic and free of any such additional 
+				/// overhead.
 				/// </summary>
-				template <class... ParamTypes>
 				class EventReporter
 				{
 
 				public:
 
 					/// <summary>
-					/// Function definition that accepts a string and unsigned 32 bit integer code
-					/// describing an event.
+					/// Constructs members with the given arguments. Nothing special here.
 					/// </summary>
-					using StringAndCodeFunction = std::function<void(const std::string&, const uint32_t&)>;
-
-					/// <summary>
-					/// Signal definition for StringAndCodeFunction callbacks.
-					/// </summary>
-					using StringAndCodeSignal = boost::signals2::signal<void(const std::string&, const uint32_t&)>;
-
-					/// <summary>
-					/// Function definition that accepts a string and unsigned 32 bit integer code
-					/// describing an event.
-					/// </summary>
-					using DataFunction = typename std::function<void(ParamTypes...)>;
-
-					/// <summary>
-					/// Signal definition for DataFunction callbacks.
-					/// </summary>
-					using DataSignal = typename boost::signals2::signal<void(ParamTypes...)>;
-					
-					EventReporter()
+					/// <param name="onInfo">
+					/// Callback for general information about non-critical events.
+					/// </param>
+					/// <param name="onWarning">
+					/// Callback for warnings about potentially critical events.
+					/// </param>
+					/// <param name="onError">
+					/// Callback for error information about critical events that were handled.
+					/// </param>
+					EventReporter(
+						MessageFunction onInfo = nullptr,
+						MessageFunction onWarning = nullptr,
+						MessageFunction onError = nullptr
+						) :
+						m_onInfo(onInfo),
+						m_onWarning(onWarning),
+						m_onError(onError)
 					{
 
 					}
 
+					/// <summary>
+					/// Default destructor.
+					/// </summary>
 					virtual ~EventReporter()
 					{
 
 					}
 
 					/// <summary>
-					/// Subscribe to the information event. This event will be raised when general
-					/// information which is considered potentially useful is raised, such as a
-					/// notification that a task has completed.
+					/// Sets the callback for general information about non-critical events.
 					/// </summary>
-					/// <param name="callback">
-					/// The callback function where information events should be dispatched to. 
+					/// <param name="onInfo">
+					/// Callback for general information about non-critical events.
 					/// </param>
-					/// <returns>
-					/// The slot for the newly registered callback. This must be retained to
-					/// unsubscribe.
-					/// </returns>
-					boost::signals2::connection SubscribeOnInfo(StringAndCodeFunction callback)
-					{						
-						return m_infoSignal.connect(callback);
+					virtual void SetOnInfo(MessageFunction onInfo)
+					{
+						m_onInfo = onInfo;
 					}
 
 					/// <summary>
-					/// Subscribe to the warning event. This event will be raised when information
-					/// is generated about a potential low severity event.
+					/// Sets the callback for warnings about potentially critical events.
 					/// </summary>
-					/// <param name="callback">
-					/// The callback function where warning events should be dispatched to. 
+					/// <param name="onWarning">
+					/// Callback for warnings about potentially critical events.
 					/// </param>
-					/// <returns>
-					/// The slot for the newly registered callback. This must be retained to
-					/// unsubscribe.
-					/// </returns>
-					boost::signals2::connection SubscribeOnWarning(StringAndCodeFunction callback)
+					virtual void SetOnWarning(MessageFunction onWarning)
 					{
-						m_warningSignal.connect(callback);
+						m_onWarning = onWarning;
 					}
 
 					/// <summary>
-					/// Subscribe to the error event. This event will be raised when information is
-					/// generated about a potentially serious event that was caught and handled.
+					/// Sets the callback for error information about critical events that were handled.
 					/// </summary>
-					/// <param name="callback">
-					/// The callback function where error events should be dispatched to. 
+					/// <param name="onError">
+					/// Callback for error information about critical events that were handled.
 					/// </param>
-					/// <returns>
-					/// The slot for the newly registered callback. This must be retained to
-					/// unsubscribe.
-					/// </returns>
-					boost::signals2::connection SubscribeOnError(StringAndCodeFunction callback)
+					virtual void SetOnError(MessageFunction onError)
 					{
-						m_errorSignal.connect(callback);
+						m_onError = onError;
 					}
 
 					/// <summary>
-					/// The data event. This event will be raised when data about an event is being
-					/// made available to potential observers. This additional data parameter is
-					/// templated so implementers may provide different data, if at all. Check the
-					/// summary comments on the inheriting class for details about what data the
-					/// class intends to dispatch through this event, if anything.
+					/// If the info callback member is valid, invokes it with the informational
+					/// message data as arguments.
 					/// </summary>
-					/// <param name="callback">
-					/// The callback function where data events should be dispatched to. 
+					/// <param name="infoMessage">
+					/// An informational string about a non-critical event.
 					/// </param>
-					/// <returns>
-					/// The slot for the newly registered callback. This must be retained to
-					/// unsubscribe.
-					/// </returns>
-					boost::signals2::connection SubscribeOnData(DataFunction callback)
+					virtual void ReportInfo(const boost::string_ref infoMessage) const
 					{
-						m_dataSignal.connect(callback);
-					}
-
-				protected:
-
-					/// <summary>
-					/// Subclasses can report general information through this function. 
-					/// </summary>
-					/// <param name="message">
-					/// A string message containing meaningful information about an event. 
-					/// </param>
-					/// <param name="code">
-					/// A code associated with this event. This interface is agnostic to user
-					/// created codes and meanings, except that they are expected as a 32 bit
-					/// unsigned integer.
-					/// </param>
-					void ReportInfo(const std::string& message, const uint32_t code = 0) const
-					{
-						m_infoSignal(message, code);
+						if (m_onInfo && infoMessage.data())
+						{
+							m_onInfo(infoMessage.begin(), infoMessage.size());
+						}
 					}
 
 					/// <summary>
-					/// Subclasses can report warning information through this function. 
+					/// If the warning callback member is valid, invokes it with the warning message
+					/// data as arguments.
 					/// </summary>
-					/// <param name="message">
-					/// A string message containing meaningful information about an event. 
+					/// <param name="warningMessage">
+					/// An informational string about potentially critical event.
 					/// </param>
-					/// <param name="code">
-					/// A code associated with this event. This interface is agnostic to user
-					/// created codes and meanings, except that they are expected as a 32 bit
-					/// unsigned integer.
-					/// </param>
-					void ReportWarning(const std::string& message, const uint32_t code = 0) const
+					virtual void ReportWarning(const boost::string_ref warningMessage) const
 					{
-						m_warningSignal(message, code);
+						if (m_onWarning && warningMessage.data())
+						{
+							m_onWarning(warningMessage.begin(), warningMessage.size());
+						}
 					}
 
 					/// <summary>
-					/// Subclasses can report error information through this function. 
+					/// If the error callback member is valid, invokes it with the error message
+					/// data as arguments.
 					/// </summary>
-					/// <param name="message">
-					/// A string message containing meaningful information about an event. 
+					/// <param name="errorMessage">
+					/// An informational string about a critical event.
 					/// </param>
-					/// <param name="code">
-					/// A code associated with this event. This interface is agnostic to user
-					/// created codes and meanings, except that they are expected as a 32 bit
-					/// unsigned integer.
-					/// </param>
-					void ReportError(const std::string& message, const uint32_t code = 0) const
+					virtual void ReportError(const boost::string_ref errorMessage) const
 					{
-						m_errorSignal(message, code);
-					}
-
-					/// <summary>
-					/// Subclasses can report data information through this function. The method is
-					/// marked virtual so that subclasses may override. This may be useful in a
-					/// situation where a subclass defines the template types to be non-const
-					/// references or pointers, offering data out for manipulation rather than just
-					/// pure observation.
-					/// </summary>
-					/// <param name="message">
-					/// A string message containing meaningful information about an event. 
-					/// </param>
-					/// <param name="code">
-					/// A code associated with this event. This interface is agnostic to user
-					/// created codes and meanings, except that they are expected as a 32 bit
-					/// unsigned integer.
-					/// </param>
-					/// <param name="data">
-					/// Templated data type object to be provided in the callback as a const
-					/// reference.
-					/// </param>
-					virtual void ReportData(ParamTypes... params) const
-					{
-						m_dataSignal(std::forward<ParamTypes>(params)...);
+						if (m_onError && errorMessage.data())
+						{
+							m_onError(errorMessage.begin(), errorMessage.size());
+						}
 					}
 
 				private:
 
-					StringAndCodeSignal m_infoSignal;
+					/// <summary>
+					/// Callback for general information about non-critical events.
+					/// </summary>
+					MessageFunction m_onInfo;
 
-					StringAndCodeSignal m_warningSignal;
+					/// <summary>
+					/// Callback for warnings about potentially critical events.
+					/// </summary>
+					MessageFunction m_onWarning;
 
-					StringAndCodeSignal m_errorSignal;
-
-					DataSignal m_dataSignal;
+					/// <summary>
+					/// Callback for error information about critical events that were handled.
+					/// </summary>
+					MessageFunction m_onError;
 
 				};
 

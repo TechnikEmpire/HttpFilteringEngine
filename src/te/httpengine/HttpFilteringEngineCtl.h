@@ -31,45 +31,52 @@
 
 #pragma once
 
-#include <cstdint>
-#include <memory>
-#include <boost/predef.h>
-#include <functional>
+#include "util/cb/EngineCallbackTypes.h"
 
-// Forward decls to keep implementation away from the interface. This isn't just for improved
-// compiler performance, it's absolutely required to prevent the native code from getting gobbled up
-// and included for managed compiliation to MSIL when the library is used within .NET.
-namespace te
-{
-	namespace httpengine
+#ifdef __cplusplus
+	#include <cstdint>
+	#include <memory>
+	#include <boost/predef.h>
+	#include <functional>
+
+	// Forward decls to keep implementation away from the interface. This isn't just for improved
+	// compiler performance, it's absolutely required to prevent the native code from getting gobbled up
+	// and included for managed compiliation to MSIL when the library is used within .NET.
+	namespace te
 	{
+		namespace httpengine
+		{
 		
-		class HttpFilteringEngineCtl;
+			class HttpFilteringEngineCtl;
 
-	} /* namespace httpengine */
+		} /* namespace httpengine */
 
-	namespace filtering
-	{
-		namespace http
+		namespace filtering
 		{
+			namespace http
+			{
 
-			class HttpFilteringEngine;
+				class HttpFilteringEngine;
 
-		} /* namespace http */
-	} /* namespace filtering */
+			} /* namespace http */
+		} /* namespace filtering */
 
-	namespace mitm
-	{
-		namespace diversion
+		namespace mitm
 		{
+			namespace diversion
+			{
 
-			class BaseDiverter;
+				class BaseDiverter;
 
-		} /* namespace diversion */
-	} /* namespace mitm */
+			} /* namespace diversion */
+		} /* namespace mitm */
 
-} /* namespace te */
+	} /* namespace te */
 
+	using HttpFilteringEngineCtl = te::httpengine::HttpFilteringEngineCtl;;
+#else // #ifdef __cplusplus
+	typedef struct HttpFilteringEngineCtl;
+#endif
 
 // C API. XXX TODO - Perhaps this should be separated out to another file?
 // XXX TODO - This isn't at all suitable for a C project to include, because we
@@ -110,52 +117,6 @@ extern "C" {
 	// the names used in the C API are very long. Very long names are the Achilles' heel of camel case.
 
 	/// <summary>
-	/// On Windows, at the very least, internet access is controlled by the default firewall
-	/// (Windows Firewall) on a per-application basis. We need to be able to query this firewall
-	/// whenever we consider intercepting and diverting a new flow through the proxy, to ensure that
-	/// we are not just handing out free candy, and by free candy I mean free access to the
-	/// internet. I know, free candy made it perfectly clear and I didn't need to explain.
-	/// 
-	/// This callback must be supplied to a valid function which can give us this information when
-	/// creating new instances of the Engine. The burden of correctly implementing this
-	/// functionality is on the end-user of this library.
-	/// </summary>
-	typedef bool(*FirewallCheckCallback)(const char* binaryAbsolutePath, const size_t binaryAbsolutePathLength);
-
-	/// <summary>
-	/// The Engine handles any error that occurs in situations related to external input. This is
-	/// because the very nature of the Engine is to deal with unpredictable external input. However,
-	/// to prevent some insight and feedback to users, various callbacks are used for errors,
-	/// warnings, and general information.
-	/// 
-	/// When constructing a new instance of the Engine, these callbacks should be provided to the
-	/// construction mechanism.
-	/// </summary>
-	typedef void(*ReportMessageCallback)(const char* message, const size_t messageLength);
-
-	/// <summary>
-	/// When the Engine blocks a request, it will report information about the blocking event, if a
-	/// callback is provided to do so. This information includes the category that the filter
-	/// responsible for the block belongs to, the size of the payload which would have been
-	/// transferred if the request were not blocked (only if this option is enabled), and the host
-	/// of the blocked request.
-	/// 
-	/// If the filtering option to fetch and report the blocked payload size is disabled or if the
-	/// payload is configured to be delivered as a chunked response, the size reported will be zero.
-	/// </summary>
-	typedef void(*ReportBlockedRequestCallback)(const uint8_t category, const uint32_t payloadSizeBlocked, const char* host, const size_t hostLength);
-
-	/// <summary>
-	/// When the Engine removes elements from a specific web page, it will report information about
-	/// that event, if a callback is provided to do so. This information is simply the number of
-	/// elements removed and the full request that contained the returned HTML on which the
-	/// selectors were run. Category information is unfortunately not available, since selectors
-	/// from all categories are collectively used to remove multiple elements, unlike filters where
-	/// a single filter is ultimately responsible for blocking or whitelisting a request.
-	/// </summary>
-	typedef void(*ReportBlockedElementsCallback)(const uint32_t numElementsRemoved, const char* fullRequest, const size_t requestLength);
-
-	/// <summary>
 	/// Creates a new instance of the HttpFilteringEngineCtl class, which manages the operation of
 	/// the HTTP Filtering Engine.
 	/// 
@@ -189,7 +150,7 @@ extern "C" {
 	/// selects, generated by the underlying Engine. Default is nullptr. This callback
 	/// cannot be supplied post-construction.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API te::httpengine::HttpFilteringEngineCtl* fe_ctl_create(
+	HTTP_FILTERING_ENGINE_API HttpFilteringEngineCtl* fe_ctl_create(
 		FirewallCheckCallback firewallCb = nullptr,
 		ReportMessageCallback onInfo = nullptr,
 		ReportMessageCallback onWarn = nullptr,
@@ -206,7 +167,7 @@ extern "C" {
 	/// <param name="ptr">
 	/// A valid pointer to an existing Engine instance.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_destroy(te::httpengine::HttpFilteringEngineCtl* ptr);
+	HTTP_FILTERING_ENGINE_API void fe_ctl_destroy(HttpFilteringEngineCtl* ptr);
 
 	/// <summary>
 	/// Begins intercepting and diverting HTTP/S traffic through the Engine.
@@ -214,7 +175,7 @@ extern "C" {
 	/// <param name="ptr">
 	/// A valid pointer to an existing Engine instance.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_start(te::httpengine::HttpFilteringEngineCtl* ptr);
+	HTTP_FILTERING_ENGINE_API void fe_ctl_start(HttpFilteringEngineCtl* ptr);
 
 	/// <summary>
 	/// Stops intercepting and diverting HTTP/S traffic through the Engine.
@@ -222,7 +183,7 @@ extern "C" {
 	/// <param name="ptr">
 	/// A valid pointer to an existing Engine instance.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_stop(te::httpengine::HttpFilteringEngineCtl* ptr);
+	HTTP_FILTERING_ENGINE_API void fe_ctl_stop(HttpFilteringEngineCtl* ptr);
 
 	/// <summary>
 	/// Checks if the Engine is actively diverting and filtering HTTP/S traffic or not.
@@ -233,7 +194,7 @@ extern "C" {
 	/// <returns>
 	/// True if the Engine is actively diverting and filtering HTTP/S traffic, false otherwise.
 	/// </returns>
-	HTTP_FILTERING_ENGINE_API bool fe_ctl_is_running(te::httpengine::HttpFilteringEngineCtl* ptr);
+	HTTP_FILTERING_ENGINE_API bool fe_ctl_is_running(HttpFilteringEngineCtl* ptr);
 
 	/// <summary>
 	/// Gets the port that the Engine is listening on for diverted HTTP connections.
@@ -244,7 +205,7 @@ extern "C" {
 	/// <returns>
 	/// The port the Engine is listening on for diverted HTTP connections.
 	/// </returns>
-	HTTP_FILTERING_ENGINE_API uint16_t fe_ctl_get_http_listener_port(te::httpengine::HttpFilteringEngineCtl* ptr);
+	HTTP_FILTERING_ENGINE_API uint16_t fe_ctl_get_http_listener_port(HttpFilteringEngineCtl* ptr);
 
 	/// <summary>
 	/// Sets the port that the Engine is listening on for diverted HTTP connections. If the Engine
@@ -256,7 +217,7 @@ extern "C" {
 	/// <param name="val">
 	/// The port number on which to listen for diverted HTTP connections.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_set_http_listener_port(te::httpengine::HttpFilteringEngineCtl* ptr, const uint16_t val);
+	HTTP_FILTERING_ENGINE_API void fe_ctl_set_http_listener_port(HttpFilteringEngineCtl* ptr, const uint16_t val);
 
 	/// <summary>
 	/// Gets the port that the Engine is listening on for diverted HTTPS connections.
@@ -267,7 +228,7 @@ extern "C" {
 	/// <returns>
 	/// The port the Engine is listening on for diverted HTTPS connections
 	/// </returns>
-	HTTP_FILTERING_ENGINE_API uint16_t fe_ctl_get_https_listener_port(te::httpengine::HttpFilteringEngineCtl* ptr);
+	HTTP_FILTERING_ENGINE_API uint16_t fe_ctl_get_https_listener_port(HttpFilteringEngineCtl* ptr);
 
 	/// <summary>
 	/// Sets the port that the Engine is listening on for diverted HTTPS connections. If the Engine
@@ -279,7 +240,7 @@ extern "C" {
 	/// <param name="val">
 	/// The port number on which to listen for diverted HTTPS connections.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_set_https_listener_port(te::httpengine::HttpFilteringEngineCtl* ptr, const uint16_t val);
+	HTTP_FILTERING_ENGINE_API void fe_ctl_set_https_listener_port(HttpFilteringEngineCtl* ptr, const uint16_t val);
 
 	/// <summary>
 	/// Checks whether the queried option is enabled in the Engine. Options are specific, and
@@ -298,7 +259,7 @@ extern "C" {
 	/// <returns>
 	/// True if the option queried is enabled, false otherwise.
 	/// </returns>
-	HTTP_FILTERING_ENGINE_API bool fe_ctl_get_option(te::httpengine::HttpFilteringEngineCtl* ptr, const uint32_t optionId);
+	HTTP_FILTERING_ENGINE_API bool fe_ctl_get_option(HttpFilteringEngineCtl* ptr, const uint32_t optionId);
 
 	/// <summary>
 	/// Sets whether the queried option is enabled in the Engine or not. Options are specific, and
@@ -317,7 +278,7 @@ extern "C" {
 	/// <param name="val">
 	/// The value to set for the supplied option.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_set_option(te::httpengine::HttpFilteringEngineCtl* ptr, const uint32_t optionId, const bool val);
+	HTTP_FILTERING_ENGINE_API void fe_ctl_set_option(HttpFilteringEngineCtl* ptr, const uint32_t optionId, const bool val);
 
 	/// <summary>
 	/// Sets whether the queried user defined category is enabled in the Engine or not. Categories
@@ -341,7 +302,7 @@ extern "C" {
 	/// <returns>
 	/// True if the category queried is enabled, false otherwise.
 	/// </returns>
-	HTTP_FILTERING_ENGINE_API bool fe_ctl_get_category(te::httpengine::HttpFilteringEngineCtl* ptr, const uint8_t categoryId);
+	HTTP_FILTERING_ENGINE_API bool fe_ctl_get_category(HttpFilteringEngineCtl* ptr, const uint8_t categoryId);
 
 	/// <summary>
 	/// Gets whether the queried user defined category is enabled in the Engine or not. Categories
@@ -365,7 +326,7 @@ extern "C" {
 	/// <param name="val">
 	/// The value to set for the supplied category.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_set_category(te::httpengine::HttpFilteringEngineCtl* ptr, const uint8_t categoryId, const bool val);
+	HTTP_FILTERING_ENGINE_API void fe_ctl_set_category(HttpFilteringEngineCtl* ptr, const uint8_t categoryId, const bool val);
 
 	/// <summary>
 	/// Attempts to have the Engine load an Adblock Plus formatted list containing filtering and
@@ -395,7 +356,7 @@ extern "C" {
 	/// provided interfaces to programmatically investigate the true reason for the false return value.
 	/// </returns>
 	HTTP_FILTERING_ENGINE_API bool fe_ctl_load_list_from_file(
-		te::httpengine::HttpFilteringEngineCtl* ptr, 
+		HttpFilteringEngineCtl* ptr, 
 		const char* filePath, 
 		const size_t filePathLength, 
 		const uint8_t listCategory
@@ -429,7 +390,7 @@ extern "C" {
 	/// interfaces to programmatically investigate the true reason for the false return value.
 	/// </returns>
 	HTTP_FILTERING_ENGINE_API bool fe_ctl_load_list_from_string(
-		te::httpengine::HttpFilteringEngineCtl* ptr, 
+		HttpFilteringEngineCtl* ptr, 
 		const char* listString, 
 		const size_t listStringLength, 
 		const uint8_t listCategory

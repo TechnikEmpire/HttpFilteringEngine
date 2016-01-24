@@ -30,6 +30,7 @@
 */
 
 #include "TlsCapableHttpBridge.hpp"
+#include <stdexcept>
 
 namespace te
 {
@@ -41,31 +42,47 @@ namespace te
 			{					
 				
 				TlsCapableHttpBridge<network::TcpSocket>::TlsCapableHttpBridge(
-					boost::asio::io_service* service,
-					BaseInMemoryCertificateStore* certStore,
+					boost::asio::io_service* service,					
 					const filtering::http::HttpFilteringEngine* filteringEngine,
+					BaseInMemoryCertificateStore* certStore,
 					boost::asio::ssl::context* defaultServerContext,
-					boost::asio::ssl::context* clientContext
+					boost::asio::ssl::context* clientContext,
+					util::cb::MessageFunction onInfoCb,
+					util::cb::MessageFunction onWarnCb,
+					util::cb::MessageFunction onErrorCb
 					) : 
 					m_upstreamSocket(*service), 
 					m_downstreamSocket(*service),
 					m_upstreamStrand(*service),
 					m_downstreamStrand(*service),
 					m_resolver(*service),
-					m_streamTimer(*service),					
-					m_certStore(certStore), 
-					m_filteringEngine(filteringEngine)
+					m_streamTimer(*service),				
+					m_filteringEngine(filteringEngine),
+					m_certStore(certStore)				
 				{
+					#ifndef NDEBUG						
+						assert(m_filteringEngine != nullptr && u8"In TlsCapableHttpBridge<network::TcpSocket>::TlsCapableHttpBridge(... args) - Supplied filtering engine pointer is nullptr!");
+					#else
+						if (m_filteringEngine == nullptr)
+						{
+							throw new std::runtime_error(u8"In TlsCapableHttpBridge<network::TcpSocket>::TlsCapableHttpBridge(... args) - Supplied filtering engine pointer is nullptr!");
+						}
+					#endif
+					
+
 					m_request.reset(new http::HttpRequest());
 					m_response.reset(new http::HttpResponse());
 				}
 				
-				TlsCapableHttpBridge<network::SslSocket>::TlsCapableHttpBridge(
-					boost::asio::io_service* service,
-					BaseInMemoryCertificateStore* certStore,
+				TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(
+					boost::asio::io_service* service,					
 					const filtering::http::HttpFilteringEngine* filteringEngine,
+					BaseInMemoryCertificateStore* certStore,
 					boost::asio::ssl::context* defaultServerContext,
-					boost::asio::ssl::context* clientContext
+					boost::asio::ssl::context* clientContext,
+					util::cb::MessageFunction onInfoCb,
+					util::cb::MessageFunction onWarnCb,
+					util::cb::MessageFunction onErrorCb
 					)
 					:
 					m_upstreamSocket(*service, *clientContext),
@@ -73,205 +90,356 @@ namespace te
 					m_upstreamStrand(*service),
 					m_downstreamStrand(*service),
 					m_resolver(*service),
-					m_streamTimer(*service),
-					m_certStore(certStore),
-					m_filteringEngine(filteringEngine)
+					m_streamTimer(*service),					
+					m_filteringEngine(filteringEngine),
+					m_certStore(certStore)
 				{
+					#ifndef NDEBUG					
+						assert(m_filteringEngine != nullptr && u8"In TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(... args) - Supplied certificate store is nullptr!");
+						assert(m_certStore != nullptr && u8"In TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(... args) - Supplied certificate store is nullptr!");						
+					#else
+						if (m_filteringEngine == nullptr)
+						{
+							throw new std::runtime_error(u8"In TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(... args) - Supplied filtering engine pointer is nullptr!");
+						}
+
+						if (m_certStore == nullptr)
+						{
+							throw new std::runtime_error(u8"In TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(... args) - Supplied certificate store is nullptr!");
+						}
+					#endif
+					
+
 					m_request.reset(new http::HttpRequest());
 					m_response.reset(new http::HttpResponse());
-				}
-
-				TlsCapableHttpBridge<network::TcpSocket>::~TlsCapableHttpBridge()
-				{
-
-				}
-
-				TlsCapableHttpBridge<network::SslSocket>::~TlsCapableHttpBridge()
-				{
-
+					m_tlsPeekBuffer.reset(new std::array<char, TlsPeekBufferSize>());										
 				}
 
 				template<>
-				int TlsCapableHttpBridge<network::TcpSocket>::OnTlsServerName(SSL* ssl, int* ad, void* arg)
+				void TlsCapableHttpBridge<network::TcpSocket>::Start()
 				{
-					// Not implemented, should not be used.
+					try
+					{
+						SetStreamTimeout(10000);
+
+						// We start off by simply reading the client request headers.
+						boost::asio::async_read_until(
+							m_downstreamSocket, 
+							m_request->GetHeaderReadBuffer(), 
+							Crlf, 
+							m_downstreamStrand.wrap(
+								std::bind(
+									&TlsCapableHttpBridge::OnDownstreamHeaders, 
+									shared_from_this(), 
+									boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred
+									)
+								)
+							);
+
+						return;
+					}
+					catch (std::exception& e)
+					{
+						std::string errMessage(u8"IN TlsCapableHttpBridge<network::TcpSocket>::Start() - Got error:\n\t");
+						errMessage.append(e.what());
+						ReportError(errMessage);
+					}
+
+					Kill();
 				}
 
 				template<>
-				int TlsCapableHttpBridge<network::SslSocket>::OnTlsServerName(SSL* ssl, int* ad, void* arg)
+				void TlsCapableHttpBridge<network::TlsSocket>::Start()
+				{					
+					try
+					{
+						SetStreamTimeout(10000);
+
+						// Start a peek read on the connected secure client, so we can attempt to extract the
+						// SNI hostname in the handler without screwing up the pending handshake.
+						m_downstreamSocket.next_layer().async_receive(
+							boost::asio::buffer(*m_tlsPeekBuffer.get(), m_tlsPeekBuffer->size()), 
+							boost::asio::ip::tcp::socket::message_peek, 
+							m_downstreamStrand.wrap(
+								std::bind(&TlsCapableHttpBridge::OnTlsPeek, 
+									shared_from_this(), 
+									boost::asio::placeholders::error, 
+									boost::asio::placeholders::bytes_transferred
+									)
+								)
+							);
+
+						return;
+					}
+					catch (std::exception& e)
+					{
+						std::string errMessage(u8"IN TlsCapableHttpBridge<network::TlsSocket>::Start() - Got error:\n\t");
+						errMessage.append(e.what());						
+						ReportError(errMessage);
+					}
+
+					Kill();
+				}
+
+				template<>
+				boost::asio::ip::tcp::socket& TlsCapableHttpBridge<network::TcpSocket>::DownstreamSocket()
+				{
+					return m_downstreamSocket;
+				}
+
+				template<>
+				boost::asio::ip::tcp::socket& TlsCapableHttpBridge<network::TlsSocket>::DownstreamSocket()
+				{
+					return m_downstreamSocket.next_layer();
+				}
+
+				template<>
+				boost::asio::ip::tcp::socket& TlsCapableHttpBridge<network::TcpSocket>::UpstreamSocket()
+				{
+					return m_upstreamSocket;
+				}
+
+				template<>
+				boost::asio::ip::tcp::socket& TlsCapableHttpBridge<network::TlsSocket>::UpstreamSocket()
+				{
+					return m_upstreamSocket.next_layer();
+				}
+
+				template<>
+				void TlsCapableHttpBridge<network::TcpSocket>::OnUpstreamConnect(const boost::system::error_code& error)
 				{
 
-					// Something worth mentioning. This callback is invoked in the middle of the 
-					// handshake with the client, to give the server the opportunity to fetch
-					// the correct certificate. In our context, we've initiated the handshake 
-					// with boost::asio using the async_handshake method, which took a copy of
-					// TlsCapableHttpBridge<T>::shared_from_this(). At this point in execution,
-					// that copy is still being held, so the life of the bridge we're using
-					// here is being preserved by this.
-
-					assert(ssl != nullptr && u8"In TlsCapableHttpBridge::OnTlsServerName(SSL*, int*, void*) - SSL context is nullptr!");
-
-					if (!ssl)
+					if (!error)
 					{
-						return SSL_TLSEXT_ERR_ALERT_FATAL;
-					}
+						SetNoDelay(UpstreamSocket(), true);
+						SetNoDelay(DownstreamSocket(), true);
 
-					// A ptr to the bridge should always be the argument assigned for this callback, using
-					// SSL_CTX_set_tlsext_servername_arg(...).
-					TlsCapableHttpBridge<network::SslSocket>* bridge = static_cast<TlsCapableHttpBridge<network::SslSocket>*>(arg);
+						if (m_request->IsPayloadComplete() == false && m_request->GetConsumeAllBeforeSending() == true)
+						{
+							// Means that there is a request payload, it's not complete, and it's been flagged
+							// for inspection before being sent upstream. Another read from the client is
+							// required.
 
-					assert(bridge != nullptr && u8"In TlsCapableHttpBridge::OnTlsServerName(SSL*, int*, void*) - TlsCapableHttpBridge<network::SslSocket>* via void* arg param is nullptr!");
-					assert(bridge->m_certStore != nullptr && u8"In TlsCapableHttpBridge::OnTlsServerName(SSL*, int*, void*) - TlsCapableHttpBridge<network::SslSocket>*::m_certStore member is nullptr!");
+							auto requestReadBuffer = m_request->GetPayloadReadBuffer();
 
-					if (bridge == nullptr || bridge->m_certStore == nullptr)
-					{
-						return SSL_TLSEXT_ERR_ALERT_FATAL;
-					}
+							boost::asio::async_read(
+								m_downstreamSocket, 
+								requestReadBuffer, 
+								boost::asio::transfer_at_least(1), 
+								m_downstreamStrand.wrap(
+									std::bind(
+										&TlsCapableHttpBridge::OnDownstreamRead, 
+										shared_from_this(), 
+										boost::asio::placeholders::error, 
+										boost::asio::placeholders::bytes_transferred
+										)
+									)
+								);
 
-					const char* hostName = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+							return;
+						}
 
-					// Ensure hostname is valid befor attempting to go any further.
-					if (!hostName || hostName[0] == '\0')
-					{
-						return SSL_TLSEXT_ERR_NOACK;
-					}
-										
-					auto* serverContext = bridge->m_certStore->GetServerContext(hostName);
+						// Means that we need to start off by simply writing whatever we've got from the client to 
+						// the server. In the completion handler for this op, it will be determined if the client
+						// has more to give or not, and this will be handled correctly.
 
-					if (serverContext == nullptr)
-					{
-						// No existing context for the specified host could be found. Now we need to go
-						// fetch the real cert from the real host, and ask the store to spoof it and give
-						// us a server context for this host.
-
-						// Since we're in a static context here, let's use the socket(s) and resolver(s) we already
-						// have in the supplied bridge object to fetch the upstream cert and spoof it.
-						auto* upstreamSocket = &bridge->m_upstreamSocket;
-						auto* resolver = &bridge->m_resolver;
-						auto* upstreamStrand = &bridge->m_upstreamStrand;
-						auto* timer = &bridge->m_streamTimer;
-
-						assert(upstreamSocket != nullptr && u8"In TlsCapableHttpBridge::OnTlsServerName(SSL*, int*, void*) - TlsCapableHttpBridge<network::SslSocket>*::m_upstreamSocket member is nullptr!");
-						assert(resolver != nullptr && u8"In TlsCapableHttpBridge::OnTlsServerName(SSL*, int*, void*) - TlsCapableHttpBridge<network::SslSocket>*::m_resolver member is nullptr!");
-						assert(upstreamStrand != nullptr && u8"In TlsCapableHttpBridge::OnTlsServerName(SSL*, int*, void*) - TlsCapableHttpBridge<network::SslSocket>*::m_upstreamStrand member is nullptr!");
-
-						bool resolved = false;
-						boost::asio::ip::tcp::endpoint remoteHostEndpoint;
+						auto writeBuffer = m_request->GetWriteBuffer();
 						
-						if (resolver != nullptr && upstreamSocket != nullptr)
+						boost::asio::async_write(
+							m_upstreamSocket, 
+							writeBuffer, 
+							boost::asio::transfer_all(), 
+							m_upstreamStrand.wrap(
+								std::bind(
+									&TlsCapableHttpBridge::OnUpstreamWrite, 
+									shared_from_this(), 
+									boost::asio::placeholders::error
+									)
+								)
+							);
+
+						return;
+					}
+					else
+					{
+						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - \
+							Got error:\n\t");
+						errMsg.append(error.message());
+						ReportError(errMsg);
+					}
+					
+					Kill();
+				}
+
+				template<>
+				void TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code& error)
+				{
+					if (!error)
+					{
+						SetNoDelay(UpstreamSocket(), true);
+						SetNoDelay(DownstreamSocket(), true);
+
+						SetStreamTimeout(5000);
+
+						m_upstreamSocket.set_verify_mode(boost::asio::ssl::verify_peer | boost::asio::ssl::verify_fail_if_no_peer_cert);
+
+						boost::system::error_code scerr;
+
+						// Verification callback does not require a shared_ptr for the bind, because the async_handshake
+						// completion handler will "out-live" the verification callback, so it will hold the shared_ptr
+						// that will ensure this object survives the async handshake.
+
+						m_upstreamSocket.set_verify_callback(
+							std::bind(
+								&TlsCapableHttpBridge::VerifyServerCertificateCallback, 
+								this, 
+								std::placeholders::_1, 
+								std::placeholders::_2
+								), 
+							scerr
+							);
+
+						if (!scerr)
 						{
-							std::string requestedHost(hostName);
-							boost::asio::ip::tcp::resolver::query query(requestedHost, "https");
-							resolver->async_resolve(query, upstreamStrand->wrap(
-								[&remoteHostEndpoint, &resolved](const boost::system::error_code& err, boost::asio::ip::tcp::resolver::iterator endpoint_iterator)
-								{
-									if (!err)
-									{
-										remoteHostEndpoint = *endpoint_iterator;
-										resolved = true;
-									}									
-								}
-							));
+							m_upstreamSocket.async_handshake(
+								network::TlsSocket::client, 
+								m_upstreamStrand.wrap(
+									std::bind(
+										&TlsCapableHttpBridge::OnUpstreamHandshake, 
+										shared_from_this(), 
+										boost::asio::placeholders::error
+										)
+									)
+								);
 
-							// Let's give the resolver 3 seconds to give us an endpoint to connect to.
-							boost::asio::deadline_timer timer(resolver->get_io_service());
-							timer.expires_from_now(boost::posix_time::seconds(3));
-							timer.wait();
-
-							bool connected = false;
-							bool verified = false;							
-							bool didhandshake = false;
-							X509* cert = nullptr;
-
-							auto verificationCallback = 
-								[&verified, &cert, &requestedHost] (bool preverified, boost::asio::ssl::verify_context& ctx)->bool
-							{							
-								boost::asio::ssl::rfc2818_verification v(requestedHost);
-								verified = v(preverified, ctx);
-
-								X509* curCert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-
-								if (verified)
-								{
-									cert = curCert;
-								}
-
-								return verified;
-							};
-
-							auto onHandshake = 
-								[&didhandshake](const boost::system::error_code& err)
-							{
-								// All we care about finding out is whether or not the async op actually
-								// completed, so we know if we have to cancel it or not. We don't care if
-								// an error was set, just that it completed at all.
-								didhandshake = true;
-							};
-
-							if (resolved)
-							{
-								// Important! We have to tell our connecting socket which host it's connecting
-								// for, so that SNI can function correctly in case the remote host defines more
-								// than one hostname (which it most likely does).
-								SSL_set_tlsext_host_name(upstreamSocket->native_handle(), hostName);
-								
-								upstreamSocket->lowest_layer().async_connect(remoteHostEndpoint, upstreamStrand->wrap(
-									[&connected, &upstreamSocket, &upstreamStrand, onHandshake, verificationCallback](const boost::system::error_code& err)
-									{
-										if (!err)
-										{
-											// Handshake, supply our lambda callback for verification to get
-											// the verified cert.
-											boost::system::error_code scerr;
-											upstreamSocket->set_verify_callback(verificationCallback, scerr);
-
-											upstreamSocket->async_handshake(network::SslSocket::client, upstreamStrand->wrap(onHandshake));
-										}										
-									}
-								));
-
-								// Give the upstream socket 5 seconds to connect and handshake.
-								timer.expires_from_now(boost::posix_time::seconds(5));
-								timer.wait();
-
-								if (connected && didhandshake && verified && cert != nullptr)
-								{
-									try
-									{
-										serverContext = bridge->m_certStore->SpoofCertificate(requestedHost, cert);
-									}
-									catch (std::runtime_error& e)
-									{
-										// XXX TODO - Report error through the bridge callbacks.
-									}									
-								}
-								else
-								{
-									// In case one of these async calls is hung forever in the eternal void, cancel
-									// here and bring it back before we return to the bridge from whence they came.
-									if (!connected || !didhandshake)
-									{
-										upstreamSocket->lowest_layer().cancel();
-									}									
-								}
-							}
-							else
-							{
-								resolver->cancel();
-							}
+							return;
+						}
+						else
+						{
+							std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - \
+							While setting verification callback, got error:\n\t");
+							errMsg.append(error.message());
+							ReportError(errMsg);
 						}
 					}
-
-					if (serverContext != nullptr)
+					else
 					{
-						if (SSL_set_SSL_CTX(bridge->m_downstreamSocket.native_handle(), serverContext->native_handle()) == serverContext->native_handle())
-						{
-							return SSL_TLSEXT_ERR_OK;
-						}
-					}					
+						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - \
+							Got error:\n\t");
+						errMsg.append(error.message());
+						ReportError(errMsg);
+					}
 
-					return SSL_TLSEXT_ERR_ALERT_FATAL;
+					Kill();
 				}
+
+				template<>
+				void TlsCapableHttpBridge<network::TcpSocket>::OnResolve(const boost::system::error_code& error, boost::asio::ip::tcp::resolver::iterator endpointIterator)
+				{
+					if (!error)
+					{
+
+						SetStreamTimeout(5000);
+
+						auto ep = *endpointIterator;
+
+						// Perhaps client requested a port other than 80. We should have already parsed
+						// this before initiating the resolve of the upstream host, so that this information
+						// was not polluting the hostname during resolution.
+						//
+						// RFC2616 Section 14.23 demands that non-port-80 requests include the port in with
+						// the host name, so this should be reliable. If m_upstreamHostPort is zero, the 
+						// default value, then we leave the configured port alone, because we resolved this
+						// using "http" as the service parameter on the resolver. The service parameter consults
+						// something unknown to me (I vaguely remember the details) which has a list of port
+						// numbers associated with specific services. So by default, every iterator result
+						// here should be preconfigured to port 80.
+						if (m_upstreamHostPort != 0 && ep.endpoint().port() != m_upstreamHostPort)
+						{
+							ep.endpoint().port(m_upstreamHostPort);
+						}
+
+						// XXX TODO. The correct thing to do here is keep the iterator somehow, then in
+						// the completion handler, in the event of a connection related error, keep
+						// incrementing through the iterator until all possible endpoints for the
+						// requested host have been exhausted. Doing things this way means that we
+						// only take a crack at connecting to the first A record entry resolved, then
+						// quit if that first record does not work.
+
+						m_upstreamSocket.async_connect(
+							ep, 
+							m_upstreamStrand.wrap(
+								std::bind(
+									&TlsCapableHttpBridge::OnUpstreamConnect, 
+									shared_from_this(), 
+									boost::asio::placeholders::error
+									)
+								)
+							);
+
+						return;
+					}
+					else
+					{
+						std::string errMsg(u8"In TlsCapableHttpBridge<network::TcpSocket>::OnResolve(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator) - \
+							Got error:\n\t");
+						errMsg.append(error.message());
+						ReportError(errMsg);
+					}
+
+					Kill();
+				}
+
+				template<>
+				void TlsCapableHttpBridge<network::TlsSocket>::OnResolve(const boost::system::error_code& error, boost::asio::ip::tcp::resolver::iterator endpointIterator)
+				{
+					if (!error)
+					{
+
+						SetStreamTimeout(5000);
+
+						SSL_set_tlsext_host_name(m_upstreamSocket.native_handle(), m_upstreamHost.c_str());
+
+						// XXX TODO. The correct thing to do here is keep the iterator somehow, then in
+						// the completion handler, in the event of a connection related error, keep
+						// incrementing through the iterator until all possible endpoints for the
+						// requested host have been exhausted. Doing things this way means that we
+						// only take a crack at connecting to the first A record entry resolved, then
+						// quit if that first record does not work.
+
+						// Note also that unlike the TCP version of this handler, we do not check the
+						// upstream host member for a port number. This is because, AFAIK, there is no
+						// such data in the SNI extension, the place where we get the hostname from.
+						//
+						// This could become a problem only depending on our implementation in the 
+						// packet diversion system. If we intercept TLS packets that are not destined
+						// for 443 and send them to this proxy, then we'll break the connection entirely.
+						// Care therefore needs to be taken, or a more robust system needs to be put in
+						// place starting at the diversion level.
+
+						m_upstreamSocket.lowest_layer().async_connect(
+							*endpointIterator,
+							m_upstreamStrand.wrap(
+								std::bind(
+									&TlsCapableHttpBridge::OnUpstreamConnect, 
+									shared_from_this(), 
+									boost::asio::placeholders::error
+									)
+								)
+							);
+
+						return;
+					}
+					else
+					{
+						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnResolve(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator) - \
+							Got error:\n\t");
+						errMsg.append(error.message());
+						ReportError(errMsg);
+					}
+
+					Kill();
+				}				
 
 			} /* namespace secure */
 		} /* namespace mitm */

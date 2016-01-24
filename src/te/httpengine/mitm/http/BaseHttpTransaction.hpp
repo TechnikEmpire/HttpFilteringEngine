@@ -110,7 +110,7 @@ namespace te
 				/// fashion, and maintaining a correct state at the same time. This balance is
 				/// unstable with some provided methods, but heavy warnings abound.
 				/// </summary>
-				class BaseHttpTransaction : public util::cb::EventReporter<const char*, const uint8_t>
+				class BaseHttpTransaction : public util::cb::EventReporter
 				{
 				public:
 
@@ -376,6 +376,36 @@ namespace te
 					/// The transaction payload, aka the body. May or may not be compressed. 
 					/// </returns>
 					const std::vector<char>& GetPayload() const;
+
+					/// <summary>
+					/// Moves the supplied payload to the internal transaction payload buffer. Sets
+					/// the state of the transaction to complete, removes all headers about
+					/// compression, content length or transfer encoding, then injects a new
+					/// content-length header with the size of the supplied payload.
+					/// 
+					/// As such, this method assumes that the supplied payload is uncompressed. If
+					/// compression is required, pass uncompressed data here, then call the
+					/// ::CompressDeflate() or ::CompressGzip() members.
+					/// </summary>
+					/// <param name="payload">
+					/// The payload to be moved to the internal payload buffer.
+					/// </param>
+					void SetPayload(std::vector<char>&& payload);
+
+					/// <summary>
+					/// Copies the supplied payload to the internal transaction payload buffer. Sets
+					/// the state of the transaction to complete, removes all headers about
+					/// compression, content length or transfer encoding, then injects a new
+					/// content-length header with the size of the supplied payload.
+					/// 
+					/// As such, this method assumes that the supplied payload is uncompressed. If
+					/// compression is required, pass uncompressed data here, then call the
+					/// ::CompressDeflate() or ::CompressGzip() members.
+					/// </summary>
+					/// <param name="payload">
+					/// The payload to be copied to the internal payload buffer.
+					/// </param>
+					void SetPayload(const std::vector<char>& payload);
 
 					/// <summary>
 					/// Check to see if the transaction payload has been fully received. This will
@@ -656,9 +686,20 @@ namespace te
 					static const boost::string_ref ContentTypeJavascript;
 
 					/// <summary>
+					/// Increments by which the payload buffer will be resized, also the initial
+					/// reserved size.
+					/// </summary>
+					static constexpr uint32_t PayloadBufferReadSize = 131072;
+
+					/// <summary>
+					/// Maximum size that the payload buffer can be resized to.
+					/// </summary>
+					static constexpr uint32_t MaxPayloadResize = 10000000;
+
+					/// <summary>
 					/// The http_parser object that gets stuck with doing all of the hard work.
 					/// </summary>
-					http_parser* m_httpParser;
+					http_parser* m_httpParser = nullptr;
 
 					/// <summary>
 					/// Configuration settings for the http_parser* member m_httpParser.
@@ -725,7 +766,7 @@ namespace te
 					/// Flag used to indicate if the headers for the transaction have been fully
 					/// read from the client/remote peer.
 					/// </summary>
-					bool m_headersComplete;
+					bool m_headersComplete = false;
 
 					/// <summary>
 					/// Used internally only to determine if the headers have been written outbound
@@ -734,13 +775,13 @@ namespace te
 					/// false and the payload is requested for writing, the headers must be
 					/// prepended to the payload, of course.
 					/// </summary>
-					bool m_headersSent;
+					bool m_headersSent = false;
 
 					/// <summary>
 					/// Flag used to indicate if the payload for the transaction has been fully
 					/// read from the client/remote peer.
 					/// </summary>
-					bool m_payloadComplete;
+					bool m_payloadComplete = false;
 
 					/// <summary>
 					/// Flag used to determine if the transaction should be blocked. Any non-zero
@@ -748,7 +789,14 @@ namespace te
 					/// indicates that the request should indeed be blocked, which zero indicates
 					/// that the transaction should be blocked.
 					/// </summary>
-					uint8_t m_shouldBlock;
+					uint8_t m_shouldBlock = 0;
+
+					/// <summary>
+					/// Flag used to determine if the entire transaction headers and payload (body)
+					/// should be read into memory before allowing the data to be moved outbound
+					/// from the proxy. This is necessary for things such as deep content analysis.
+					/// </summary>
+					bool m_consumeAllBeforeSending = false;
 
 					/// <summary>
 					/// Decompress the payload contents, expecting gzip format.
@@ -789,14 +837,7 @@ namespace te
 					/// <returns>
 					/// True if the conversion succeeded, false otherwise. 
 					/// </returns>
-					const bool ConvertPayloadFromChunkedToFixedLength();
-
-					/// <summary>
-					/// Flag used to determine if the entire transaction headers and payload (body)
-					/// should be read into memory before allowing the data to be moved outbound
-					/// from the proxy. This is necessary for things such as deep content analysis.
-					/// </summary>
-					bool m_consumeAllBeforeSending;
+					const bool ConvertPayloadFromChunkedToFixedLength();					
 
 					/// <summary>
 					/// Called when the http_parser has begun reading a new transaction.

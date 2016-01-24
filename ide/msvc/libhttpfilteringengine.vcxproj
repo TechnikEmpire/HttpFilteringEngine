@@ -445,11 +445,12 @@
     <ClInclude Include="..\..\src\te\httpengine\filtering\http\CategorizedCssSelector.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpBaseFilter.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpExceptionFilter.hpp" />
+    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpFilterOptions.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpInclusionFilter.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpFilteringEngine.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\filtering\options\HttpFilteringOptions.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\filtering\options\ProgramWideOptions.hpp" />
-    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineCtl.hpp" />
+    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineCtl.h" />
     <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\BaseDiverter.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\http\BaseHttpTransaction.hpp" />
@@ -460,6 +461,7 @@
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpListener.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\WindowsInMemoryCertificateStore.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\network\SocketTypes.hpp" />
+    <ClInclude Include="..\..\src\te\httpengine\util\cb\EngineCallbackTypes.h" />
     <ClInclude Include="..\..\src\te\httpengine\util\cb\EventReporter.hpp" />
     <ClInclude Include="..\..\src\te\util\http\KnownHttpHeaders.hpp" />
     <ClInclude Include="..\..\src\te\util\string\StringRefUtil.hpp" />

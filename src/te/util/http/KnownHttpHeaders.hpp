@@ -69,7 +69,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>					
-					const std::string AIM = std::string(u8"A-IM");
+					const std::string AIM{ u8"A-IM" };
 
 					/// <summary>
 					/// Header Name: Accept
@@ -77,7 +77,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 5.3.2]
 					/// </summary>
-					const std::string Accept = std::string(u8"Accept");
+					const std::string Accept{ u8"Accept" };
 
 					/// <summary>
 					/// Header Name: Accept-Additions
@@ -85,7 +85,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string AcceptAdditions = std::string(u8"Accept-Additions");
+					const std::string AcceptAdditions{ u8"Accept-Additions" };
 
 					/// <summary>
 					/// Header Name: Accept-Charset
@@ -93,7 +93,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 5.3.3]
 					/// </summary>
-					const std::string AcceptCharset = std::string(u8"Accept-Charset");
+					const std::string AcceptCharset{ u8"Accept-Charset" };
 
 					/// <summary>
 					/// Header Name: Accept-Datetime
@@ -101,7 +101,7 @@ namespace te
 					/// Status: Informational
 					/// Defined In: [RFC7089]
 					/// </summary>
-					const std::string AcceptDatetime = std::string(u8"Accept-Datetime");
+					const std::string AcceptDatetime{ u8"Accept-Datetime" };
 
 					/// <summary>
 					/// Header Name: Accept-Encoding
@@ -109,7 +109,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 5.3.4][RFC-ietf-httpbis-cice-03, Section 3]
 					/// </summary>
-					const std::string AcceptEncoding = std::string(u8"Accept-Encoding");
+					const std::string AcceptEncoding{ u8"Accept-Encoding" };
 
 					/// <summary>
 					/// Header Name: Accept-Features
@@ -117,7 +117,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string AcceptFeatures = std::string(u8"Accept-Features");
+					const std::string AcceptFeatures{ u8"Accept-Features" };
 
 					/// <summary>
 					/// Header Name: Accept-Language
@@ -125,7 +125,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 5.3.5]
 					/// </summary>
-					const std::string AcceptLanguage = std::string(u8"Accept-Language");
+					const std::string AcceptLanguage{ u8"Accept-Language" };
 
 					/// <summary>
 					/// Header Name: Accept-Patch
@@ -133,7 +133,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC5789]
 					/// </summary>
-					const std::string AcceptPatch = std::string(u8"Accept-Patch");
+					const std::string AcceptPatch{ u8"Accept-Patch" };
 
 					/// <summary>
 					/// Header Name: Accept-Ranges
@@ -141,7 +141,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7233, Section 2.3]
 					/// </summary>
-					const std::string AcceptRanges = std::string(u8"Accept-Ranges");
+					const std::string AcceptRanges{ u8"Accept-Ranges" };
 
 					/// <summary>
 					/// Header Name: Access-Control
@@ -149,7 +149,7 @@ namespace te
 					/// Status: deprecated
 					/// Defined In: [W3C Web Application Formats Working Group]
 					/// </summary>
-					const std::string AccessControl = std::string(u8"Access-Control");
+					const std::string AccessControl{ u8"Access-Control" };
 
 					/// <summary>
 					/// Header Name: Access-Control-Allow-Credentials
@@ -157,7 +157,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [W3C Web Application Formats Working Group]
 					/// </summary>
-					const std::string AccessControlAllowCredentials = std::string(u8"Access-Control-Allow-Credentials");
+					const std::string AccessControlAllowCredentials{ u8"Access-Control-Allow-Credentials" };
 
 					/// <summary>
 					/// Header Name: Access-Control-Allow-Headers
@@ -165,7 +165,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [W3C Web Application Formats Working Group]
 					/// </summary>
-					const std::string AccessControlAllowHeaders = std::string(u8"Access-Control-Allow-Headers");
+					const std::string AccessControlAllowHeaders{ u8"Access-Control-Allow-Headers" };
 
 					/// <summary>
 					/// Header Name: Access-Control-Allow-Methods
@@ -173,7 +173,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [W3C Web Application Formats Working Group]
 					/// </summary>
-					const std::string AccessControlAllowMethods = std::string(u8"Access-Control-Allow-Methods");
+					const std::string AccessControlAllowMethods{ u8"Access-Control-Allow-Methods" };
 
 					/// <summary>
 					/// Header Name: Access-Control-Allow-Origin
@@ -181,7 +181,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [W3C Web Application Formats Working Group]
 					/// </summary>
-					const std::string AccessControlAllowOrigin = std::string(u8"Access-Control-Allow-Origin");
+					const std::string AccessControlAllowOrigin{ u8"Access-Control-Allow-Origin" };
 
 					/// <summary>
 					/// Header Name: Access-Control-Max-Age
@@ -189,7 +189,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [W3C Web Application Formats Working Group]
 					/// </summary>
-					const std::string AccessControlMaxAge = std::string(u8"Access-Control-Max-Age");
+					const std::string AccessControlMaxAge{ u8"Access-Control-Max-Age" };
 
 					/// <summary>
 					/// Header Name: Access-Control-Request-Headers
@@ -197,7 +197,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [W3C Web Application Formats Working Group]
 					/// </summary>
-					const std::string AccessControlRequestHeaders = std::string(u8"Access-Control-Request-Headers");
+					const std::string AccessControlRequestHeaders{ u8"Access-Control-Request-Headers" };
 
 					/// <summary>
 					/// Header Name: Access-Control-Request-Method
@@ -205,7 +205,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [W3C Web Application Formats Working Group]
 					/// </summary>
-					const std::string AccessControlRequestMethod = std::string(u8"Access-Control-Request-Method");
+					const std::string AccessControlRequestMethod{ u8"Access-Control-Request-Method" };
 
 					/// <summary>
 					/// Header Name: Age
@@ -213,7 +213,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7234, Section 5.1]
 					/// </summary>
-					const std::string Age = std::string(u8"Age");
+					const std::string Age{ u8"Age" };
 
 					/// <summary>
 					/// Header Name: Allow
@@ -221,7 +221,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 7.4.1]
 					/// </summary>
-					const std::string Allow = std::string(u8"Allow");
+					const std::string Allow{ u8"Allow" };
 
 					/// <summary>
 					/// Header Name: ALPN
@@ -229,7 +229,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7639, Section 2]
 					/// </summary>
-					const std::string ALPN = std::string(u8"ALPN");
+					const std::string ALPN{ u8"ALPN" };
 
 					/// <summary>
 					/// Header Name: Alternates
@@ -237,7 +237,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Alternates = std::string(u8"Alternates");
+					const std::string Alternates{ u8"Alternates" };
 
 					/// <summary>
 					/// Header Name: Apply-To-Redirect-Ref
@@ -245,7 +245,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4437]
 					/// </summary>
-					const std::string ApplyToRedirectRef = std::string(u8"Apply-To-Redirect-Ref");
+					const std::string ApplyToRedirectRef{ u8"Apply-To-Redirect-Ref" };
 
 					/// <summary>
 					/// Header Name: Authentication-Info
@@ -253,7 +253,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7615, Section 3]
 					/// </summary>
-					const std::string AuthenticationInfo = std::string(u8"Authentication-Info");
+					const std::string AuthenticationInfo{ u8"Authentication-Info" };
 
 					/// <summary>
 					/// Header Name: Authorization
@@ -261,7 +261,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7235, Section 4.2]
 					/// </summary>
-					const std::string Authorization = std::string(u8"Authorization");
+					const std::string Authorization{ u8"Authorization" };
 
 					/// <summary>
 					/// Header Name: Base
@@ -269,7 +269,7 @@ namespace te
 					/// Status: obsoleted
 					/// Defined In: [RFC1808][RFC2068 Section 14.11]
 					/// </summary>
-					const std::string Base = std::string(u8"Base");
+					const std::string Base{ u8"Base" };
 
 					/// <summary>
 					/// Header Name: Body
@@ -277,7 +277,7 @@ namespace te
 					/// Status: reserved
 					/// Defined In: [RFC6068]
 					/// </summary>
-					const std::string Body = std::string(u8"Body");
+					const std::string Body{ u8"Body" };
 
 					/// <summary>
 					/// Header Name: C-Ext
@@ -285,7 +285,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string CExt = std::string(u8"C-Ext");
+					const std::string CExt{ u8"C-Ext" };
 
 					/// <summary>
 					/// Header Name: C-Man
@@ -293,7 +293,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string CMan = std::string(u8"C-Man");
+					const std::string CMan{ u8"C-Man" };
 
 					/// <summary>
 					/// Header Name: C-Opt
@@ -301,7 +301,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string COpt = std::string(u8"C-Opt");
+					const std::string COpt{ u8"C-Opt" };
 
 					/// <summary>
 					/// Header Name: C-PEP
@@ -309,7 +309,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string CPEP = std::string(u8"C-PEP");
+					const std::string CPEP{ u8"C-PEP" };
 
 					/// <summary>
 					/// Header Name: C-PEP-Info
@@ -317,7 +317,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string CPEPInfo = std::string(u8"C-PEP-Info");
+					const std::string CPEPInfo{ u8"C-PEP-Info" };
 
 					/// <summary>
 					/// Header Name: Cache-Control
@@ -325,7 +325,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7234, Section 5.2]
 					/// </summary>
-					const std::string CacheControl = std::string(u8"Cache-Control");
+					const std::string CacheControl{ u8"Cache-Control" };
 
 					/// <summary>
 					/// Header Name: CalDAV-Timezones
@@ -333,7 +333,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC-ietf-tzdist-caldav-timezone-ref-05, Section 7.1]
 					/// </summary>
-					const std::string CalDAVTimezones = std::string(u8"CalDAV-Timezones");
+					const std::string CalDAVTimezones{ u8"CalDAV-Timezones" };
 
 					/// <summary>
 					/// Header Name: Close
@@ -341,7 +341,7 @@ namespace te
 					/// Status: reserved
 					/// Defined In: [RFC7230, Section 8.1]
 					/// </summary>
-					const std::string Close = std::string(u8"Close");
+					const std::string Close{ u8"Close" };
 
 					/// <summary>
 					/// Header Name: Compliance
@@ -349,7 +349,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Compliance = std::string(u8"Compliance");
+					const std::string Compliance{ u8"Compliance" };
 
 					/// <summary>
 					/// Header Name: Connection
@@ -357,7 +357,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7230, Section 6.1]
 					/// </summary>
-					const std::string Connection = std::string(u8"Connection");
+					const std::string Connection{ u8"Connection" };
 
 					/// <summary>
 					/// Header Name: Content-Alternative
@@ -365,7 +365,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4021]
 					/// </summary>
-					const std::string ContentAlternative = std::string(u8"Content-Alternative");
+					const std::string ContentAlternative{ u8"Content-Alternative" };
 
 					/// <summary>
 					/// Header Name: Content-Base
@@ -373,7 +373,7 @@ namespace te
 					/// Status: obsoleted
 					/// Defined In: [RFC2068][RFC2616]
 					/// </summary>
-					const std::string ContentBase = std::string(u8"Content-Base");
+					const std::string ContentBase{ u8"Content-Base" };
 
 					/// <summary>
 					/// Header Name: Content-Description
@@ -381,7 +381,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4021]
 					/// </summary>
-					const std::string ContentDescription = std::string(u8"Content-Description");
+					const std::string ContentDescription{ u8"Content-Description" };
 
 					/// <summary>
 					/// Header Name: Content-Disposition
@@ -389,7 +389,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC6266]
 					/// </summary>
-					const std::string ContentDisposition = std::string(u8"Content-Disposition");
+					const std::string ContentDisposition{ u8"Content-Disposition" };
 
 					/// <summary>
 					/// Header Name: Content-Duration
@@ -397,7 +397,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4021]
 					/// </summary>
-					const std::string ContentDuration = std::string(u8"Content-Duration");
+					const std::string ContentDuration{ u8"Content-Duration" };
 
 					/// <summary>
 					/// Header Name: Content-Encoding
@@ -405,7 +405,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 3.1.2.2]
 					/// </summary>
-					const std::string ContentEncoding = std::string(u8"Content-Encoding");
+					const std::string ContentEncoding{ u8"Content-Encoding" };
 
 					/// <summary>
 					/// Header Name: Content-features
@@ -413,7 +413,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4021]
 					/// </summary>
-					const std::string Contentfeatures = std::string(u8"Content-features");
+					const std::string Contentfeatures{ u8"Content-features" };
 
 					/// <summary>
 					/// Header Name: Content-ID
@@ -421,7 +421,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ContentID = std::string(u8"Content-ID");
+					const std::string ContentID{ u8"Content-ID" };
 
 					/// <summary>
 					/// Header Name: Content-Language
@@ -429,7 +429,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 3.1.3.2]
 					/// </summary>
-					const std::string ContentLanguage = std::string(u8"Content-Language");
+					const std::string ContentLanguage{ u8"Content-Language" };
 
 					/// <summary>
 					/// Header Name: Content-Length
@@ -437,7 +437,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7230, Section 3.3.2]
 					/// </summary>
-					const std::string ContentLength = std::string(u8"Content-Length");
+					const std::string ContentLength{ u8"Content-Length" };
 
 					/// <summary>
 					/// Header Name: Content-Location
@@ -445,7 +445,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 3.1.4.2]
 					/// </summary>
-					const std::string ContentLocation = std::string(u8"Content-Location");
+					const std::string ContentLocation{ u8"Content-Location" };
 
 					/// <summary>
 					/// Header Name: Content-MD5
@@ -453,7 +453,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ContentMD5 = std::string(u8"Content-MD5");
+					const std::string ContentMD5{ u8"Content-MD5" };
 
 					/// <summary>
 					/// Header Name: Content-Range
@@ -461,7 +461,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7233, Section 4.2]
 					/// </summary>
-					const std::string ContentRange = std::string(u8"Content-Range");
+					const std::string ContentRange{ u8"Content-Range" };
 
 					/// <summary>
 					/// Header Name: Content-Script-Type
@@ -469,7 +469,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ContentScriptType = std::string(u8"Content-Script-Type");
+					const std::string ContentScriptType{ u8"Content-Script-Type" };
 
 					/// <summary>
 					/// Header Name: Content-Style-Type
@@ -477,7 +477,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ContentStyleType = std::string(u8"Content-Style-Type");
+					const std::string ContentStyleType{ u8"Content-Style-Type" };
 
 					/// <summary>
 					/// Header Name: Content-Transfer-Encoding
@@ -485,7 +485,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ContentTransferEncoding = std::string(u8"Content-Transfer-Encoding");
+					const std::string ContentTransferEncoding{ u8"Content-Transfer-Encoding" };
 
 					/// <summary>
 					/// Header Name: Content-Type
@@ -493,7 +493,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 3.1.1.5]
 					/// </summary>
-					const std::string ContentType = std::string(u8"Content-Type");
+					const std::string ContentType{ u8"Content-Type" };
 
 					/// <summary>
 					/// Header Name: Content-Version
@@ -501,7 +501,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ContentVersion = std::string(u8"Content-Version");
+					const std::string ContentVersion{ u8"Content-Version" };
 
 					/// <summary>
 					/// Header Name: Cookie
@@ -509,7 +509,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC6265]
 					/// </summary>
-					const std::string Cookie = std::string(u8"Cookie");
+					const std::string Cookie{ u8"Cookie" };
 
 					/// <summary>
 					/// Header Name: Cookie2
@@ -517,7 +517,7 @@ namespace te
 					/// Status: obsoleted
 					/// Defined In: [RFC2965][RFC6265]
 					/// </summary>
-					const std::string Cookie2 = std::string(u8"Cookie2");
+					const std::string Cookie2{ u8"Cookie2" };
 
 					/// <summary>
 					/// Header Name: Cost
@@ -525,7 +525,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Cost = std::string(u8"Cost");
+					const std::string Cost{ u8"Cost" };
 
 					/// <summary>
 					/// Header Name: DASL
@@ -533,7 +533,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC5323]
 					/// </summary>
-					const std::string DASL = std::string(u8"DASL");
+					const std::string DASL{ u8"DASL" };
 
 					/// <summary>
 					/// Header Name: Date
@@ -541,7 +541,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 7.1.1.2]
 					/// </summary>
-					const std::string Date = std::string(u8"Date");
+					const std::string Date{ u8"Date" };
 
 					/// <summary>
 					/// Header Name: DAV
@@ -549,7 +549,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC4918]
 					/// </summary>
-					const std::string DAV = std::string(u8"DAV");
+					const std::string DAV{ u8"DAV" };
 
 					/// <summary>
 					/// Header Name: Default-Style
@@ -557,7 +557,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string DefaultStyle = std::string(u8"Default-Style");
+					const std::string DefaultStyle{ u8"Default-Style" };
 
 					/// <summary>
 					/// Header Name: Delta-Base
@@ -565,7 +565,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string DeltaBase = std::string(u8"Delta-Base");
+					const std::string DeltaBase{ u8"Delta-Base" };
 
 					/// <summary>
 					/// Header Name: Depth
@@ -573,7 +573,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC4918]
 					/// </summary>
-					const std::string Depth = std::string(u8"Depth");
+					const std::string Depth{ u8"Depth" };
 
 					/// <summary>
 					/// Header Name: Derived-From
@@ -581,7 +581,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string DerivedFrom = std::string(u8"Derived-From");
+					const std::string DerivedFrom{ u8"Derived-From" };
 
 					/// <summary>
 					/// Header Name: Destination
@@ -589,7 +589,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC4918]
 					/// </summary>
-					const std::string Destination = std::string(u8"Destination");
+					const std::string Destination{ u8"Destination" };
 
 					/// <summary>
 					/// Header Name: Differential-ID
@@ -597,7 +597,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string DifferentialID = std::string(u8"Differential-ID");
+					const std::string DifferentialID{ u8"Differential-ID" };
 
 					/// <summary>
 					/// Header Name: Digest
@@ -605,7 +605,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Digest = std::string(u8"Digest");
+					const std::string Digest{ u8"Digest" };
 
 					/// <summary>
 					/// Header Name: EDIINT-Features
@@ -613,7 +613,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC6017]
 					/// </summary>
-					const std::string EDIINTFeatures = std::string(u8"EDIINT-Features");
+					const std::string EDIINTFeatures{ u8"EDIINT-Features" };
 
 					/// <summary>
 					/// Header Name: ETag
@@ -621,7 +621,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7232, Section 2.3]
 					/// </summary>
-					const std::string ETag = std::string(u8"ETag");
+					const std::string ETag{ u8"ETag" };
 
 					/// <summary>
 					/// Header Name: Expect
@@ -629,7 +629,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 5.1.1]
 					/// </summary>
-					const std::string Expect = std::string(u8"Expect");
+					const std::string Expect{ u8"Expect" };
 
 					/// <summary>
 					/// Header Name: Expires
@@ -637,7 +637,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7234, Section 5.3]
 					/// </summary>
-					const std::string Expires = std::string(u8"Expires");
+					const std::string Expires{ u8"Expires" };
 
 					/// <summary>
 					/// Header Name: Ext
@@ -645,7 +645,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Ext = std::string(u8"Ext");
+					const std::string Ext{ u8"Ext" };
 
 					/// <summary>
 					/// Header Name: Forwarded
@@ -653,7 +653,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7239]
 					/// </summary>
-					const std::string Forwarded = std::string(u8"Forwarded");
+					const std::string Forwarded{ u8"Forwarded" };
 
 					/// <summary>
 					/// Header Name: From
@@ -661,7 +661,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 5.5.1]
 					/// </summary>
-					const std::string From = std::string(u8"From");
+					const std::string From{ u8"From" };
 
 					/// <summary>
 					/// Header Name: GetProfile
@@ -669,7 +669,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string GetProfile = std::string(u8"GetProfile");
+					const std::string GetProfile{ u8"GetProfile" };
 
 					/// <summary>
 					/// Header Name: Hobareg
@@ -677,7 +677,7 @@ namespace te
 					/// Status: experimental
 					/// Defined In: [RFC7486, Section 6.1.1]
 					/// </summary>
-					const std::string Hobareg = std::string(u8"Hobareg");
+					const std::string Hobareg{ u8"Hobareg" };
 
 					/// <summary>
 					/// Header Name: Host
@@ -685,7 +685,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7230, Section 5.4]
 					/// </summary>
-					const std::string Host = std::string(u8"Host");
+					const std::string Host{ u8"Host" };
 
 					/// <summary>
 					/// Header Name: HTTP2-Settings
@@ -693,7 +693,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7540, Section 3.2.1]
 					/// </summary>
-					const std::string HTTP2Settings = std::string(u8"HTTP2-Settings");
+					const std::string HTTP2Settings{ u8"HTTP2-Settings" };
 
 					/// <summary>
 					/// Header Name: If
@@ -701,7 +701,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC4918]
 					/// </summary>
-					const std::string If = std::string(u8"If");
+					const std::string If{ u8"If" };
 
 					/// <summary>
 					/// Header Name: If-Match
@@ -709,7 +709,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7232, Section 3.1]
 					/// </summary>
-					const std::string IfMatch = std::string(u8"If-Match");
+					const std::string IfMatch{ u8"If-Match" };
 
 					/// <summary>
 					/// Header Name: If-Modified-Since
@@ -717,7 +717,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7232, Section 3.3]
 					/// </summary>
-					const std::string IfModifiedSince = std::string(u8"If-Modified-Since");
+					const std::string IfModifiedSince{ u8"If-Modified-Since" };
 
 					/// <summary>
 					/// Header Name: If-None-Match
@@ -725,7 +725,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7232, Section 3.2]
 					/// </summary>
-					const std::string IfNoneMatch = std::string(u8"If-None-Match");
+					const std::string IfNoneMatch{ u8"If-None-Match" };
 
 					/// <summary>
 					/// Header Name: If-Range
@@ -733,7 +733,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7233, Section 3.2]
 					/// </summary>
-					const std::string IfRange = std::string(u8"If-Range");
+					const std::string IfRange{ u8"If-Range" };
 
 					/// <summary>
 					/// Header Name: If-Schedule-Tag-Match
@@ -741,7 +741,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC6638]
 					/// </summary>
-					const std::string IfScheduleTagMatch = std::string(u8"If-Schedule-Tag-Match");
+					const std::string IfScheduleTagMatch{ u8"If-Schedule-Tag-Match" };
 
 					/// <summary>
 					/// Header Name: If-Unmodified-Since
@@ -749,7 +749,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7232, Section 3.4]
 					/// </summary>
-					const std::string IfUnmodifiedSince = std::string(u8"If-Unmodified-Since");
+					const std::string IfUnmodifiedSince{ u8"If-Unmodified-Since" };
 
 					/// <summary>
 					/// Header Name: IM
@@ -757,7 +757,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string IM = std::string(u8"IM");
+					const std::string IM{ u8"IM" };
 
 					/// <summary>
 					/// Header Name: Keep-Alive
@@ -765,7 +765,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string KeepAlive = std::string(u8"Keep-Alive");
+					const std::string KeepAlive{ u8"Keep-Alive" };
 
 					/// <summary>
 					/// Header Name: Label
@@ -773,7 +773,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Label = std::string(u8"Label");
+					const std::string Label{ u8"Label" };
 
 					/// <summary>
 					/// Header Name: Last-Modified
@@ -781,7 +781,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7232, Section 2.2]
 					/// </summary>
-					const std::string LastModified = std::string(u8"Last-Modified");
+					const std::string LastModified{ u8"Last-Modified" };
 
 					/// <summary>
 					/// Header Name: Link
@@ -789,7 +789,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC5988]
 					/// </summary>
-					const std::string Link = std::string(u8"Link");
+					const std::string Link{ u8"Link" };
 
 					/// <summary>
 					/// Header Name: Location
@@ -797,7 +797,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 7.1.2]
 					/// </summary>
-					const std::string Location = std::string(u8"Location");
+					const std::string Location{ u8"Location" };
 
 					/// <summary>
 					/// Header Name: Lock-Token
@@ -805,7 +805,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC4918]
 					/// </summary>
-					const std::string LockToken = std::string(u8"Lock-Token");
+					const std::string LockToken{ u8"Lock-Token" };
 
 					/// <summary>
 					/// Header Name: Man
@@ -813,7 +813,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Man = std::string(u8"Man");
+					const std::string Man{ u8"Man" };
 
 					/// <summary>
 					/// Header Name: Max-Forwards
@@ -821,7 +821,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 5.1.2]
 					/// </summary>
-					const std::string MaxForwards = std::string(u8"Max-Forwards");
+					const std::string MaxForwards{ u8"Max-Forwards" };
 
 					/// <summary>
 					/// Header Name: Memento-Datetime
@@ -829,7 +829,7 @@ namespace te
 					/// Status: Informational
 					/// Defined In: [RFC7089]
 					/// </summary>
-					const std::string MementoDatetime = std::string(u8"Memento-Datetime");
+					const std::string MementoDatetime{ u8"Memento-Datetime" };
 
 					/// <summary>
 					/// Header Name: Message-ID
@@ -837,7 +837,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string MessageID = std::string(u8"Message-ID");
+					const std::string MessageID{ u8"Message-ID" };
 
 					/// <summary>
 					/// Header Name: Meter
@@ -845,7 +845,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Meter = std::string(u8"Meter");
+					const std::string Meter{ u8"Meter" };
 
 					/// <summary>
 					/// Header Name: Method-Check
@@ -853,7 +853,7 @@ namespace te
 					/// Status: deprecated
 					/// Defined In: [W3C Web Application Formats Working Group]
 					/// </summary>
-					const std::string MethodCheck = std::string(u8"Method-Check");
+					const std::string MethodCheck{ u8"Method-Check" };
 
 					/// <summary>
 					/// Header Name: Method-Check-Expires
@@ -861,7 +861,7 @@ namespace te
 					/// Status: deprecated
 					/// Defined In: [W3C Web Application Formats Working Group]
 					/// </summary>
-					const std::string MethodCheckExpires = std::string(u8"Method-Check-Expires");
+					const std::string MethodCheckExpires{ u8"Method-Check-Expires" };
 
 					/// <summary>
 					/// Header Name: MIME-Version
@@ -869,7 +869,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Appendix A.1]
 					/// </summary>
-					const std::string MIMEVersion = std::string(u8"MIME-Version");
+					const std::string MIMEVersion{ u8"MIME-Version" };
 
 					/// <summary>
 					/// Header Name: Negotiate
@@ -877,7 +877,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Negotiate = std::string(u8"Negotiate");
+					const std::string Negotiate{ u8"Negotiate" };
 
 					/// <summary>
 					/// Header Name: Non-Compliance
@@ -885,7 +885,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string NonCompliance = std::string(u8"Non-Compliance");
+					const std::string NonCompliance{ u8"Non-Compliance" };
 
 					/// <summary>
 					/// Header Name: Opt
@@ -893,7 +893,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Opt = std::string(u8"Opt");
+					const std::string Opt{ u8"Opt" };
 
 					/// <summary>
 					/// Header Name: Optional
@@ -901,7 +901,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Optional = std::string(u8"Optional");
+					const std::string Optional{ u8"Optional" };
 
 					/// <summary>
 					/// Header Name: Ordering-Type
@@ -909,7 +909,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string OrderingType = std::string(u8"Ordering-Type");
+					const std::string OrderingType{ u8"Ordering-Type" };
 
 					/// <summary>
 					/// Header Name: Origin
@@ -917,7 +917,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC6454]
 					/// </summary>
-					const std::string Origin = std::string(u8"Origin");
+					const std::string Origin{ u8"Origin" };
 
 					/// <summary>
 					/// Header Name: Overwrite
@@ -925,7 +925,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC4918]
 					/// </summary>
-					const std::string Overwrite = std::string(u8"Overwrite");
+					const std::string Overwrite{ u8"Overwrite" };
 
 					/// <summary>
 					/// Header Name: P3P
@@ -933,7 +933,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string P3P = std::string(u8"P3P");
+					const std::string P3P{ u8"P3P" };
 
 					/// <summary>
 					/// Header Name: PEP
@@ -941,7 +941,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string PEP = std::string(u8"PEP");
+					const std::string PEP{ u8"PEP" };
 
 					/// <summary>
 					/// Header Name: Pep-Info
@@ -949,7 +949,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string PepInfo = std::string(u8"Pep-Info");
+					const std::string PepInfo{ u8"Pep-Info" };
 
 					/// <summary>
 					/// Header Name: PICS-Label
@@ -957,7 +957,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string PICSLabel = std::string(u8"PICS-Label");
+					const std::string PICSLabel{ u8"PICS-Label" };
 
 					/// <summary>
 					/// Header Name: Position
@@ -965,7 +965,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Position = std::string(u8"Position");
+					const std::string Position{ u8"Position" };
 
 					/// <summary>
 					/// Header Name: Pragma
@@ -973,7 +973,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7234, Section 5.4]
 					/// </summary>
-					const std::string Pragma = std::string(u8"Pragma");
+					const std::string Pragma{ u8"Pragma" };
 
 					/// <summary>
 					/// Header Name: Prefer
@@ -981,7 +981,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7240]
 					/// </summary>
-					const std::string Prefer = std::string(u8"Prefer");
+					const std::string Prefer{ u8"Prefer" };
 
 					/// <summary>
 					/// Header Name: Preference-Applied
@@ -989,7 +989,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7240]
 					/// </summary>
-					const std::string PreferenceApplied = std::string(u8"Preference-Applied");
+					const std::string PreferenceApplied{ u8"Preference-Applied" };
 
 					/// <summary>
 					/// Header Name: ProfileObject
@@ -997,7 +997,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ProfileObject = std::string(u8"ProfileObject");
+					const std::string ProfileObject{ u8"ProfileObject" };
 
 					/// <summary>
 					/// Header Name: Protocol
@@ -1005,7 +1005,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Protocol = std::string(u8"Protocol");
+					const std::string Protocol{ u8"Protocol" };
 
 					/// <summary>
 					/// Header Name: Protocol-Info
@@ -1013,7 +1013,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ProtocolInfo = std::string(u8"Protocol-Info");
+					const std::string ProtocolInfo{ u8"Protocol-Info" };
 
 					/// <summary>
 					/// Header Name: Protocol-Query
@@ -1021,7 +1021,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ProtocolQuery = std::string(u8"Protocol-Query");
+					const std::string ProtocolQuery{ u8"Protocol-Query" };
 
 					/// <summary>
 					/// Header Name: Protocol-Request
@@ -1029,7 +1029,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ProtocolRequest = std::string(u8"Protocol-Request");
+					const std::string ProtocolRequest{ u8"Protocol-Request" };
 
 					/// <summary>
 					/// Header Name: Proxy-Authenticate
@@ -1037,7 +1037,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7235, Section 4.3]
 					/// </summary>
-					const std::string ProxyAuthenticate = std::string(u8"Proxy-Authenticate");
+					const std::string ProxyAuthenticate{ u8"Proxy-Authenticate" };
 
 					/// <summary>
 					/// Header Name: Proxy-Authentication-Info
@@ -1045,7 +1045,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7615, Section 4]
 					/// </summary>
-					const std::string ProxyAuthenticationInfo = std::string(u8"Proxy-Authentication-Info");
+					const std::string ProxyAuthenticationInfo{ u8"Proxy-Authentication-Info" };
 
 					/// <summary>
 					/// Header Name: Proxy-Authorization
@@ -1053,7 +1053,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7235, Section 4.4]
 					/// </summary>
-					const std::string ProxyAuthorization = std::string(u8"Proxy-Authorization");
+					const std::string ProxyAuthorization{ u8"Proxy-Authorization" };
 
 					/// <summary>
 					/// Header Name: Proxy-Features
@@ -1061,7 +1061,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ProxyFeatures = std::string(u8"Proxy-Features");
+					const std::string ProxyFeatures{ u8"Proxy-Features" };
 
 					/// <summary>
 					/// Header Name: Proxy-Instruction
@@ -1069,7 +1069,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ProxyInstruction = std::string(u8"Proxy-Instruction");
+					const std::string ProxyInstruction{ u8"Proxy-Instruction" };
 
 					/// <summary>
 					/// Header Name: Public
@@ -1077,7 +1077,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Public = std::string(u8"Public");
+					const std::string Public{ u8"Public" };
 
 					/// <summary>
 					/// Header Name: Public-Key-Pins
@@ -1085,7 +1085,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7469]
 					/// </summary>
-					const std::string PublicKeyPins = std::string(u8"Public-Key-Pins");
+					const std::string PublicKeyPins{ u8"Public-Key-Pins" };
 
 					/// <summary>
 					/// Header Name: Public-Key-Pins-Report-Only
@@ -1093,7 +1093,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7469]
 					/// </summary>
-					const std::string PublicKeyPinsReportOnly = std::string(u8"Public-Key-Pins-Report-Only");
+					const std::string PublicKeyPinsReportOnly{ u8"Public-Key-Pins-Report-Only" };
 
 					/// <summary>
 					/// Header Name: Range
@@ -1101,7 +1101,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7233, Section 3.1]
 					/// </summary>
-					const std::string Range = std::string(u8"Range");
+					const std::string Range{ u8"Range" };
 
 					/// <summary>
 					/// Header Name: Redirect-Ref
@@ -1109,7 +1109,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4437]
 					/// </summary>
-					const std::string RedirectRef = std::string(u8"Redirect-Ref");
+					const std::string RedirectRef{ u8"Redirect-Ref" };
 
 					/// <summary>
 					/// Header Name: Referer
@@ -1117,7 +1117,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 5.5.2]
 					/// </summary>
-					const std::string Referer = std::string(u8"Referer");
+					const std::string Referer{ u8"Referer" };
 
 					/// <summary>
 					/// Header Name: Referer-Root
@@ -1125,7 +1125,7 @@ namespace te
 					/// Status: deprecated
 					/// Defined In: [W3C Web Application Formats Working Group]
 					/// </summary>
-					const std::string RefererRoot = std::string(u8"Referer-Root");
+					const std::string RefererRoot{ u8"Referer-Root" };
 
 					/// <summary>
 					/// Header Name: Resolution-Hint
@@ -1133,7 +1133,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ResolutionHint = std::string(u8"Resolution-Hint");
+					const std::string ResolutionHint{ u8"Resolution-Hint" };
 
 					/// <summary>
 					/// Header Name: Resolver-Location
@@ -1141,7 +1141,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string ResolverLocation = std::string(u8"Resolver-Location");
+					const std::string ResolverLocation{ u8"Resolver-Location" };
 
 					/// <summary>
 					/// Header Name: Retry-After
@@ -1149,7 +1149,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 7.1.3]
 					/// </summary>
-					const std::string RetryAfter = std::string(u8"Retry-After");
+					const std::string RetryAfter{ u8"Retry-After" };
 
 					/// <summary>
 					/// Header Name: Safe
@@ -1157,7 +1157,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Safe = std::string(u8"Safe");
+					const std::string Safe{ u8"Safe" };
 
 					/// <summary>
 					/// Header Name: Schedule-Reply
@@ -1165,7 +1165,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC6638]
 					/// </summary>
-					const std::string ScheduleReply = std::string(u8"Schedule-Reply");
+					const std::string ScheduleReply{ u8"Schedule-Reply" };
 
 					/// <summary>
 					/// Header Name: Schedule-Tag
@@ -1173,7 +1173,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC6638]
 					/// </summary>
-					const std::string ScheduleTag = std::string(u8"Schedule-Tag");
+					const std::string ScheduleTag{ u8"Schedule-Tag" };
 
 					/// <summary>
 					/// Header Name: Sec-WebSocket-Accept
@@ -1181,7 +1181,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC6455]
 					/// </summary>
-					const std::string SecWebSocketAccept = std::string(u8"Sec-WebSocket-Accept");
+					const std::string SecWebSocketAccept{ u8"Sec-WebSocket-Accept" };
 
 					/// <summary>
 					/// Header Name: Sec-WebSocket-Extensions
@@ -1189,7 +1189,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC6455]
 					/// </summary>
-					const std::string SecWebSocketExtensions = std::string(u8"Sec-WebSocket-Extensions");
+					const std::string SecWebSocketExtensions{ u8"Sec-WebSocket-Extensions" };
 
 					/// <summary>
 					/// Header Name: Sec-WebSocket-Key
@@ -1197,7 +1197,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC6455]
 					/// </summary>
-					const std::string SecWebSocketKey = std::string(u8"Sec-WebSocket-Key");
+					const std::string SecWebSocketKey{ u8"Sec-WebSocket-Key" };
 
 					/// <summary>
 					/// Header Name: Sec-WebSocket-Protocol
@@ -1205,7 +1205,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC6455]
 					/// </summary>
-					const std::string SecWebSocketProtocol = std::string(u8"Sec-WebSocket-Protocol");
+					const std::string SecWebSocketProtocol{ u8"Sec-WebSocket-Protocol" };
 
 					/// <summary>
 					/// Header Name: Sec-WebSocket-Version
@@ -1213,7 +1213,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC6455]
 					/// </summary>
-					const std::string SecWebSocketVersion = std::string(u8"Sec-WebSocket-Version");
+					const std::string SecWebSocketVersion{ u8"Sec-WebSocket-Version" };
 
 					/// <summary>
 					/// Header Name: Security-Scheme
@@ -1221,7 +1221,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string SecurityScheme = std::string(u8"Security-Scheme");
+					const std::string SecurityScheme{ u8"Security-Scheme" };
 
 					/// <summary>
 					/// Header Name: Server
@@ -1229,7 +1229,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 7.4.2]
 					/// </summary>
-					const std::string Server = std::string(u8"Server");
+					const std::string Server{ u8"Server" };
 
 					/// <summary>
 					/// Header Name: Set-Cookie
@@ -1237,7 +1237,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC6265]
 					/// </summary>
-					const std::string SetCookie = std::string(u8"Set-Cookie");
+					const std::string SetCookie{ u8"Set-Cookie" };
 
 					/// <summary>
 					/// Header Name: Set-Cookie2
@@ -1245,7 +1245,7 @@ namespace te
 					/// Status: obsoleted
 					/// Defined In: [RFC2965][RFC6265]
 					/// </summary>
-					const std::string SetCookie2 = std::string(u8"Set-Cookie2");
+					const std::string SetCookie2{ u8"Set-Cookie2" };
 
 					/// <summary>
 					/// Header Name: SetProfile
@@ -1253,7 +1253,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string SetProfile = std::string(u8"SetProfile");
+					const std::string SetProfile{ u8"SetProfile" };
 
 					/// <summary>
 					/// Header Name: SLUG
@@ -1261,7 +1261,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC5023]
 					/// </summary>
-					const std::string SLUG = std::string(u8"SLUG");
+					const std::string SLUG{ u8"SLUG" };
 
 					/// <summary>
 					/// Header Name: SoapAction
@@ -1269,7 +1269,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string SoapAction = std::string(u8"SoapAction");
+					const std::string SoapAction{ u8"SoapAction" };
 
 					/// <summary>
 					/// Header Name: Status-URI
@@ -1277,7 +1277,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string StatusURI = std::string(u8"Status-URI");
+					const std::string StatusURI{ u8"Status-URI" };
 
 					/// <summary>
 					/// Header Name: Strict-Transport-Security
@@ -1285,7 +1285,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC6797]
 					/// </summary>
-					const std::string StrictTransportSecurity = std::string(u8"Strict-Transport-Security");
+					const std::string StrictTransportSecurity{ u8"Strict-Transport-Security" };
 
 					/// <summary>
 					/// Header Name: SubOK
@@ -1293,7 +1293,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string SubOK = std::string(u8"SubOK");
+					const std::string SubOK{ u8"SubOK" };
 
 					/// <summary>
 					/// Header Name: Subst
@@ -1301,7 +1301,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Subst = std::string(u8"Subst");
+					const std::string Subst{ u8"Subst" };
 
 					/// <summary>
 					/// Header Name: Surrogate-Capability
@@ -1309,7 +1309,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string SurrogateCapability = std::string(u8"Surrogate-Capability");
+					const std::string SurrogateCapability{ u8"Surrogate-Capability" };
 
 					/// <summary>
 					/// Header Name: Surrogate-Control
@@ -1317,7 +1317,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string SurrogateControl = std::string(u8"Surrogate-Control");
+					const std::string SurrogateControl{ u8"Surrogate-Control" };
 
 					/// <summary>
 					/// Header Name: TCN
@@ -1325,7 +1325,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string TCN = std::string(u8"TCN");
+					const std::string TCN{ u8"TCN" };
 
 					/// <summary>
 					/// Header Name: TE
@@ -1333,7 +1333,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7230, Section 4.3]
 					/// </summary>
-					const std::string TE = std::string(u8"TE");
+					const std::string TE{ u8"TE" };
 
 					/// <summary>
 					/// Header Name: Timeout
@@ -1341,7 +1341,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC4918]
 					/// </summary>
-					const std::string Timeout = std::string(u8"Timeout");
+					const std::string Timeout{ u8"Timeout" };
 
 					/// <summary>
 					/// Header Name: Title
@@ -1349,7 +1349,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Title = std::string(u8"Title");
+					const std::string Title{ u8"Title" };
 
 					/// <summary>
 					/// Header Name: Trailer
@@ -1357,7 +1357,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7230, Section 4.4]
 					/// </summary>
-					const std::string Trailer = std::string(u8"Trailer");
+					const std::string Trailer{ u8"Trailer" };
 
 					/// <summary>
 					/// Header Name: Transfer-Encoding
@@ -1365,7 +1365,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7230, Section 3.3.1]
 					/// </summary>
-					const std::string TransferEncoding = std::string(u8"Transfer-Encoding");
+					const std::string TransferEncoding{ u8"Transfer-Encoding" };
 
 					/// <summary>
 					/// Header Name: UA-Color
@@ -1373,7 +1373,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string UAColor = std::string(u8"UA-Color");
+					const std::string UAColor{ u8"UA-Color" };
 
 					/// <summary>
 					/// Header Name: UA-Media
@@ -1381,7 +1381,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string UAMedia = std::string(u8"UA-Media");
+					const std::string UAMedia{ u8"UA-Media" };
 
 					/// <summary>
 					/// Header Name: UA-Pixels
@@ -1389,7 +1389,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string UAPixels = std::string(u8"UA-Pixels");
+					const std::string UAPixels{ u8"UA-Pixels" };
 
 					/// <summary>
 					/// Header Name: UA-Resolution
@@ -1397,7 +1397,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string UAResolution = std::string(u8"UA-Resolution");
+					const std::string UAResolution{ u8"UA-Resolution" };
 
 					/// <summary>
 					/// Header Name: UA-Windowpixels
@@ -1405,7 +1405,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string UAWindowpixels = std::string(u8"UA-Windowpixels");
+					const std::string UAWindowpixels{ u8"UA-Windowpixels" };
 
 					/// <summary>
 					/// Header Name: Upgrade
@@ -1413,7 +1413,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7230, Section 6.7]
 					/// </summary>
-					const std::string Upgrade = std::string(u8"Upgrade");
+					const std::string Upgrade{ u8"Upgrade" };
 
 					/// <summary>
 					/// Header Name: URI
@@ -1421,7 +1421,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string URI = std::string(u8"URI");
+					const std::string URI{ u8"URI" };
 
 					/// <summary>
 					/// Header Name: User-Agent
@@ -1429,7 +1429,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 5.5.3]
 					/// </summary>
-					const std::string UserAgent = std::string(u8"User-Agent");
+					const std::string UserAgent{ u8"User-Agent" };
 
 					/// <summary>
 					/// Header Name: Variant-Vary
@@ -1437,7 +1437,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string VariantVary = std::string(u8"Variant-Vary");
+					const std::string VariantVary{ u8"Variant-Vary" };
 
 					/// <summary>
 					/// Header Name: Vary
@@ -1445,7 +1445,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7231, Section 7.1.4]
 					/// </summary>
-					const std::string Vary = std::string(u8"Vary");
+					const std::string Vary{ u8"Vary" };
 
 					/// <summary>
 					/// Header Name: Version
@@ -1453,7 +1453,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string Version = std::string(u8"Version");
+					const std::string Version{ u8"Version" };
 
 					/// <summary>
 					/// Header Name: Via
@@ -1461,7 +1461,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7230, Section 5.7.1]
 					/// </summary>
-					const std::string Via = std::string(u8"Via");
+					const std::string Via{ u8"Via" };
 
 					/// <summary>
 					/// Header Name: Want-Digest
@@ -1469,7 +1469,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [RFC4229]
 					/// </summary>
-					const std::string WantDigest = std::string(u8"Want-Digest");
+					const std::string WantDigest{ u8"Want-Digest" };
 
 					/// <summary>
 					/// Header Name: Warning
@@ -1477,7 +1477,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7234, Section 5.5]
 					/// </summary>
-					const std::string Warning = std::string(u8"Warning");
+					const std::string Warning{ u8"Warning" };
 
 					/// <summary>
 					/// Header Name: WWW-Authenticate
@@ -1485,7 +1485,7 @@ namespace te
 					/// Status: Standard
 					/// Defined In: [RFC7235, Section 4.1]
 					/// </summary>
-					const std::string WWWAuthenticate = std::string(u8"WWW-Authenticate");
+					const std::string WWWAuthenticate{ u8"WWW-Authenticate" };
 
 					/// <summary>
 					/// Header Name: X-Device-Accept
@@ -1493,7 +1493,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [W3C Mobile Web Best Practices Working Group]
 					/// </summary>
-					const std::string XDeviceAccept = std::string(u8"X-Device-Accept");
+					const std::string XDeviceAccept{ u8"X-Device-Accept" };
 
 					/// <summary>
 					/// Header Name: X-Device-Accept-Charset
@@ -1501,7 +1501,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [W3C Mobile Web Best Practices Working Group]
 					/// </summary>
-					const std::string XDeviceAcceptCharset = std::string(u8"X-Device-Accept-Charset");
+					const std::string XDeviceAcceptCharset{ u8"X-Device-Accept-Charset" };
 
 					/// <summary>
 					/// Header Name: X-Device-Accept-Encoding
@@ -1509,7 +1509,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [W3C Mobile Web Best Practices Working Group]
 					/// </summary>
-					const std::string XDeviceAcceptEncoding = std::string(u8"X-Device-Accept-Encoding");
+					const std::string XDeviceAcceptEncoding{ u8"X-Device-Accept-Encoding" };
 
 					/// <summary>
 					/// Header Name: X-Device-Accept-Language
@@ -1517,7 +1517,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [W3C Mobile Web Best Practices Working Group]
 					/// </summary>
-					const std::string XDeviceAcceptLanguage = std::string(u8"X-Device-Accept-Language");
+					const std::string XDeviceAcceptLanguage{ u8"X-Device-Accept-Language" };
 
 					/// <summary>
 					/// Header Name: X-Device-User-Agent
@@ -1525,7 +1525,7 @@ namespace te
 					/// Status: Proposed
 					/// Defined In: [W3C Mobile Web Best Practices Working Group]
 					/// </summary>
-					const std::string XDeviceUserAgent = std::string(u8"X-Device-User-Agent");
+					const std::string XDeviceUserAgent{ u8"X-Device-User-Agent" };
 
 					/// <summary>
 					/// Header Name: X-Frame-Options
@@ -1533,7 +1533,7 @@ namespace te
 					/// Status: Informational
 					/// Defined In: [RFC7034]
 					/// </summary>
-					const std::string XFrameOptions = std::string(u8"X-Frame-Options");
+					const std::string XFrameOptions{ u8"X-Frame-Options" };
 					// Common but non-standard request headers
 
 					/// <summary>
@@ -1542,7 +1542,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XRequestedWith = std::string(u8"X-Requested-With");
+					const std::string XRequestedWith{ u8"X-Requested-With" };
 
 					/// <summary>
 					/// Header Name: DNT
@@ -1550,7 +1550,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string DNT = std::string(u8"DNT");
+					const std::string DNT{ u8"DNT" };
 
 					/// <summary>
 					/// Header Name: X-Forwarded-For
@@ -1558,7 +1558,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XForwardedFor = std::string(u8"X-Forwarded-For");
+					const std::string XForwardedFor{ u8"X-Forwarded-For" };
 
 					/// <summary>
 					/// Header Name: X-Forwarded-Host
@@ -1566,7 +1566,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XForwardedHost = std::string(u8"X-Forwarded-Host");
+					const std::string XForwardedHost{ u8"X-Forwarded-Host" };
 
 					/// <summary>
 					/// Header Name: X-Forwarded-Proto
@@ -1574,7 +1574,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XForwardedProto = std::string(u8"X-Forwarded-Proto");
+					const std::string XForwardedProto{ u8"X-Forwarded-Proto" };
 
 					/// <summary>
 					/// Header Name: Front-End-Https
@@ -1582,7 +1582,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string FrontEndHttps = std::string(u8"Front-End-Https");
+					const std::string FrontEndHttps{ u8"Front-End-Https" };
 
 					/// <summary>
 					/// Header Name: X-Http-Method-Override
@@ -1590,7 +1590,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XHttpMethodOverride = std::string(u8"X-Http-Method-Override");
+					const std::string XHttpMethodOverride{ u8"X-Http-Method-Override" };
 
 					/// <summary>
 					/// Header Name: X-ATT-DeviceId
@@ -1598,7 +1598,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XATTDeviceId = std::string(u8"X-ATT-DeviceId");
+					const std::string XATTDeviceId{ u8"X-ATT-DeviceId" };
 
 					/// <summary>
 					/// Header Name: X-Wap-Profile
@@ -1606,7 +1606,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XWapProfile = std::string(u8"X-Wap-Profile");
+					const std::string XWapProfile{ u8"X-Wap-Profile" };
 
 					/// <summary>
 					/// Header Name: Proxy-Connection
@@ -1614,7 +1614,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string ProxyConnection = std::string(u8"Proxy-Connection");
+					const std::string ProxyConnection{ u8"Proxy-Connection" };
 
 					/// <summary>
 					/// Header Name: X-UIDH
@@ -1622,7 +1622,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XUIDH = std::string(u8"X-UIDH");
+					const std::string XUIDH{ u8"X-UIDH" };
 
 					/// <summary>
 					/// Header Name: X-Csrf-Token
@@ -1630,7 +1630,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XCsrfToken = std::string(u8"X-Csrf-Token");
+					const std::string XCsrfToken{ u8"X-Csrf-Token" };
 					// Common but non-standard response headers
 
 					/// <summary>
@@ -1639,7 +1639,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XXSSProtection = std::string(u8"X-XSS-Protection");
+					const std::string XXSSProtection{ u8"X-XSS-Protection" };
 
 					/// <summary>
 					/// Header Name: Content-Security-Policy
@@ -1647,7 +1647,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string ContentSecurityPolicy = std::string(u8"Content-Security-Policy");
+					const std::string ContentSecurityPolicy{ u8"Content-Security-Policy" };
 
 					/// <summary>
 					/// Header Name: X-Content-Security-Policy
@@ -1655,7 +1655,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XContentSecurityPolicy = std::string(u8"X-Content-Security-Policy");
+					const std::string XContentSecurityPolicy{ u8"X-Content-Security-Policy" };
 
 					/// <summary>
 					/// Header Name: X-WebKit-CSP
@@ -1663,7 +1663,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XWebKitCSP = std::string(u8"X-WebKit-CSP");
+					const std::string XWebKitCSP{ u8"X-WebKit-CSP" };
 
 					/// <summary>
 					/// Header Name: X-Content-Type-Options
@@ -1671,7 +1671,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XContentTypeOptions = std::string(u8"X-Content-Type-Options");
+					const std::string XContentTypeOptions{ u8"X-Content-Type-Options" };
 
 					/// <summary>
 					/// Header Name: X-Powered-By
@@ -1679,7 +1679,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XPoweredBy = std::string(u8"X-Powered-By");
+					const std::string XPoweredBy{ u8"X-Powered-By" };
 
 					/// <summary>
 					/// Header Name: X-UA-Compatible
@@ -1687,7 +1687,7 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XUACompatible = std::string(u8"X-UA-Compatible");
+					const std::string XUACompatible{ u8"X-UA-Compatible" };
 
 					/// <summary>
 					/// Header Name: X-Content-Duration
@@ -1695,7 +1695,31 @@ namespace te
 					/// Status: Non-Standard Common
 					/// Defined In: Nowhereville
 					/// </summary>
-					const std::string XContentDuration = std::string(u8"X-Content-Duration");
+					const std::string XContentDuration{ u8"X-Content-Duration" };
+
+					/// <summary>
+					/// Header Name: Get-Dictionary
+					/// Protocol: HTTP
+					/// Status: Non-Standard
+					/// Defined In: Made up by Google to support SDHC compression.
+					/// </summary>
+					const std::string GetDictionary{ u8"Get-Dictionary" };
+
+					/// <summary>
+					/// Header Name: X-SDHC
+					/// Protocol: HTTP
+					/// Status: Non-Standard
+					/// Defined In: Made up by Google to support SDHC compression.
+					/// </summary>
+					const std::string XSDHC{ u8"X-SDHC" };
+
+					/// <summary>
+					/// Header Name: Avail-Dictionary
+					/// Protocol: HTTP
+					/// Status: Non-Standard
+					/// Defined In: Made up by Google to support SDHC compression.
+					/// </summary>
+					const std::string AvailDictionary{ u8"Avail-Dictionary" };
 
 				} /* namespace headers */
 			} /* namespace http */

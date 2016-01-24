@@ -29,7 +29,7 @@
 * with Http Filtering Engine. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "HttpFilteringEngineCtl.hpp"
+#include "HttpFilteringEngineCtl.h"
 
 // Because we're using ::asio inside a library, and it's a header only library,
 // we need to include the source in one place alone, and that's here. We also

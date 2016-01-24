@@ -31,11 +31,11 @@
 
 #pragma once
 
-#include <bitset>
 #include <vector>
 #include <string>
 #include <boost/utility/string_ref.hpp>
 #include "../options/HttpFilteringOptions.hpp"
+#include "HttpAbpFilterOptions.hpp"
 
 namespace te
 {
@@ -44,43 +44,7 @@ namespace te
 		namespace filtering
 		{
 			namespace http
-			{
-
-				/// <summary>
-				/// Each ABP Filter can specify many details about just what type of requests and
-				/// content a filter ought to apply to. By configuring these options, it's possible to
-				/// develop filters that will return a match against images, but not against scripts, or
-				/// against third-party CSS Documents, etc. This enum serves as convenient key system
-				/// for checking and setting options on the HttpAbpFilterSettings object, a fixed-size
-				/// bitset where any of these options, by the corresponding enum key, can be
-				/// manipulated.
-				/// </summary>
-				enum HttpAbpFilterOption
-					: size_t
-				{
-					script = 0,
-					notscript = 1,
-					image = 2,
-					notimage = 3,
-					stylesheet = 4,
-					notstylesheet = 5,
-					object = 6,
-					notobject = 7,
-					object_subrequest = 8,
-					notobject_subrequest = 9,
-					subdocument = 10,
-					notsubdocument = 11,
-					document = 12,
-					notdocument = 13,
-					elemhide = 14,
-					notelemhide = 15,
-					third_party = 16,
-					notthird_party = 17,
-					xmlhttprequest = 18,
-					notxmlhttprequest = 19
-				};
-
-				typedef std::bitset<20> HttpAbpFilterSettings;
+			{				
 
 				/// <summary>
 				/// The HttpAbpBaseFilter object contains all of the base code for finalizing the

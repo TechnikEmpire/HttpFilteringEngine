@@ -168,9 +168,6 @@
     <ClInclude Include="..\..\src\te\httpengine\mitm\http\HttpResponse.hpp">
       <Filter>Header Files\te\httpengine\mitm\http</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\util\cb\EventReporter.hpp">
-      <Filter>Header Files\te\httpengine\util\cb</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\filtering\options\ProgramWideOptions.hpp">
       <Filter>Header Files\te\httpengine\filtering\options</Filter>
     </ClInclude>
@@ -192,9 +189,6 @@
     <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.hpp">
       <Filter>Header Files\te\httpengine</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineCtl.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\BaseDiverter.hpp">
       <Filter>Header Files\te\httpengine\mitm\diversion</Filter>
     </ClInclude>
@@ -209,6 +203,18 @@
     </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\WindowsInMemoryCertificateStore.hpp">
       <Filter>Header Files\te\httpengine\mitm\secure</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\util\cb\EngineCallbackTypes.h">
+      <Filter>Header Files\te\httpengine\util\cb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineCtl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\util\cb\EventReporter.hpp">
+      <Filter>Header Files\te\httpengine\util\cb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpFilterOptions.hpp">
+      <Filter>Header Files\te\httpengine\filtering\http</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -40,6 +40,9 @@
 #include "../../../util/http/KnownHttpHeaders.hpp"
 #include "CategorizedCssSelector.hpp"
 
+#include "HttpAbpInclusionFilter.hpp"
+#include "HttpAbpExceptionFilter.hpp"
+
 #include <gq/Document.hpp>
 #include <gq/NodeMutationCollection.hpp>
 #include <gq/Serializer.hpp>
@@ -77,8 +80,14 @@ namespace te
 					{ u8"~xmlhttprequest" , notxmlhttprequest }
 				};
 				
-				HttpFilteringEngine::HttpFilteringEngine(const options::ProgramWideOptions* programOptions)	:
-					m_programOptions(programOptions)
+				HttpFilteringEngine::HttpFilteringEngine(
+					const options::ProgramWideOptions* programOptions,
+					util::cb::RequestBlockFunction onRequestBlocked,
+					util::cb::ElementBlockFunction onElementsBlocked
+					) :
+					m_programOptions(programOptions),
+					m_onRequestBlocked(onRequestBlocked),
+					m_onElementsBlocked(onElementsBlocked)
 				{					
 					#ifndef NDEBUG
 						assert(programOptions != nullptr && u8"In HttpFilteringEngine::HttpFilteringEngine(const options::ProgramWideOptions*, TextClassificationCallback) - ProgramWideOptions pointer must not be null. Options must exist and be available for the lifetime of the program for the software to function correctly.");
@@ -101,8 +110,9 @@ namespace te
 					std::ifstream in(listFilePath, std::ios::binary | std::ios::in);
 
 					if (in.fail() || in.is_open() == false)
-					{						
-						ReportError(u8"In HttpFilteringEngine::LoadAbpFormattedListFromFile(const std::string&, const uint8_t, const bool) - Unable to read supplied filter list file: " + listFilePath, 0);
+					{					
+						std::string errMessage(u8"In HttpFilteringEngine::LoadAbpFormattedListFromFile(const std::string&, const uint8_t, const bool) - Unable to read supplied filter list file: " + listFilePath);
+						ReportError(errMessage);
 						return false;
 					}
 
@@ -228,6 +238,47 @@ namespace te
 						}
 					#endif					
 					
+					// If the request is already set to be blocked, and the repsonse is supplied,
+					// then we simply want to report the size of the blocked request based on the
+					// response headers. We'll then return the existing ShouldBlock value from
+					// the request's settings.
+					if (response != nullptr && request->GetShouldBlock() != 0)
+					{
+						auto blockCategory = request->GetShouldBlock();
+
+						auto contentLenHeader = response->GetHeader(util::http::headers::ContentLength);
+
+						uint32_t blockedContentSize = AverageWebPageInBytes;
+
+						if (contentLenHeader.first != contentLenHeader.second)
+						{
+							try
+							{
+								blockedContentSize = static_cast<uint32_t>(std::stoi(contentLenHeader.first->second));
+							}
+							catch (...)
+							{
+								// This isn't critical. We don't really care for the specifics of the exception. Maybe
+								// it's a malicious web server, a broken on, or a troll putting "trololol" as the content
+								// length. Who cares.
+
+								ReportWarning(u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) -  \
+												Failed to parse content-length of blocked response. Using default average.");
+							}
+						}
+
+						auto fullRequest = request->RequestURI();
+						const auto hostHeader = request->GetHeader(util::http::headers::Host);
+						if (hostHeader.first != hostHeader.second)
+						{
+							fullRequest = hostHeader.first->second + u8"/" + fullRequest;
+						}
+
+						ReportRequestBlocked(blockCategory, blockedContentSize, fullRequest);
+
+						return blockCategory;
+					}
+
 					HttpAbpFilterSettings transactionSettings;
 					
 					// XXX TODO - Check if the specified host is just an IP address and if so, reverse resolve the domain name.
@@ -251,7 +302,7 @@ namespace te
 					// we can't do a whole lot with this because the http request is fundamentally broken.
 					if (hostStringRef.size() == 0)
 					{
-						ReportWarning(u8"In HttpFilteringEngine::HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - Host declaration is missing from the HTTP request. As the request is fundamentally broken, aborting any further analysis.", 0);
+						ReportWarning(u8"In HttpFilteringEngine::HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - Host declaration is missing from the HTTP request. As the request is fundamentally broken, aborting any further analysis.");
 						return 0;
 					}
 
@@ -338,17 +389,7 @@ namespace te
 							transactionSettings[HttpAbpFilterOption::notscript] = false;
 							transactionSettings[HttpAbpFilterOption::script] = true;
 							hasTypeData = true;
-						}
-
-						// If this method was called and the request and response are available, and
-						// the request is already marked for blocking, then why are you punishing
-						// your poor CPU by making it do work it doesn't need to do. In this case,
-						// set the value of the response equal to the value of the request and exit asap.
-						if (request != nullptr && request->GetShouldBlock() != 0)
-						{
-							ReportWarning(u8"In HttpFilteringEngine::HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - Response was submitted for analysis when the request is already marked for blocking. Automatically returning the same category value of the request.", 0);
-							return response->GetShouldBlock();
-						}
+						}						
 					}
 
 					// boost::string_ref, I'd love you even more if you had ::append()
@@ -382,27 +423,36 @@ namespace te
 					const size_t domainTypelessExcludeSize = (domainTypelessExcludesPair != m_typelessExcludeRules.end()) ? domainTypelessExcludesPair->second.size() : 0;
 					const size_t domainTypelessIncludeSize = (domainTypelessIncludesPair != m_typelessIncludeRules.end()) ? domainTypelessIncludesPair->second.size() : 0;
 
-					// First thing we want to look for are exclusions. If we find an exclusion, we can return without any further
-					// inspection. Check host specific rules first, since that collection is bound to be much smaller.
-					for (size_t he = 0; he < domainTypelessExcludeSize; ++he)
+					// We only want to check the typeless rules if the response is not present. The
+					// idea here is that if a response is present, then the request should have
+					// already been checked indepdently before reaching this phase. If a response is
+					// present, that means that the initial request survived the global typeless
+					// rules, so it's just a waste to recheck them again.
+					if (response == nullptr)
 					{
-						if ((m_programOptions->GetIsHttpCategoryFiltered(domainTypelessExcludesPair->second[he]->GetCategory())) &&
-							domainTypelessExcludesPair->second[he]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
+						// First thing we want to look for are exclusions. If we find an exclusion,
+						// we can return without any further inspection. Check host specific rules
+						// first, since that collection is bound to be much smaller.
+						for (size_t he = 0; he < domainTypelessExcludeSize; ++he)
 						{
-							// Exclusion found, don't filter or block.
-							return 0;
+							if ((m_programOptions->GetIsHttpCategoryFiltered(domainTypelessExcludesPair->second[he]->GetCategory())) &&
+								domainTypelessExcludesPair->second[he]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
+							{
+								// Exclusion found, don't filter or block.
+								return 0;
+							}
 						}
-					}
 
-					for (size_t ge = 0; ge < globalTypelessExcludeSize; ++ge)
-					{
-						if ((m_programOptions->GetIsHttpCategoryFiltered(globalTypelessExcludesPair->second[ge]->GetCategory())) &&
-							globalTypelessExcludesPair->second[ge]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
+						for (size_t ge = 0; ge < globalTypelessExcludeSize; ++ge)
 						{
-							// Exclusion found, don't filter or block.
-							return 0;
+							if ((m_programOptions->GetIsHttpCategoryFiltered(globalTypelessExcludesPair->second[ge]->GetCategory())) &&
+								globalTypelessExcludesPair->second[ge]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
+							{
+								// Exclusion found, don't filter or block.
+								return 0;
+							}
 						}
-					}
+					}					
 
 					// If hasTypeData is true, then we'll check the typed exclude rules as well.
 					if (hasTypeData)
@@ -435,24 +485,32 @@ namespace te
 						}
 					}
 
-					// Beyond this point, inclusions are being looked for.
-					for (size_t gi = 0; gi < globalTypelessIncludeSize; ++gi)
+					// We only want to check the typeless rules if the response is not present. The
+					// idea here is that if a response is present, then the request should have
+					// already been checked indepdently before reaching this phase. If a response is
+					// present, that means that the initial request survived the global typeless
+					// rules, so it's just a waste to recheck them again.
+					if (response == nullptr)
 					{
-						if ((m_programOptions->GetIsHttpCategoryFiltered(globalTypelessIncludesPair->second[gi]->GetCategory())) &&
-							globalTypelessIncludesPair->second[gi]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
+						// Beyond this point, inclusions are being looked for.
+						for (size_t gi = 0; gi < globalTypelessIncludeSize; ++gi)
 						{
-							// Inclusion found, block and return the category of the matching rule.
-							return globalTypelessIncludesPair->second[gi]->GetCategory();
+							if ((m_programOptions->GetIsHttpCategoryFiltered(globalTypelessIncludesPair->second[gi]->GetCategory())) &&
+								globalTypelessIncludesPair->second[gi]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
+							{
+								// Inclusion found, block and return the category of the matching rule.
+								return globalTypelessIncludesPair->second[gi]->GetCategory();
+							}
 						}
-					}
 
-					for (size_t di = 0; di < domainTypelessIncludeSize; ++di)
-					{
-						if ((m_programOptions->GetIsHttpCategoryFiltered(domainTypelessIncludesPair->second[di]->GetCategory())) &&
-							domainTypelessIncludesPair->second[di]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
+						for (size_t di = 0; di < domainTypelessIncludeSize; ++di)
 						{
-							// Inclusion found, block and return the category of the matching rule.
-							return domainTypelessIncludesPair->second[di]->GetCategory();
+							if ((m_programOptions->GetIsHttpCategoryFiltered(domainTypelessIncludesPair->second[di]->GetCategory())) &&
+								domainTypelessIncludesPair->second[di]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
+							{
+								// Inclusion found, block and return the category of the matching rule.
+								return domainTypelessIncludesPair->second[di]->GetCategory();
+							}
 						}
 					}
 
@@ -533,13 +591,16 @@ namespace te
 					const auto& payloadVector = response->GetPayload();
 
 					boost::string_ref payloadStrRef(payloadVector.data(), payloadVector.size());
+					auto payloadString = payloadStrRef.to_string();
 
 					try
 					{
-						doc->Parse(payloadStrRef.to_string());
+						// XXX TODO - Why doesn't GQ take a string_ref param so we don't have to copy? Good grief,
+						// who wrote that crap?
+						doc->Parse(payloadString);
 					}
 					catch (std::runtime_error& e)
-					{
+					{						
 						// This would only happen, AFAIK, if we failed to parse any valid HTML.
 						std::string errMessage(u8"In HttpFilteringEngine::ProcessHtmlResponse(const mhttp::HttpRequest*, const mhttp::HttpResponse*) const - Error:\n\t");
 						errMessage.append(e.what());
@@ -1364,6 +1425,22 @@ namespace te
 					boost::string_ref domainFromStorage(insertResult.first->c_str());
 
 					return domainFromStorage;
+				}
+
+				void HttpFilteringEngine::ReportRequestBlocked(const uint8_t category, const uint32_t payloadSizeBlocked, boost::string_ref fullRequest) const
+				{
+					if (m_onRequestBlocked)
+					{
+						m_onRequestBlocked(category, payloadSizeBlocked, fullRequest.begin(), fullRequest.size());
+					}
+				}
+
+				void HttpFilteringEngine::ReportElementsBlocked(const uint32_t numElementsRemoved, boost::string_ref fullRequest) const
+				{
+					if (m_onElementsBlocked)
+					{
+						m_onElementsBlocked(numElementsRemoved, fullRequest.begin(), fullRequest.size());
+					}
 				}
 
 			} /* namespace http */

@@ -42,8 +42,7 @@
 #include <boost/thread/shared_mutex.hpp>
 #include "../../../util/string/StringRefUtil.hpp"
 #include "../../util/cb/EventReporter.hpp"
-#include "HttpAbpInclusionFilter.hpp"
-#include "HttpAbpExceptionFilter.hpp"
+#include "HttpAbpFilterOptions.hpp"
 
 /// <summary>
 /// Forward decl for gq structures.
@@ -106,13 +105,8 @@ namespace te
 				/// requests and responses can be evaluated together or independently to determine
 				/// if the transactions should be blocked or not, based on current option settings
 				/// and supplied filters.
-				/// 
-				/// This class inherits the templated EventReporter with the data type for reporting
-				/// data events set to an unsigned 32 bit integer. This callback is only implemented
-				/// to report how many filters are loaded into the engine whenever the collections
-				/// are updated.
 				/// </summary>
-				class HttpFilteringEngine : public util::cb::EventReporter<const uint8_t&>
+				class HttpFilteringEngine : public util::cb::EventReporter
 				{
 
 				private:
@@ -138,7 +132,17 @@ namespace te
 					/// A valid pointer to a ProgramWideOptions object which must have a lifetime at
 					/// least equal to the lifetime of this object.
 					/// </param>
-					HttpFilteringEngine(const options::ProgramWideOptions* programOptions);				
+					/// <param name="onRequestBlocked">
+					/// Callback where information about blocked requests can be sent.
+					/// </param>
+					/// <param name="onElementsBlocked">
+					/// Callback where information about element hiding/removal can be sent.
+					/// </param>
+					HttpFilteringEngine(
+						const options::ProgramWideOptions* programOptions,
+						util::cb::RequestBlockFunction onRequestBlocked = nullptr,
+						util::cb::ElementBlockFunction onElementsBlocked = nullptr
+						);				
 
 					HttpFilteringEngine(const HttpFilteringEngine&) = delete;
 					HttpFilteringEngine(HttpFilteringEngine&&) = delete;
@@ -301,6 +305,22 @@ namespace te
 					const options::ProgramWideOptions* m_programOptions;
 
 					/// <summary>
+					/// Whenever a request is blocked, the filtering engine will attempt to generate
+					/// information about the request, such as the total size of the request, which
+					/// it can report to an observer through this callback, if the callback was
+					/// supplied during construction.
+					/// </summary>
+					util::cb::RequestBlockFunction m_onRequestBlocked = nullptr;
+
+					/// <summary>
+					/// Whenever elements are removed from an HTML response payload, the filtering
+					/// engine will attempt to generate information about that event, such as the
+					/// total number of elements removed, which it can report to an observer through
+					/// this callback, if the callback was supplied during construction.
+					/// </summary>
+					util::cb::ElementBlockFunction m_onElementsBlocked = nullptr;
+
+					/// <summary>
 					/// Currently, this program buries its head in the sand and pretends that
 					/// International Domain Names don't exist, the tell tale sign of an unrepentant
 					/// anglophile. In the future, this needs to be addressed, so this is marked
@@ -372,6 +392,18 @@ namespace te
 					/// quickly retrieve the correct corresponding HttpAbpFilterOption value.
 					/// </summary>
 					static const std::unordered_map<boost::string_ref, HttpAbpFilterOption, util::string::StringRefHash> ValidFilterOptions;
+
+					/// <summary>
+					/// When we block a response that uses chunked encoding, it's impossible to
+					/// known the entire size of the content without downloading and parsing the
+					/// entire response. But we did in fact block, and we did in fact stop a bunch
+					/// of stuff from being transferred over the wire. So, we'll go with the average
+					/// size of the average website as our default to report whenever content-length
+					/// is not specified. I believe this is more than a fair representation, since
+					/// especially in the case of ads, blocked content will almost surely download
+					/// more content, such as videos and images, very heavy stuff.
+					/// </summary>
+					static constexpr uint32_t AverageWebPageInBytes = 1935000;
 
 					/// <summary>
 					/// Used for storing inclusion filters that do not specify any constraints in
@@ -667,8 +699,56 @@ namespace te
 					/// </returns>
 					std::string ExtractHtmlText(const gq::Document* document) const;
 
-
+					/// <summary>
+					/// Since it's possible for the user load many different filtering rules
+					/// spanning many files, each containing potentially tens of thousands of rules,
+					/// each rule potentially being for the same host, it makes sense to avoid
+					/// copying the same information across this class. Further, to avoid unecessary
+					/// copies of of such data to and from this object from request headers and
+					/// such, we use boost::string_ref for storing such string. However, in order to
+					/// ensure that the string_ref objects stay valid, the original source string
+					/// must be stored once, and only once to preserve its life, then a
+					/// corresponding string_ref object generated around that string around the
+					/// memory space where it's "permanently" stored.
+					/// 
+					/// This method transparently handles this process, returning a "preserved"
+					/// version of a string_ref supplied to it.
+					/// </summary>
+					/// <param name="domain">
+					/// The domain string to preserve.
+					/// </param>
+					/// <returns>
+					/// A boost::string_ref where the underlying string data is guaranteed to be
+					/// preserved during the lifetime of this object.
+					/// </returns>
 					boost::string_ref GetPreservedDomainStringRef(boost::string_ref domain);
+
+					/// <summary>
+					/// If an appropriate callback was supplied at construction, reports information
+					/// about blocked requests to the supplied callback.
+					/// </summary>
+					/// <param name="category">
+					/// The category to which the blocking rule belongs.
+					/// </param>
+					/// <param name="payloadSizeBlocked">
+					/// The size of the response payload blocked from being downloaded.
+					/// </param>
+					/// <param name="host">
+					/// The full request that was blocked.
+					/// </param>
+					void ReportRequestBlocked(const uint8_t category, const uint32_t payloadSizeBlocked, boost::string_ref fullRequest) const;
+
+					/// <summary>
+					/// If an appropriate callback was supplied at construction, reports information
+					/// about blocked HTML elements to the supplied callback.
+					/// </summary>
+					/// <param name="numElementsRemoved">
+					/// The number of HTML elements removed from the processed HTML response payload.
+					/// </param>
+					/// <param name="fullRequest">
+					/// The full request that generated the filtered HTML response payload.
+					/// </param>
+					void ReportElementsBlocked(const uint32_t numElementsRemoved, boost::string_ref fullRequest) const;
 
 				};
 

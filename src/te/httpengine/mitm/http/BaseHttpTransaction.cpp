@@ -41,9 +41,8 @@
 #include <boost/iostreams/copy.hpp>
 #include "BaseHttpTransaction.hpp"
 #include "../../../util/http/KnownHttpHeaders.hpp"
+#include <stdexcept>
 
-
-#define PAYLOAD_BUFFER_READ_SIZE 131072
 
 namespace te
 {
@@ -184,7 +183,9 @@ namespace te
 
 						if (nparsed != m_headerBuffer.size())
 						{
-							ReportError(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse headers.", m_httpParser->http_errno);
+							std::string errMsg(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse headers. Got http_parser error number: ");
+							errMsg.append(std::to_string(m_httpParser->http_errno));
+							ReportError(errMsg);
 							return false;
 						}
 
@@ -222,7 +223,9 @@ namespace te
 
 						if (nparsed != m_headerBuffer.size())
 						{
-							ReportError(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse payload.", m_httpParser->http_errno);
+							std::string errMsg(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse headers. Got http_parser error number: ");
+							errMsg.append(std::to_string(m_httpParser->http_errno));
+							ReportError(errMsg);							
 							return false;
 						}
 					}
@@ -232,6 +235,10 @@ namespace te
 					// of chunked transfers to fixed-length/precalculated (content-length header defined) transfers.
 					if (m_payloadComplete && m_consumeAllBeforeSending)
 					{
+						// First we need to cut down the payload buffer to the exact size of how many bytes
+						// we've received.
+						m_transactionData.resize(m_unwrittenPayloadSize);
+
 						bool finalizationFailed = false;
 
 						const auto transferEncoding = GetHeader(util::http::headers::TransferEncoding);
@@ -344,9 +351,9 @@ namespace te
 					// First thing we want to do is resize the buffer, if it needs to be resized. Warning, incoming
 					// hardcoded values. In my testing, 131072 gives a nice balance for keeping allocations to a 
 					// minimum, since most content that we're concerned about keeping should come in well under that.
-					if (m_transactionData.size() < PAYLOAD_BUFFER_READ_SIZE)
+					if (m_transactionData.size() < PayloadBufferReadSize)
 					{
-						m_transactionData.resize(PAYLOAD_BUFFER_READ_SIZE);
+						m_transactionData.resize(PayloadBufferReadSize);
 					}
 
 					if (m_consumeAllBeforeSending == false)
@@ -359,18 +366,25 @@ namespace te
 
 					if (m_consumeAllBeforeSending && m_unwrittenPayloadSize > 0)
 					{
-						// So, if the payload container already contains data, and we want to read more, and the 
-						// difference between the size of the existing valid data and the size of the container
-						// is less than our hard-coded buffer size of 131072, resize the container so it has
-						// 131072 bytes available for populating.
-						// This way, we should always have a buffer length of 131072.
-						if ((m_transactionData.size() - m_unwrittenPayloadSize) < PAYLOAD_BUFFER_READ_SIZE)
+						if (m_transactionData.size() < MaxPayloadResize)
 						{
-							m_transactionData.resize(m_transactionData.size() + (PAYLOAD_BUFFER_READ_SIZE - (m_transactionData.size() - m_unwrittenPayloadSize)));
+							// So, if the payload container already contains data, and we want to read more, and the 
+							// difference between the size of the existing valid data and the size of the container
+							// is less than our hard-coded buffer size of 131072, resize the container so it has
+							// 131072 bytes available for populating.
+							// This way, we should always have a buffer length of 131072.
+							if ((m_transactionData.size() - m_unwrittenPayloadSize) < PayloadBufferReadSize)
+							{
+								m_transactionData.resize(m_transactionData.size() + (PayloadBufferReadSize - (m_transactionData.size() - m_unwrittenPayloadSize)));
+							}
 						}
+						else
+						{
+							throw new std::runtime_error(u8"In BaseHttpTransaction::GetPayloadReadBuffer() - Maximum buffer size reached.");
+						}						
 					}
 
-					return boost::asio::mutable_buffers_1(m_transactionData.data() + m_unwrittenPayloadSize, PAYLOAD_BUFFER_READ_SIZE);
+					return boost::asio::mutable_buffers_1(m_transactionData.data() + m_unwrittenPayloadSize, PayloadBufferReadSize);
 				}
 
 				boost::asio::const_buffers_1 BaseHttpTransaction::GetWriteBuffer()
@@ -391,6 +405,8 @@ namespace te
 
 						m_transactionData = std::move(headersVector);
 
+						m_unwrittenPayloadSize = m_transactionData.size();
+
 						m_headersSent = true;
 					}
 
@@ -407,6 +423,77 @@ namespace te
 				const std::vector<char>& BaseHttpTransaction::GetPayload() const
 				{
 					return m_transactionData;
+				}
+
+				void BaseHttpTransaction::SetPayload(std::vector<char>&& payload)
+				{
+					// XXX TODO - Cleanup this code duplication.
+
+					m_transactionData = std::move(payload);
+					m_unwrittenPayloadSize = m_transactionData.size();
+					m_payloadComplete = true;
+										
+					RemoveHeader(util::http::headers::ContentLength);
+					RemoveHeader(util::http::headers::TransferEncoding);
+					RemoveHeader(util::http::headers::ContentEncoding);					
+
+					if (
+						m_transactionData[m_transactionData.size() - 4] == '\r' &&
+						m_transactionData[m_transactionData.size() - 3] == '\n' &&
+						m_transactionData[m_transactionData.size() - 2] == '\r' &&
+						m_transactionData[m_transactionData.size() - 1] == '\n'
+						)
+					{
+						auto sizeString = std::to_string(m_unwrittenPayloadSize - 4);
+						AddHeader(util::http::headers::ContentLength, sizeString);
+					}
+					else 
+					{
+
+						auto sizeString = std::to_string(m_unwrittenPayloadSize);
+						AddHeader(util::http::headers::ContentLength, sizeString);
+
+						m_transactionData.push_back('\r');
+						m_transactionData.push_back('\n');
+						m_transactionData.push_back('\r');
+						m_transactionData.push_back('\n');
+					}
+				}
+
+				void BaseHttpTransaction::SetPayload(const std::vector<char>& payload)
+				{
+					// XXX TODO - Cleanup this code duplication.
+
+					m_transactionData = payload;
+
+					m_unwrittenPayloadSize = m_transactionData.size();
+					m_payloadComplete = true;
+
+					RemoveHeader(util::http::headers::ContentLength);
+					RemoveHeader(util::http::headers::TransferEncoding);
+					RemoveHeader(util::http::headers::ContentEncoding);
+
+					if (
+						m_transactionData[m_transactionData.size() - 4] == '\r' &&
+						m_transactionData[m_transactionData.size() - 3] == '\n' &&
+						m_transactionData[m_transactionData.size() - 2] == '\r' &&
+						m_transactionData[m_transactionData.size() - 1] == '\n'
+						)
+					{
+						auto sizeString = std::to_string(m_unwrittenPayloadSize - 4);
+						AddHeader(util::http::headers::ContentLength, sizeString);
+					}
+					else
+					{
+
+						auto sizeString = std::to_string(m_unwrittenPayloadSize);
+						AddHeader(util::http::headers::ContentLength, sizeString);
+
+						m_transactionData.push_back('\r');
+						m_transactionData.push_back('\n');
+						m_transactionData.push_back('\r');
+						m_transactionData.push_back('\n');
+					}
 				}
 
 				const bool BaseHttpTransaction::IsPayloadComplete() const
@@ -604,6 +691,8 @@ namespace te
 					if (m_transactionData.size() > compressed.size())
 					{
 						m_transactionData = std::move(compressed);
+						std::string gzip(u8"gzip");
+						AddHeader(util::http::headers::ContentEncoding, gzip);
 						return true;
 					}
 					else {
@@ -641,6 +730,8 @@ namespace te
 					if (m_transactionData.size() > compressed.size())
 					{
 						m_transactionData = std::move(compressed);
+						std::string deflate(u8"deflate");
+						AddHeader(util::http::headers::ContentEncoding, deflate);
 						return true;
 					}
 					else {
@@ -654,6 +745,18 @@ namespace te
 					{
 						ReportError(u8"In BaseBridge::DecompressGzip() - There is no payload to decompress.");
 						return false;
+					}
+
+					// If the terminating CRLF's on the payload are left, they'll screw with
+					// decompression. They need to be trimmed first.
+					if (
+						m_transactionData.at(m_transactionData.size() - 4) == '\r' &&
+						m_transactionData.at(m_transactionData.size() - 3) == '\n' &&
+						m_transactionData.at(m_transactionData.size() - 2) == '\r' &&
+						m_transactionData.at(m_transactionData.size() - 1) == '\n'
+						)
+					{
+						m_transactionData.resize(m_transactionData.size() - 4);
 					}
 
 					std::vector<char> decompressed;
@@ -692,6 +795,18 @@ namespace te
 					{
 						ReportError(u8"In BaseBridge::DecompressDeflate() - There is no payload to decompress.");
 						return false;
+					}
+
+					// If the terminating CRLF's on the payload are left, they'll screw with
+					// decompression. They need to be trimmed first.
+					if (
+						m_transactionData.at(m_transactionData.size() - 4) == '\r' &&
+						m_transactionData.at(m_transactionData.size() - 3) == '\n' &&
+						m_transactionData.at(m_transactionData.size() - 2) == '\r' &&
+						m_transactionData.at(m_transactionData.size() - 1) == '\n'
+						)
+					{
+						m_transactionData.resize(m_transactionData.size() - 4);
 					}
 
 					std::vector<char> decompressed;
