@@ -370,10 +370,11 @@ namespace te
 
 									now += std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(3));
 
-									// So we make sure that this packet doesn't belong to us (the proxy), we make sure that we also got a valid
-									// process (non-zero) and also that the process isn't a protected operating system process (pid 4). If
-									// all these things pass, then we want to divert this packet to the proxy.
-									if (procPid != m_thisPid && procPid != 0 && procPid != 4)
+									// So we make sure that this packet doesn't belong to us (the
+									// proxy), we make sure that we also got a valid process
+									// (non-zero). If all these things pass, then we want to divert
+									// this packet to the proxy.
+									if (procPid != m_thisPid && procPid != 0)
 									{
 										auto processName = GetPacketProcessBinaryPath(procPid);
 
@@ -439,7 +440,7 @@ namespace te
 
 									now += std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(3));
 
-									if (procPid != m_thisPid && procPid != 0 && procPid != 4)
+									if (procPid != m_thisPid && procPid != 0)
 									{
 										auto processName = GetPacketProcessBinaryPath(procPid);
 
@@ -495,6 +496,15 @@ namespace te
 
 				std::string WinDiverter::GetPacketProcessBinaryPath(const unsigned long processId) const
 				{
+					if (processId == 4)
+					{
+						// OS process. We need to do this, otherwise OpenProcess will fail and we'll get
+						// nothing. We still want to filter OS processes, because on systems like Windows 10,
+						// there are... shudders... ads BUILT IN to the OS. By allowing us to filter proc ID 4,
+						// we can block ad and tracking requests made by the OS. GG Microbros. Goml. Nt. etc.
+						return std::string(u8"SYSTEM");
+					}
+
 					HANDLE processHandle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, processId);
 
 					if (processHandle != nullptr && processHandle != INVALID_HANDLE_VALUE)

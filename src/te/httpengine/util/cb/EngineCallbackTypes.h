@@ -72,7 +72,7 @@ typedef void(*ReportMessageCallback)(const char* message, const size_t messageLe
 /// If the filtering option to fetch and report the blocked payload size is disabled or if the
 /// payload is configured to be delivered as a chunked response, the size reported will be zero.
 /// </summary>
-typedef void(*ReportBlockedRequestCallback)(const uint8_t category, const uint32_t payloadSizeBlocked, const char* host, const size_t hostLength);
+typedef void(*ReportBlockedRequestCallback)(const uint8_t category, const uint32_t payloadSizeBlocked, const char* fullRequest, const size_t requestLength);
 
 /// <summary>
 /// When the Engine removes elements from a specific web page, it will report information about

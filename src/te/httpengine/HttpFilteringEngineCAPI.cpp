@@ -35,6 +35,10 @@
 
 #include <boost/predef.h>
 
+#if BOOST_OS_WINDOWS
+	#include <WinSock2.h>
+#endif
+
 PHttpFilteringEngineCtl fe_ctl_create(
 	FirewallCheckCallback firewallCb,
 	const char* caBundleAbsolutePath,
@@ -56,13 +60,24 @@ PHttpFilteringEngineCtl fe_ctl_create(
 						ReportMessageCallback, ReportMessageCallback, ReportBlockedRequestCallback, \
 						ReportBlockedElementsCallback) - On Windows, a valid firewall callback is required!");
 		#else
-			if (firewallCb == nullptr)
-			{
-				throw new std::runtime_error(u8"In fe_ctl_create(FirewallCheckCallback, ReportMessageCallback, \
-						ReportMessageCallback, ReportMessageCallback, ReportBlockedRequestCallback, \
-						ReportBlockedElementsCallback) - On Windows, a valid firewall callback is required!");
-			}
+			//if (firewallCb == nullptr)
+			//{
+			//	throw new std::runtime_error(u8"In fe_ctl_create(FirewallCheckCallback, ReportMessageCallback, \
+			//			ReportMessageCallback, ReportMessageCallback, ReportBlockedRequestCallback, \
+			//			ReportBlockedElementsCallback) - On Windows, a valid firewall callback is required!");
+			//}
 		#endif
+
+		
+		WORD wVersionRequested = MAKEWORD(2, 0);
+		WSADATA wsaData;
+		int err = WSAStartup(wVersionRequested, &wsaData);
+
+		// XXX TODO - Because of our non-existent error API, what can do here?
+		if (err != 0)
+		{
+			return nullptr;
+		}
 	#endif
 
 	if (numThread == 0)
@@ -122,6 +137,10 @@ void fe_ctl_destroy(PPHttpFilteringEngineCtl ptr)
 {	
 	delete reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(*ptr);
 	*ptr = nullptr;
+
+	#if BOOST_OS_WINDOWS
+		WSACleanup();
+	#endif
 }
 
 const bool fe_ctl_start(PHttpFilteringEngineCtl ptr)
