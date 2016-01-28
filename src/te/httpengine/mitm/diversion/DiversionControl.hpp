@@ -31,7 +31,8 @@
 
 #pragma once
 
-#include <atomic>
+#include <memory>
+#include <cstdint>
 #include "../../util/cb/EventReporter.hpp"
 
 namespace te
@@ -42,43 +43,72 @@ namespace te
 		{
 			namespace diversion
 			{
+			
+				/// <summary>
+				/// Forward decl BaseDiverter.
+				/// </summary>
+				class BaseDiverter;
 
 				/// <summary>
-				/// The BaseDiverter serves as the base class for all platform dependent packet
-				/// diversion mechanisms. For each supported platform, a specialized diversion class
-				/// must be created and must inherit from this.
+				/// The DiversionControl class is meant to serve as the static interface to
+				/// polymorphic platform specific implementations of packet diversion capabilities,
+				/// in order to divert packets to the listening proxy acceptors. This class offers a
+				/// very simple interface, enabling configuration of underlying diverter classes.
 				/// 
-				/// XXX TODO - Need port-independent protocol mapping for plain HTTP and TLS traffic,
-				/// along with a flow tracking mechanism to properly support such a mechanism.
+				/// Note that this constructor can throw std::runtime_error in the event that the
+				/// underlying diverter fails to initialize correctly.
 				/// </summary>
-				class BaseDiverter : public util::cb::EventReporter
+				class DiversionControl : util::cb::EventReporter
 				{
 
-					friend class DiversionControl;
-
 				public:
+					
+					/// <summary>
+					/// Constructs a new DiversionControl which will transparently handle loading
+					/// and using the correct platform appropriate Diverter. This constructor should
+					/// be expected to throw a std::runtime_error in the event that invalid
+					/// arguments are supplied. For example, as the firewallCheckCb is required on
+					/// most platforms, providing an invalid function here will result in a throw on
+					/// most platforms.
+					/// </summary>
+					/// <param name="firewallCheckCb">
+					/// Callback that the underlying packet diversion mechanism can use to verify
+					/// that traffic intercepted from specific machine local binaries is permitted
+					/// to be sent outbound from the device. Needed on most platforms for most
+					/// implementations, so a valid function pointer is required here.
+					/// </param>
+					/// <param name="onInfo">
+					/// Optional callback to receive informational messages regarding non-critical events.
+					/// </param>
+					/// <param name="onWarning">
+					/// Optional callback to receive informational messages regarding potentially
+					/// critical, but handled events.
+					/// </param>
+					/// <param name="onError">
+					/// Optional callback to receive informational messages regarding critical, but
+					/// handled events.
+					/// </param>
+					DiversionControl(
+						util::cb::FirewallCheckFunction firewallCheckCb,
+						util::cb::MessageFunction onInfo = nullptr,
+						util::cb::MessageFunction onWarning = nullptr,
+						util::cb::MessageFunction onError = nullptr
+						);
 
 					/// <summary>
 					/// Default destructor.
 					/// </summary>
-					virtual ~BaseDiverter();
-
-					/// <summary>
-					/// No copy no move no thx.
-					/// </summary>
-					BaseDiverter(const BaseDiverter&) = delete;
-					BaseDiverter(BaseDiverter&&) = delete;
-					BaseDiverter& operator=(const BaseDiverter&) = delete;
+					~DiversionControl();
 
 					/// <summary>
 					/// Gets the port number that the diverter is configured to sent identified HTTP
-					/// flows to. 
+					/// flows to.
 					/// </summary>
 					/// <returns>
 					/// The port number that the diverter is configured to sent identified HTTP
 					/// flows to.
 					/// </returns>
-					virtual const uint16_t GetHttpListenerPort() const;
+					const uint16_t GetHttpListenerPort() const;
 
 					/// <summary>
 					/// Sets the port number that the diverter is configured to sent identified HTTP
@@ -89,7 +119,7 @@ namespace te
 					/// The port number that the diverter is to sent identified HTTP
 					/// flows to.
 					/// </param>
-					virtual void SetHttpListenerPort(const uint16_t port);
+					void SetHttpListenerPort(const uint16_t port);
 
 					/// <summary>
 					/// Gets the port number that the diverter is configured to sent identified
@@ -99,7 +129,7 @@ namespace te
 					/// The port number that the diverter is configured to sent identified HTTPS
 					/// flows to.
 					/// </returns>
-					virtual const uint16_t GetHttpsListenerPort() const;
+					const uint16_t GetHttpsListenerPort() const;
 
 					/// <summary>
 					/// Sets the port number that the diverter is configured to sent identified
@@ -109,7 +139,7 @@ namespace te
 					/// <param name="port">
 					/// The port number that the diverter is to sent identified HTTPS flows to.
 					/// </param>
-					virtual void SetHttpsListenerPort(const uint16_t port);
+					void SetHttpsListenerPort(const uint16_t port);
 
 					/// <summary>
 					/// Initiates the packet diversion process. Should create one or more threads
@@ -118,12 +148,12 @@ namespace te
 					/// diversion process failed to intitate. The ::what() member will contain
 					/// details of the error.
 					/// </summary>
-					virtual void Run() = 0;
+					void Run();
 
 					/// <summary>
 					/// Stops the packet diversion process.
 					/// </summary>
-					virtual void Stop() = 0;
+					void Stop();
 
 					/// <summary>
 					/// Indicates whether or not the packet diversion process is presently active.
@@ -131,42 +161,11 @@ namespace te
 					/// <returns>
 					/// True if the packet diversion process is presently active, false otherwise.
 					/// </returns>
-					virtual const bool IsRunning() const = 0;
+					const bool IsRunning() const;
 
-				protected:
+				private:
 
-					BaseDiverter(
-						util::cb::FirewallCheckFunction firewallCheckCb = nullptr,
-						util::cb::MessageFunction onInfo = nullptr,
-						util::cb::MessageFunction onWarning = nullptr,
-						util::cb::MessageFunction onError = nullptr
-						);
-
-					/// <summary>
-					/// The port that intercepted HTTP packets should be diverted to.
-					/// </summary>
-					std::atomic_uint16_t m_httpListenerPort;
-
-					/// <summary>
-					/// The port that intercepted HTTPS packets should be diverted to.
-					/// </summary>
-					std::atomic_uint16_t m_httpsListenerPort;
-
-					/// <summary>
-					/// Indicates whether or not the diversion process is presently running.
-					/// Can/should be used to keep the diversion loop going.
-					/// </summary>
-					std::atomic_bool m_running;
-
-					/// <summary>
-					/// For some implementations, it's necessary to have a mechanism available by
-					/// which we can determine if the traffic we're diverting to our proxy is
-					/// allowed to have internet access. Otherwise, since our application is granted
-					/// internet access, we would by default allow anyone and everyone who's traffic
-					/// we intercept to pass freely to the internet. So, this method is demanded by
-					/// Diverter implementations that require this type of check.
-					/// </summary>
-					util::cb::FirewallCheckFunction m_firewallCheckCb;
+					std::unique_ptr<BaseDiverter> m_diverter;
 
 				};
 

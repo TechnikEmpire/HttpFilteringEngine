@@ -67,8 +67,6 @@ namespace te
 
 				BaseInMemoryCertificateStore::~BaseInMemoryCertificateStore()
 				{
-					RevokeOsTrust();
-
 					// XXX TODO - What about the temp EC key? Does it simply die as part of the
 					// context? Why is there no method to fetch it later? If it doesn't die with
 					// the context, then we need to store it separately. :(
@@ -105,7 +103,7 @@ namespace te
 					return nullptr;
 				}
 
-				boost::asio::ssl::context* BaseInMemoryCertificateStore::SpoofCertificate(const std::string& host, X509* certificate)
+				boost::asio::ssl::context* BaseInMemoryCertificateStore::SpoofCertificate(std::string host, X509* certificate)
 				{
 					std::transform(host.begin(), host.end(), host.begin(), ::tolower);
 

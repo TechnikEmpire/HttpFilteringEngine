@@ -43,13 +43,22 @@
 #include "../../../util/http/KnownHttpHeaders.hpp"
 #include <memory>
 #include <atomic>
+#include <type_traits>
 
 #if BOOST_OS_WINDOWS
 
 	#if BOOST_ARCH_X86_32
-		#define cpu_relax()		asm volatile("pause" ::: "memory")
+		#ifdef _MSC_VER
+			#define cpu_relax() _mm_pause()
+		#else
+			#define cpu_relax() asm volatile("pause" ::: "memory")
+		#endif
 	#elif BOOST_ARCH_X86_64
-		#define cpu_relax()		asm volatile("pause" ::: "memory")
+		#ifdef _MSC_VER
+			#define cpu_relax() _mm_pause()
+		#else
+			#define cpu_relax() asm volatile("pause" ::: "memory")
+		#endif
 	#else
 		#if BOOST_COMP_MSVC_BUILD || BOOST_COMP_MSVC
 			#pragma message ("Relax instruction for ::Kill() member spinlock for ARCH not implemented.")
@@ -63,6 +72,63 @@
 	// XXX TODO - Ensure we've got cpu_relax for other platforms.
 #endif	
 
+/*
+*					TLS Bridge Control Flow
+*
+*    +------------------------------+
+*    |                              |
+*    |    Client socket connects.   +-------------+
+*    |                              |             |
+*    +------------------------------+             |
+*                                                 |
+*    +---------------------------+     +----------v-------------+
+*    |                           <--+  | Read host information  |
+* +--+ Connect upstream to host. |  |  | from TLS client hello. +--^
+* |  |                           |  |  +------------------------+  |
+* |  +---------------------------+  |  +------------------------+  |
+* |                                 |  | Resolve the extracted  |  |
+* |  +---------------------------+  +--+ host address.          <--+
+* +-->                           |     +------------------------+
+*    | Perform handshake with    |
+*    | the upstream server. Get  |     +------------------------+
+*    | the server's certificate. +---->+ Ask cert store to spoof+--+
+*    |                           |     | or get existing cert.  |  |
+*    +---------------------------+     +------------------------+  |
+*                                                                  |
+*    +---------------------------+     +------------------------+  |
+*    | Read downstream client    <-----+ Perform downstream     +<-+
+*    | request headers. Adjust   |     | client handshake.      |
+*    | socket options such as    |     +------------------------+
+*    | keep-alive etc to match   |
+*    | the client settings.      |     +---------------------------+
+*    |                           +-----> Attempt to filter the     |
+*    +---------------------------+     | request immediately based |
+*                                      | solely on the host and    |
+*   +----------------------------+     | request URI information.  |
+*   | Read server response       |     | Write client headers to   |
+*   | headers. Attempt to filter <-----+ upstream server.          |
+*   | the request again by using |     +---------------------------+
+*   | content-type info.         |
+*   | If response body, and      |     +---------------------------+
+*   | inspection desired, read   +-----> If body inspected, filter |
+*   | from server again until    |     | when read complete, write |
+*   | the entire chunked response|     | to client.                |
+*   | has been read, or total    |     +-------------+-------------+
+*   | bytes read  equals content |                   |
+*   | length header value.       |     +-------------v-------------+
+*   |                            |     | When response is fully    |
+*   | If inspection is not wanted|     | written to client, if     |
+*   | then write to client, then |     | keep-alive specified,     |
+*   | initate read from server,  |     | re-initiate process at    |
+*   | write to client volley     +---->+ reading client headers    |
+*   | until transfer complete.   |     | stage.                    |
+*   +----------------------------+     +---------------------------+
+
+	Note that the above flow is basically identical for insecure clients
+	aka plain TCP HTTP clients. Rather than a peek read, handshake, spoof,
+	handshake, we jump right to the client's headers.
+*/
+
 namespace te
 {
 	namespace httpengine
@@ -73,7 +139,7 @@ namespace te
 			{								
 
 				/// <summary>
-				/// The TlsCapableHttpBridge serves as the nice MITM for HTTP/HTTPS transactions.
+				/// The TlsCapableHttpBridge serves as the friendly MITM for HTTP/HTTPS transactions.
 				/// The purpose of this class is to act transparently on behalf of the downstream
 				/// client, fulfilling requests to the original remote peer the connected client
 				/// sought. By transparently fulfilling these requests, this class can employ all of
@@ -111,17 +177,14 @@ namespace te
 				/// formatted filters and CSS selectors.
 				/// </summary>
 				template<class BridgeSocketType>				
-				class TlsCapableHttpBridge : std::enable_shared_from_this< TlsCapableHttpBridge<BridgeSocketType> >, public util::cb::EventReporter
+				class TlsCapableHttpBridge : public std::enable_shared_from_this< TlsCapableHttpBridge<BridgeSocketType> >, public util::cb::EventReporter
 				{
 					
 				/// <summary>
 				/// Enforce use of this class to the only two types of sockets it is intended to be
 				/// used with.
 				/// </summary>
-				static_assert(
-					(std::is_same<BridgeSocketType, network::TcpSocket> ::value || std::is_same<BridgeSocketType, network::TlsSocket>::value) &&
-					u8"TlsCapableHttpBridge can only accept boost::asio::ip::tcp::socket or boost::asio::ssl::stream<boost::asio::ip::tcp::socket> as valid template parameters."
-					);
+				static_assert((std::is_same<BridgeSocketType, network::TcpSocket> ::value || std::is_same<BridgeSocketType, network::TlsSocket>::value), "TlsCapableHttpBridge can only accept boost::asio::ip::tcp::socket or boost::asio::ssl::stream<boost::asio::ip::tcp::socket> as valid template parameters.");
 
 				public:
 					
@@ -200,16 +263,15 @@ namespace te
 					/// Consumers can inspect or log such events. Must be thread safe.
 					/// </param>
 					TlsCapableHttpBridge(
-						boost::asio::io_service* service,						
-						const filtering::http::HttpFilteringEngine* filteringEngine,
+						boost::asio::io_service* service,
+						filtering::http::HttpFilteringEngine* filteringEngine,
 						BaseInMemoryCertificateStore* certStore = nullptr,
 						boost::asio::ssl::context* defaultServerContext = nullptr,
 						boost::asio::ssl::context* clientContext = nullptr,
 						util::cb::MessageFunction onInfoCb = nullptr,
 						util::cb::MessageFunction onWarnCb = nullptr,
 						util::cb::MessageFunction onErrorCb = nullptr
-						) : 
-						util::cb::EventReporter(onInfoCb, onWarnCb, onErrorCb);
+						);
 
 					/// <summary>
 					/// No copy no move no thx.
@@ -282,7 +344,7 @@ namespace te
 					/// Every bridge requires a valid pointer to a filtering engine which may or may
 					/// not be shared, for subjecting HTTP requests and responses to filtering.
 					/// </summary>
-					const filtering::http::HttpFilteringEngine* m_filteringEngine = nullptr;
+					filtering::http::HttpFilteringEngine* m_filteringEngine = nullptr;
 
 					/// <summary>
 					/// Pointer to the in memory certificate store that is required for TLS
@@ -388,12 +450,7 @@ namespace te
 					/// shutdown sequence is only initiated once. This flag will be used as a
 					/// spinlock to force this needed synchronization.
 					/// </summary>
-					std::atomic_flag m_killLock = ATOMIC_FLAG_INIT;
-
-					/// <summary>
-					/// For supplying to async_read_until operations to force reads to stop at headers.
-					/// </summary>
-					static const std::string Crlf;		
+					std::atomic_flag m_killLock = ATOMIC_FLAG_INIT;	
 
 					/// <summary>
 					/// Indicates whether or not keep-alive should be used, at the client's request.
@@ -465,10 +522,10 @@ namespace te
 							boost::system::error_code upstreamShutdownErr;
 							boost::system::error_code upstreamCloseErr;
 
-							this->DownstreamSocket().shutdown(downstreamShutdownErr);
+							this->DownstreamSocket().shutdown(boost::asio::socket_base::shutdown_both, downstreamShutdownErr);
 							this->DownstreamSocket().close(downstreamCloseErr);
 
-							this->UpstreamSocket().shutdown(upstreamShutdownErr);
+							this->UpstreamSocket().shutdown(boost::asio::socket_base::shutdown_both, upstreamShutdownErr);
 							this->UpstreamSocket().close(upstreamCloseErr);
 
 							// We set the stream timeout to any negative value to force the stream
@@ -607,7 +664,7 @@ namespace te
 						{
 							if (m_response->Parse(bytesTransferred))
 							{
-								auto blockResult = blockResult = m_filteringEngine->ShouldBlock(m_request.get(), m_response.get());								
+								auto blockResult = m_filteringEngine->ShouldBlock(m_request.get(), m_response.get());								
 
 								if (blockResult != 0)
 								{
@@ -623,13 +680,13 @@ namespace te
 
 									boost::asio::async_write(
 										m_downstreamSocket, 
-										writeBuffer, 
+										responseBuffer,
 										boost::asio::transfer_all(), 
 										m_downstreamStrand.wrap(
 											std::bind(
 												&TlsCapableHttpBridge::OnDownstreamWrite, 
 												shared_from_this(), 
-												boost::asio::placeholders::error
+												std::placeholders::_1
 												)
 											)
 										);
@@ -694,8 +751,8 @@ namespace te
 												std::bind(
 													&TlsCapableHttpBridge::OnUpstreamRead,
 													shared_from_this(),
-													boost::asio::placeholders::error,
-													boost::asio::placeholders::bytes_transferred
+													std::placeholders::_1,
+													std::placeholders::_2
 													)
 												)
 											);
@@ -723,7 +780,7 @@ namespace te
 											std::bind(
 												&TlsCapableHttpBridge::OnDownstreamWrite,
 												shared_from_this(),
-												boost::asio::placeholders::error
+												std::placeholders::_1
 												)
 											)
 										);
@@ -803,8 +860,8 @@ namespace te
 											std::bind(
 												&TlsCapableHttpBridge::OnUpstreamRead, 
 												shared_from_this(), 
-												boost::asio::placeholders::error, 
-												boost::asio::placeholders::bytes_transferred
+												std::placeholders::_1,
+												std::placeholders::_2
 												)
 											)
 										);
@@ -823,7 +880,7 @@ namespace te
 										std::bind(
 											&TlsCapableHttpBridge::OnDownstreamWrite, 
 											shared_from_this(), 
-											boost::asio::placeholders::error
+											std::placeholders::_1
 											)
 										)
 									);
@@ -881,8 +938,8 @@ namespace te
 										std::bind(
 											&TlsCapableHttpBridge::OnDownstreamRead, 
 											shared_from_this(), 
-											boost::asio::placeholders::error, 
-											boost::asio::placeholders::bytes_transferred
+											std::placeholders::_1,
+											std::placeholders::_2
 											)
 										)
 									);
@@ -898,13 +955,13 @@ namespace te
 								boost::asio::async_read_until(
 									m_upstreamSocket, 
 									m_response->GetHeaderReadBuffer(), 
-									Crlf,
+									u8"\r\n\r\n",
 									m_upstreamStrand.wrap(
 										std::bind(
 											&TlsCapableHttpBridge::OnUpstreamHeaders, 
 											shared_from_this(), 
-											boost::asio::placeholders::error, 
-											boost::asio::placeholders::bytes_transferred
+											std::placeholders::_1,
+											std::placeholders::_2
 											)
 										)
 									);
@@ -960,7 +1017,7 @@ namespace te
 					/// completion condition. Does not accurately represent the total data read from
 					/// the remote peer.
 					/// </param>
-					void OnDownstreamHeaders(const boost::system::error_code& error, const size_t bytesTansferred)
+					void OnDownstreamHeaders(const boost::system::error_code& error, const size_t bytesTransferred)
 					{
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
@@ -969,7 +1026,8 @@ namespace te
 						{
 							if (m_request->Parse(bytesTransferred))
 							{								
-								m_request->SetShouldBlock(m_filteringEngine->ShouldBlock(m_request.get()));
+								auto requestBlockResult = m_filteringEngine->ShouldBlock(m_request.get());
+								m_request->SetShouldBlock(requestBlockResult);
 
 								// This little business is for dealing with browsers like Chrome, who just have
 								// to use their own "I'm too cool for skool" compression methods like SDHC. We
@@ -1036,8 +1094,8 @@ namespace te
 												std::bind(
 													&TlsCapableHttpBridge::OnResolve,
 													shared_from_this(),
-													boost::asio::placeholders::error,
-													boost::asio::placeholders::iterator
+													std::placeholders::_1,
+													std::placeholders::_2
 													)
 												)
 											);
@@ -1055,6 +1113,8 @@ namespace te
 
 										SetStreamTimeout(5000);
 
+										auto writeBuffer = m_request->GetWriteBuffer();
+
 										boost::asio::async_write(
 											m_upstreamSocket, 
 											writeBuffer, 
@@ -1063,7 +1123,7 @@ namespace te
 												std::bind(
 													&TlsCapableHttpBridge::OnUpstreamWrite, 
 													shared_from_this(), 
-													boost::asio::placeholders::error
+													std::placeholders::_1
 													)
 												)
 											);
@@ -1140,8 +1200,8 @@ namespace te
 											std::bind(
 												&TlsCapableHttpBridge::OnDownstreamRead, 
 												shared_from_this(), 
-												boost::asio::placeholders::error, 
-												boost::asio::placeholders::bytes_transferred
+												std::placeholders::_1,
+												std::placeholders::_2
 												)
 											)
 										);
@@ -1162,7 +1222,7 @@ namespace te
 										std::bind(
 											&TlsCapableHttpBridge::OnUpstreamWrite, 
 											shared_from_this(), 
-											boost::asio::placeholders::error
+											std::placeholders::_1
 											)
 										)
 									);
@@ -1219,8 +1279,9 @@ namespace te
 									m_upstreamStrand.wrap(
 										std::bind(
 											&TlsCapableHttpBridge::OnUpstreamRead,
-											shared_from_this(), boost::asio::placeholders::error, 
-											boost::asio::placeholders::bytes_transferred
+											shared_from_this(), 
+											std::placeholders::_1,
+											std::placeholders::_2
 											)
 										)
 									);
@@ -1239,14 +1300,14 @@ namespace te
 
 								boost::asio::async_read_until(
 									m_downstreamSocket, 
-									m_request->GetHeaderBuffer(), 
-									CrLf, 
+									m_request->GetHeaderReadBuffer(), 
+									u8"\r\n\r\n",
 									m_downstreamStrand.wrap(
 										std::bind(
 											&TlsCapableHttpBridge::OnDownstreamHeaders, 
 											shared_from_this(), 
-											boost::asio::placeholders::error, 
-											boost::asio::placeholders::bytes_transferred
+											std::placeholders::_1,
+											std::placeholders::_2
 											)
 										)
 									);
@@ -1325,7 +1386,7 @@ namespace te
 							return;
 						}
 						
-						m_streamTimer.async_wait(boost::bind(&TlsCapableHttpBridge::OnStreamTimeout, shared_from_this(), boost::asio::placeholders::error));
+						m_streamTimer.async_wait(std::bind(&TlsCapableHttpBridge::OnStreamTimeout, shared_from_this(), std::placeholders::_1));
 					}
 
 					/// <summary>
@@ -1354,7 +1415,7 @@ namespace te
 							{
 								std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\n\t");
 								errMsg.append(error.message());
-								ReportError(errMessage);
+								ReportError(errMsg);
 							}
 
 							if (m_upstreamCert != nullptr)
@@ -1434,24 +1495,24 @@ namespace te
 							if (m_tlsPeekBuffer != nullptr && (bytesTransferred > MinTlsHelloLength))
 							{
 								// Handshake && client hello
-								if (m_tlsPeekBuffer[0] == 0x16 && (m_tlsPeekBuffer[5] == 0x01))
+								if ((*m_tlsPeekBuffer)[0] == 0x16 && ((*m_tlsPeekBuffer)[5] == 0x01))
 								{
 									pos = 5;
 
 									int helloLen = 
-										(reinterpret_cast<unsigned char>(m_tlsPeekBuffer[++pos]) << 16) + 
-										(reinterpret_cast<unsigned char>(m_tlsPeekBuffer[++pos]) << 8) + 
-										reinterpret_cast<unsigned char>(m_tlsPeekBuffer[++pos]);
+										((reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[++pos]) << 16) + 
+										(reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[++pos]) << 8) +
+										reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[++pos]));
 
 									// Skip random bytes.
 									pos += 32;
 
 									// Skip past Session ID Length.
-									pos += static_cast<size_t>(m_tlsPeekBuffer[pos]);
+									pos += static_cast<size_t>((*m_tlsPeekBuffer)[pos]);
 
 									int cipherSuitesLen = 
-										(reinterpret_cast<unsigned char>(m_tlsPeekBuffer[pos]) << 8) +
-										reinterpret_cast<unsigned char>(m_tlsPeekBuffer[++pos]);
+										((reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[pos]) << 8) +
+										reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[++pos]));
 
 									pos += static_cast<size_t>(cipherSuitesLen);
 
@@ -1459,9 +1520,9 @@ namespace te
 									pos += 4;
 
 									// Skip past Compression Methods Length.
-									pos += static_cast<size_t>(m_tlsPeekBuffer[pos]);
+									pos += static_cast<size_t>((*m_tlsPeekBuffer)[pos]);
 
-									int extensionsLen = (reinterpret_cast<unsigned char>(m_tlsPeekBuffer[pos]) << 8) + reinterpret_cast<unsigned char>(m_tlsPeekBuffer[++pos]);
+									int extensionsLen = ((reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[pos]) << 8) + reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[++pos]));
 
 									// In case we didn't get the whole hello, adjust our bounds.
 									extensionsLen = std::min(extensionsLen, static_cast<int>(bytesTransferred));
@@ -1472,7 +1533,7 @@ namespace te
 									while((extensionPos + 1) < extensionsLen && notDone)
 									{
 										
-										if (m_tlsPeekBuffer[extensionPos] == 0x00 && m_tlsPeekBuffer[extensionPos + 1] == 0x00)
+										if ((*m_tlsPeekBuffer)[extensionPos] == 0x00 && (*m_tlsPeekBuffer)[extensionPos + 1] == 0x00)
 										{
 											isSni = true;											
 										}	
@@ -1483,12 +1544,12 @@ namespace te
 										{
 											// If we're in-bounds, get the length of the extension.		
 											int thisExtensionLen =
-												(reinterpret_cast<unsigned char>(m_tlsPeekBuffer[extensionPos]) << 8) +
-												reinterpret_cast<unsigned char>(m_tlsPeekBuffer[extensionPos + 1]);
+												(reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[extensionPos]) << 8) +
+												reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[extensionPos + 1]);
 
 											extensionPos += 2;
 
-											if!(isSni)
+											if(!isSni)
 											{
 												// Skip this much, since we don't have our SNI extension yet.
 												extensionPos += thisExtensionLen;
@@ -1499,11 +1560,11 @@ namespace te
 											// extension that contains the actual hostname.
 											while ((extensionPos + 3) < thisExtensionLen && (extensionPos + 3) < extensionsLen && !notDone)
 											{
-												int sniPartLen = (reinterpret_cast<unsigned char>(m_tlsPeekBuffer[extensionPos + 1]) << 8) +
-													reinterpret_cast<unsigned char>(m_tlsPeekBuffer[extensionPos + 2]);
+												int sniPartLen = (reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[extensionPos + 1]) << 8) +
+													reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[extensionPos + 2]);
 
 
-												auto sniExtensionType = m_tlsPeekBuffer[extensionPos];
+												auto sniExtensionType = (*m_tlsPeekBuffer)[extensionPos];
 												extensionPos += 3;
 
 												switch (sniExtensionType)
@@ -1513,7 +1574,7 @@ namespace te
 														if (extensionPos + sniPartLen <= extensionsLen)
 														{
 															// If we're in bounds including our length, then we've got the entire hostname.
-															hostName = boost::string_ref(m_tlsPeekBuffer[extensionPos], sniPartLen);
+															hostName = boost::string_ref(m_tlsPeekBuffer->data() + extensionPos, sniPartLen);
 														}
 														else
 														{
@@ -1552,13 +1613,13 @@ namespace te
 										try
 										{	
 											boost::asio::ip::tcp::resolver::query query(m_upstreamHost, "https");
-											m_resolver.async_resolve(query, m_upstreamStrand.wrap(boost::bind(&TlsCapableHttpBridge::OnResolve, shared_from_this(), boost::asio::placeholders::error, boost::asio::placeholders::iterator)));
+											m_resolver.async_resolve(query, m_upstreamStrand.wrap(std::bind(&TlsCapableHttpBridge::OnResolve, shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
 											return;
 										}
 										catch (std::exception& e)
 										{
 											std::string errorMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - Got Error:\n\t");
-											errorMessage.append(e.message());
+											errorMessage.append(e.what());
 											ReportError(errorMessage);
 										}
 									}
@@ -1636,7 +1697,7 @@ namespace te
 					/// </returns>
 					bool VerifyServerCertificateCallback(bool preverified, boost::asio::ssl::verify_context& ctx)
 					{
-						boost::asio::ssl::rfc2818_verification v(m_currentHost);
+						boost::asio::ssl::rfc2818_verification v(m_upstreamHost);
 
 						bool verified = v(preverified, ctx);
 
@@ -1653,7 +1714,7 @@ namespace te
 							if (curCert != nullptr)
 							{
 								char subjectName[MaxDomainNameSize];
-								X509_NAME_oneline(X509_get_subject_name(curCert), subject_name, MaxDomainNameSize);
+								X509_NAME_oneline(X509_get_subject_name(curCert), subjectName, MaxDomainNameSize);
 								
 								std::string verifyFailedErrorMessage("In TlsCapableHttpBridge<network::TlsSocket>::VerifyServerCertificateCallback(bool, boost::asio::ssl::verify_context&) - Cert for ");																
 								verifyFailedErrorMessage.append(subjectName);
@@ -1718,11 +1779,7 @@ namespace te
 							ReportError(errorMessage);
 						}
 					}
-
-				};
-
-				template<class BridgeSocketType>
-				const std::string TlsCapableHttpBridge::<BridgeSocketType>::Crlf{u8"\r\n\r\n"};
+				};				
 
 			} /* namespace secure */
 		} /* namespace mitm */

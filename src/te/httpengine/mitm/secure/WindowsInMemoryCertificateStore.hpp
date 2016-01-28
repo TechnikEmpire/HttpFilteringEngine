@@ -52,10 +52,29 @@ namespace te
 
 				public:
 
-					WindowsInMemoryCertificateStore(boost::asio::io_service* service);
+					/// <summary>
+					/// Default constructor, delegates to the parameterized constructure which
+					/// takes country code, organization name and common name, with default values.
+					/// Be advised that the constructor that this delegates to can throw.
+					/// </summary>
+					WindowsInMemoryCertificateStore();
 
+					/// <summary>
+					/// Constructs a new WindowsInMemoryCertificateStore and generates a self signed CA
+					/// certificate, storing the generated EVP_PKEY and X509 structures in the
+					/// m_thisCaKeyPair and m_thisCa members respectively. This constructor invokes
+					/// members that can throw.
+					/// </summary>
+					/// <param name="countryCode">
+					/// The country code for the self signed CA to be generated.
+					/// </param>
+					/// <param name="organizationName">
+					/// The organization name for the self signed CA to be generated.
+					/// </param>
+					/// <param name="commonName">
+					/// The common name for the self signed CA to be generated.
+					/// </param>
 					WindowsInMemoryCertificateStore(
-						boost::asio::io_service* service,
 						const std::string& countryCode,
 						const std::string& organizationName,
 						const std::string& commonName

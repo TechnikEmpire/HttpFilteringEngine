@@ -63,20 +63,18 @@ namespace te
 		{
 			namespace secure
 			{
-
-				WindowsInMemoryCertificateStore::WindowsInMemoryCertificateStore(boost::asio::io_service* service) :
-					BaseInMemoryCertificateStore(service)
+				
+				WindowsInMemoryCertificateStore::WindowsInMemoryCertificateStore() :
+					BaseInMemoryCertificateStore()
 				{
 
 				}
 
 				WindowsInMemoryCertificateStore::WindowsInMemoryCertificateStore(
-					boost::asio::io_service* service,
 					const std::string& countryCode,
 					const std::string& organizationName,
 					const std::string& commonName
-					) : BaseInMemoryCertificateStore(
-						service, 
+					) : BaseInMemoryCertificateStore(						
 						countryCode, 
 						organizationName, 
 						commonName
@@ -87,7 +85,7 @@ namespace te
 
 				WindowsInMemoryCertificateStore::~WindowsInMemoryCertificateStore()
 				{
-
+					RevokeOsTrust();
 				}
 
 				bool WindowsInMemoryCertificateStore::EstablishOsTrust()

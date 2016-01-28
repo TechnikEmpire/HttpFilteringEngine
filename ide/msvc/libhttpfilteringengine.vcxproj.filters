@@ -207,14 +207,26 @@
     <ClInclude Include="..\..\src\te\httpengine\util\cb\EngineCallbackTypes.h">
       <Filter>Header Files\te\httpengine\util\cb</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineCtl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\util\cb\EventReporter.hpp">
       <Filter>Header Files\te\httpengine\util\cb</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpFilterOptions.hpp">
       <Filter>Header Files\te\httpengine\filtering\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\DiversionControl.hpp">
+      <Filter>Header Files\te\httpengine\mitm\diversion</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\impl\win\WinDiverter.hpp">
+      <Filter>Header Files\te\httpengine\mitm\diversion\impl\win</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineControl.hpp">
+      <Filter>Header Files\te\httpengine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineCAPI.h">
+      <Filter>Header Files\te\httpengine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpAcceptor.hpp">
+      <Filter>Header Files\te\httpengine\mitm\secure</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -254,9 +266,6 @@
     <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.cpp">
       <Filter>Source Files\te\httpengine</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineCtl.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\diversion\BaseDiverter.cpp">
       <Filter>Source Files\te\httpengine\mitm\diversion</Filter>
     </ClCompile>
@@ -268,6 +277,18 @@
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\WindowsInMemoryCertificateStore.cpp">
       <Filter>Source Files\te\httpengine\mitm\secure</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\mitm\diversion\DiversionControl.cpp">
+      <Filter>Source Files\te\httpengine\mitm\diversion</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\mitm\diversion\impl\win\WinDiverter.cpp">
+      <Filter>Source Files\te\httpengine\mitm\diversion\impl\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineControl.cpp">
+      <Filter>Source Files\te\httpengine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineCAPI.cpp">
+      <Filter>Source Files\te\httpengine</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

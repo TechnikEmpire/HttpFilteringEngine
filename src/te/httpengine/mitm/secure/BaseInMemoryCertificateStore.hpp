@@ -72,16 +72,17 @@ namespace te
 				public:
 
 					/// <summary>
-					/// Default constructor, delegeates to the parameterized constructure which
+					/// Default constructor, delegates to the parameterized constructure which
 					/// takes country code, organization name and common name, with default values.
 					/// Be advised that the constructor that this delegates to can throw.
 					/// </summary>
 					BaseInMemoryCertificateStore();
 
 					/// <summary>
-					/// Generates a self signed CA certificate, storing the generated EVP_PKEY and
-					/// X509 structures in the m_thisCaKeyPair and m_thisCa members respectively.
-					/// This constructor invokes members that can throw.
+					/// Constructs a new BaseInMemoryCertificateStore and generates a self signed CA
+					/// certificate, storing the generated EVP_PKEY and X509 structures in the
+					/// m_thisCaKeyPair and m_thisCa members respectively. This constructor invokes
+					/// members that can throw.
 					/// </summary>
 					/// <param name="countryCode">
 					/// The country code for the self signed CA to be generated.
@@ -170,7 +171,7 @@ namespace te
 					/// configured to utilize the successfully spoofed certificate, keypair and
 					/// temporary negotiation EC key in a server context.
 					/// </returns>
-					boost::asio::ssl::context* SpoofCertificate(const std::string& host, X509* certificate);
+					boost::asio::ssl::context* SpoofCertificate(std::string host, X509* certificate);
 
 					/// <summary>
 					/// Attempts to install the current temporary root CA certificate for
@@ -200,6 +201,11 @@ namespace te
 					/// need to be expected and correctly handled.
 					/// </summary>
 					virtual void RevokeOsTrust() = 0;
+
+					/// <summary>
+					/// Holds the cipher list that is set on every generated context.
+					/// </summary>
+					static const std::string ContextCipherList;
 
 				protected:
 
@@ -250,12 +256,7 @@ namespace te
 					/// existence of SAN's or Subject Alternative Names, it's possible to have
 					/// multiple keys pointing to the same structure. This makes cleanup a little tricky.
 					/// </summary>
-					std::unordered_map<std::string, boost::asio::ssl::context*> m_hostContexts;
-
-					/// <summary>
-					/// Holds the cipher list that is set on every generated context.
-					/// </summary>
-					static const std::string ContextCipherList;					
+					std::unordered_map<std::string, boost::asio::ssl::context*> m_hostContexts;								
 
 					/// <summary>
 					/// Generates an EC key with the given named curve. As with basically every

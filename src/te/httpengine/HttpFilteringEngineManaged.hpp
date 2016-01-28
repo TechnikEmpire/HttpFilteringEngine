@@ -46,9 +46,9 @@ namespace Te {
 
 	namespace HttpFilteringEngine
 	{
-		public ref class Class1
+		public ref class Engine
 		{
-			// TODO: Add your methods for this class here.
+			
 		};
 	}	
 }

@@ -40,14 +40,43 @@ namespace te
 			namespace diversion
 			{
 
-				BaseDiverter::BaseDiverter()
+				BaseDiverter::BaseDiverter(
+					util::cb::FirewallCheckFunction firewallCheckCb,
+					util::cb::MessageFunction onInfo,
+					util::cb::MessageFunction onWarning,
+					util::cb::MessageFunction onError
+					) :
+					util::cb::EventReporter(onInfo,	onWarning, onError),
+					m_firewallCheckCb(firewallCheckCb)
 				{
-
+					m_httpListenerPort = 0;
+					m_httpsListenerPort = 0;
+					m_running = false;
 				}
 
 				BaseDiverter::~BaseDiverter()
 				{
 
+				}
+
+				const uint16_t BaseDiverter::GetHttpListenerPort() const
+				{
+					return m_httpListenerPort;
+				}
+
+				void BaseDiverter::SetHttpListenerPort(const uint16_t port)
+				{
+					m_httpListenerPort = port;
+				}
+
+				const uint16_t BaseDiverter::GetHttpsListenerPort() const
+				{
+					return m_httpsListenerPort;
+				}
+
+				void BaseDiverter::SetHttpsListenerPort(const uint16_t port)
+				{
+					m_httpsListenerPort = port;
 				}
 
 			} /* namespace diversion */

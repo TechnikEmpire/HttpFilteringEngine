@@ -144,9 +144,16 @@ namespace te
 						util::cb::ElementBlockFunction onElementsBlocked = nullptr
 						);				
 
+					/// <summary>
+					/// No copy no move nothx.
+					/// </summary>
 					HttpFilteringEngine(const HttpFilteringEngine&) = delete;
 					HttpFilteringEngine(HttpFilteringEngine&&) = delete;
 					HttpFilteringEngine& operator=(const HttpFilteringEngine&) = delete;
+					
+					/// <summary>
+					/// Default destructor.
+					/// </summary>
 					~HttpFilteringEngine();
 
 					/// <summary>

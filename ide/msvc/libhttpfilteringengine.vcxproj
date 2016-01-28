@@ -205,9 +205,23 @@
       <AdditionalDependencies>wsock32.lib;Ws2_32.lib;WinDivert.lib;iphlpapi.lib;psapi.lib;winmm.lib;ssleay32.lib;libeay32.lib;Crypt32.lib;http_parser.lib;gumbo_parser.lib;gq.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib;..\..\deps\openssl\msvc\$(Configuration)\lib;..\..\deps\windivert\msvc\$(PlatformTarget);..\..\deps\gq\deps\gumbo-parser\msvc\$(Configuration)\lib;..\..\deps\gq\msvc\$(Configuration);..\..\deps\http-parser\msvc\$(Configuration)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_bzip2.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_iostreams.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_thread.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_system.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_chrono.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_date_time.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug x64|Win32'">
     <ClCompile>
@@ -238,9 +252,23 @@
       <AdditionalDependencies>wsock32.lib;Ws2_32.lib;WinDivert.lib;iphlpapi.lib;psapi.lib;winmm.lib;ssleay32.lib;libeay32.lib;Crypt32.lib;http_parser.lib;gumbo_parser.lib;gq.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib;..\..\deps\openssl\msvc\$(Configuration)\lib;..\..\deps\windivert\msvc\$(PlatformTarget);..\..\deps\gq\deps\gumbo-parser\msvc\$(Configuration)\lib;..\..\deps\gq\msvc\$(Configuration);..\..\deps\http-parser\msvc\$(Configuration)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_bzip2.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_iostreams.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_thread.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_system.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_chrono.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_date_time.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug x86|x64'">
     <ClCompile>
@@ -271,9 +299,23 @@
       <AdditionalDependencies>wsock32.lib;Ws2_32.lib;WinDivert.lib;iphlpapi.lib;psapi.lib;winmm.lib;ssleay32.lib;libeay32.lib;Crypt32.lib;http_parser.lib;gumbo_parser.lib;gq.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib;..\..\deps\openssl\msvc\$(Configuration)\lib;..\..\deps\windivert\msvc\$(PlatformTarget);..\..\deps\gq\deps\gumbo-parser\msvc\$(Configuration)\lib;..\..\deps\gq\msvc\$(Configuration);..\..\deps\http-parser\msvc\$(Configuration)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_bzip2.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_iostreams.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_thread.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_system.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_chrono.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_date_time.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug x64|x64'">
     <ClCompile>
@@ -304,9 +346,23 @@
       <AdditionalDependencies>wsock32.lib;Ws2_32.lib;WinDivert.lib;iphlpapi.lib;psapi.lib;winmm.lib;ssleay32.lib;libeay32.lib;Crypt32.lib;http_parser.lib;gumbo_parser.lib;gq.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib;..\..\deps\openssl\msvc\$(Configuration)\lib;..\..\deps\windivert\msvc\$(PlatformTarget);..\..\deps\gq\deps\gumbo-parser\msvc\$(Configuration)\lib;..\..\deps\gq\msvc\$(Configuration);..\..\deps\http-parser\msvc\$(Configuration)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_bzip2.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_iostreams.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_thread.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_system.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_chrono.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_date_time.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x86|Win32'">
     <ClCompile>
@@ -336,9 +392,23 @@
       <AdditionalDependencies>wsock32.lib;Ws2_32.lib;WinDivert.lib;iphlpapi.lib;psapi.lib;winmm.lib;ssleay32.lib;libeay32.lib;Crypt32.lib;http_parser.lib;gumbo_parser.lib;gq.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib;..\..\deps\openssl\msvc\$(Configuration)\lib;..\..\deps\windivert\msvc\$(PlatformTarget);..\..\deps\gq\deps\gumbo-parser\msvc\$(Configuration)\lib;..\..\deps\gq\msvc\$(Configuration);..\..\deps\http-parser\msvc\$(Configuration)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_bzip2.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_iostreams.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_thread.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_system.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_chrono.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_date_time.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x64|Win32'">
     <ClCompile>
@@ -368,9 +438,23 @@
       <AdditionalDependencies>wsock32.lib;Ws2_32.lib;WinDivert.lib;iphlpapi.lib;psapi.lib;winmm.lib;ssleay32.lib;libeay32.lib;Crypt32.lib;http_parser.lib;gumbo_parser.lib;gq.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib;..\..\deps\openssl\msvc\$(Configuration)\lib;..\..\deps\windivert\msvc\$(PlatformTarget);..\..\deps\gq\deps\gumbo-parser\msvc\$(Configuration)\lib;..\..\deps\gq\msvc\$(Configuration);..\..\deps\http-parser\msvc\$(Configuration)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_bzip2.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_iostreams.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_thread.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_system.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_chrono.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_date_time.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x86|x64'">
     <ClCompile>
@@ -400,9 +484,23 @@
       <AdditionalDependencies>wsock32.lib;Ws2_32.lib;WinDivert.lib;iphlpapi.lib;psapi.lib;winmm.lib;ssleay32.lib;libeay32.lib;Crypt32.lib;http_parser.lib;gumbo_parser.lib;gq.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib;..\..\deps\openssl\msvc\$(Configuration)\lib;..\..\deps\windivert\msvc\$(PlatformTarget);..\..\deps\gq\deps\gumbo-parser\msvc\$(Configuration)\lib;..\..\deps\gq\msvc\$(Configuration);..\..\deps\http-parser\msvc\$(Configuration)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_bzip2.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_iostreams.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_thread.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_system.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_chrono.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_date_time.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x64|x64'">
     <ClCompile>
@@ -432,9 +530,23 @@
       <AdditionalDependencies>wsock32.lib;Ws2_32.lib;WinDivert.lib;iphlpapi.lib;psapi.lib;winmm.lib;ssleay32.lib;libeay32.lib;Crypt32.lib;http_parser.lib;gumbo_parser.lib;gq.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib;..\..\deps\openssl\msvc\$(Configuration)\lib;..\..\deps\windivert\msvc\$(PlatformTarget);..\..\deps\gq\deps\gumbo-parser\msvc\$(Configuration)\lib;..\..\deps\gq\msvc\$(Configuration);..\..\deps\http-parser\msvc\$(Configuration)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_bzip2.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_iostreams.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_thread.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_system.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_chrono.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\boost\boost_1_60_0\stage\msvc\$(Configuration)\lib\boost_date_time.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -450,13 +562,17 @@
     <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpFilteringEngine.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\filtering\options\HttpFilteringOptions.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\filtering\options\ProgramWideOptions.hpp" />
-    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineCtl.h" />
+    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineControl.hpp" />
+    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineCAPI.h" />
     <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\BaseDiverter.hpp" />
+    <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\DiversionControl.hpp" />
+    <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\impl\win\WinDiverter.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\http\BaseHttpTransaction.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\http\HttpRequest.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\http\HttpResponse.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.hpp" />
+    <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpAcceptor.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpBridge.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpListener.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\WindowsInMemoryCertificateStore.hpp" />
@@ -474,7 +590,8 @@
     <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpAbpInclusionFilter.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpFilteringEngine.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\filtering\options\ProgramWideOptions.cpp" />
-    <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineCtl.cpp" />
+    <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineControl.cpp" />
+    <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineCAPI.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x64|Win32'">true</CompileAsManaged>
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x86|Win32'">true</CompileAsManaged>
@@ -486,6 +603,8 @@
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug x86|x64'">true</CompileAsManaged>
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\diversion\BaseDiverter.cpp" />
+    <ClCompile Include="..\..\src\te\httpengine\mitm\diversion\DiversionControl.cpp" />
+    <ClCompile Include="..\..\src\te\httpengine\mitm\diversion\impl\win\WinDiverter.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\mitm\http\BaseHttpTransaction.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\mitm\http\HttpRequest.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\mitm\http\HttpResponse.cpp" />

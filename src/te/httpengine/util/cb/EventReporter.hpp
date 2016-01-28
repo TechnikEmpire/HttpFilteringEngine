@@ -170,7 +170,10 @@ namespace te
 						}
 					}
 
-				private:
+					// XXX TODO - I changed this to protected so that those who inherit can simply
+					// pass copies of their own callbacks around. I did this because... this class
+					// was designed without any planning. So todo is to make this not quite so dirty.
+				protected:
 
 					/// <summary>
 					/// Callback for general information about non-critical events.

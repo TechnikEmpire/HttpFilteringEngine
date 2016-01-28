@@ -224,10 +224,7 @@ namespace te
 					return noErrors;
 				}
 
-				uint8_t HttpFilteringEngine::ShouldBlock(
-					const mhttp::HttpRequest* request, 
-					const mhttp::HttpResponse* response
-					)
+				uint8_t HttpFilteringEngine::ShouldBlock(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response)
 				{
 					#ifndef NEDEBUG
 						assert(request != nullptr && u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - The HttpRequest parameter was supplied with a nullptr. The request is absolutely required to do accurate HTTP filtering.");
@@ -621,19 +618,22 @@ namespace te
 					{
 						for (const auto& selector : globalIncludeSelectors->second)
 						{
-							doc->Each(selector->GetSelector(), 
-								[&collection, &numberOfHtmlElementsRemoved](const gq::Node* node)->void
+							if (m_programOptions->GetIsHttpCategoryFiltered(selector->GetCategory()))
 							{
-								// XXX TODO - This needs to be dropped after GQ is updated to give
-								// NodeMutationCollection a ::Size() member, because this crude
-								// counting method may count duplicates. GQ does not do duplicate
-								// filtering before invoking these callbacks. Instead, since
-								// NodeMutationCollection internally uses an unordered_set, it's
-								// provided internally.
-								++numberOfHtmlElementsRemoved;
+								doc->Each(selector->GetSelector(),
+									[&collection, &numberOfHtmlElementsRemoved](const gq::Node* node)->void
+								{
+									// XXX TODO - This needs to be dropped after GQ is updated to give
+									// NodeMutationCollection a ::Size() member, because this crude
+									// counting method may count duplicates. GQ does not do duplicate
+									// filtering before invoking these callbacks. Instead, since
+									// NodeMutationCollection internally uses an unordered_set, it's
+									// provided internally.
+									++numberOfHtmlElementsRemoved;
 
-								collection.Add(node);
-							});
+									collection.Add(node);
+								});
+							}							
 						}
 					}
 
@@ -657,19 +657,22 @@ namespace te
 						{
 							for (const auto& selector : hostIncludeSelectors->second)
 							{
-								doc->Each(selector->GetSelector(),
-									[&collection, &numberOfHtmlElementsRemoved](const gq::Node* node)->void
+								if (m_programOptions->GetIsHttpCategoryFiltered(selector->GetCategory()))
 								{
-									// XXX TODO - This needs to be dropped after GQ is updated to give
-									// NodeMutationCollection a ::Size() member, because this crude
-									// counting method may count duplicates. GQ does not do duplicate
-									// filtering before invoking these callbacks. Instead, since
-									// NodeMutationCollection internally uses an unordered_set, it's
-									// provided internally.
-									++numberOfHtmlElementsRemoved;
+									doc->Each(selector->GetSelector(),
+										[&collection, &numberOfHtmlElementsRemoved](const gq::Node* node)->void
+									{
+										// XXX TODO - This needs to be dropped after GQ is updated to give
+										// NodeMutationCollection a ::Size() member, because this crude
+										// counting method may count duplicates. GQ does not do duplicate
+										// filtering before invoking these callbacks. Instead, since
+										// NodeMutationCollection internally uses an unordered_set, it's
+										// provided internally.
+										++numberOfHtmlElementsRemoved;
 
-									collection.Add(node);
-								});
+										collection.Add(node);
+									});
+								}								
 							}
 						}
 
@@ -683,6 +686,36 @@ namespace te
 						{
 							for (const auto& selector : hostExcludeSelectors->second)
 							{
+								if (m_programOptions->GetIsHttpCategoryFiltered(selector->GetCategory()))
+								{
+									doc->Each(selector->GetSelector(),
+										[&collection, &numberOfHtmlElementsRemoved](const gq::Node* node)->void
+									{
+										// XXX TODO - This needs to be dropped after GQ is updated to give
+										// NodeMutationCollection a ::Size() member, because this crude
+										// counting method may count duplicates. GQ does not do duplicate
+										// filtering before invoking these callbacks. Instead, since
+										// NodeMutationCollection internally uses an unordered_set, it's
+										// provided internally.
+										--numberOfHtmlElementsRemoved;
+
+										collection.Remove(node);
+									});
+								}
+							}
+						}
+					}
+
+					// Now we'll run global whitelist selectors and prune our results further.
+					const auto& globalExceptionSelectors = m_exceptionSelectors.find(m_globalRuleKey);
+
+					if (globalExceptionSelectors != m_exceptionSelectors.end())
+					{
+						for (const auto& selector : globalExceptionSelectors->second)
+						{
+							if (m_programOptions->GetIsHttpCategoryFiltered(selector->GetCategory()))
+							{
+
 								doc->Each(selector->GetSelector(),
 									[&collection, &numberOfHtmlElementsRemoved](const gq::Node* node)->void
 								{
@@ -697,29 +730,6 @@ namespace te
 									collection.Remove(node);
 								});
 							}
-						}
-					}
-
-					// Now we'll run global whitelist selectors and prune our results further.
-					const auto& globalExceptionSelectors = m_exceptionSelectors.find(m_globalRuleKey);
-
-					if (globalExceptionSelectors != m_exceptionSelectors.end())
-					{
-						for (const auto& selector : globalExceptionSelectors->second)
-						{
-							doc->Each(selector->GetSelector(),
-								[&collection, &numberOfHtmlElementsRemoved](const gq::Node* node)->void
-							{
-								// XXX TODO - This needs to be dropped after GQ is updated to give
-								// NodeMutationCollection a ::Size() member, because this crude
-								// counting method may count duplicates. GQ does not do duplicate
-								// filtering before invoking these callbacks. Instead, since
-								// NodeMutationCollection internally uses an unordered_set, it's
-								// provided internally.
-								--numberOfHtmlElementsRemoved;
-
-								collection.Remove(node);
-							});
 						}
 					}
 

@@ -40,17 +40,22 @@ namespace te
 		{
 			namespace secure
 			{					
-				
+
 				TlsCapableHttpBridge<network::TcpSocket>::TlsCapableHttpBridge(
 					boost::asio::io_service* service,					
-					const filtering::http::HttpFilteringEngine* filteringEngine,
+					filtering::http::HttpFilteringEngine* filteringEngine,
 					BaseInMemoryCertificateStore* certStore,
 					boost::asio::ssl::context* defaultServerContext,
 					boost::asio::ssl::context* clientContext,
 					util::cb::MessageFunction onInfoCb,
 					util::cb::MessageFunction onWarnCb,
 					util::cb::MessageFunction onErrorCb
-					) : 
+					) :
+					util::cb::EventReporter(
+						onInfoCb, 
+						onWarnCb, 
+						onErrorCb
+						),
 					m_upstreamSocket(*service), 
 					m_downstreamSocket(*service),
 					m_upstreamStrand(*service),
@@ -76,7 +81,7 @@ namespace te
 				
 				TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(
 					boost::asio::io_service* service,					
-					const filtering::http::HttpFilteringEngine* filteringEngine,
+					filtering::http::HttpFilteringEngine* filteringEngine,
 					BaseInMemoryCertificateStore* certStore,
 					boost::asio::ssl::context* defaultServerContext,
 					boost::asio::ssl::context* clientContext,
@@ -85,6 +90,11 @@ namespace te
 					util::cb::MessageFunction onErrorCb
 					)
 					:
+					util::cb::EventReporter(
+						onInfoCb,
+						onWarnCb,
+						onErrorCb
+						),
 					m_upstreamSocket(*service, *clientContext),
 					m_downstreamSocket(*service, *defaultServerContext),
 					m_upstreamStrand(*service),
@@ -126,12 +136,13 @@ namespace te
 						boost::asio::async_read_until(
 							m_downstreamSocket, 
 							m_request->GetHeaderReadBuffer(), 
-							Crlf, 
+							u8"\r\n\r\n",
 							m_downstreamStrand.wrap(
 								std::bind(
 									&TlsCapableHttpBridge::OnDownstreamHeaders, 
 									shared_from_this(), 
-									boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred
+									std::placeholders::_1, 
+									std::placeholders::_2
 									)
 								)
 							);
@@ -163,8 +174,8 @@ namespace te
 							m_downstreamStrand.wrap(
 								std::bind(&TlsCapableHttpBridge::OnTlsPeek, 
 									shared_from_this(), 
-									boost::asio::placeholders::error, 
-									boost::asio::placeholders::bytes_transferred
+									std::placeholders::_1,
+									std::placeholders::_2
 									)
 								)
 							);
@@ -230,8 +241,8 @@ namespace te
 									std::bind(
 										&TlsCapableHttpBridge::OnDownstreamRead, 
 										shared_from_this(), 
-										boost::asio::placeholders::error, 
-										boost::asio::placeholders::bytes_transferred
+										std::placeholders::_1,
+										std::placeholders::_2
 										)
 									)
 								);
@@ -253,7 +264,7 @@ namespace te
 								std::bind(
 									&TlsCapableHttpBridge::OnUpstreamWrite, 
 									shared_from_this(), 
-									boost::asio::placeholders::error
+									std::placeholders::_1
 									)
 								)
 							);
@@ -307,7 +318,7 @@ namespace te
 									std::bind(
 										&TlsCapableHttpBridge::OnUpstreamHandshake, 
 										shared_from_this(), 
-										boost::asio::placeholders::error
+										std::placeholders::_1
 										)
 									)
 								);
@@ -372,7 +383,7 @@ namespace te
 								std::bind(
 									&TlsCapableHttpBridge::OnUpstreamConnect, 
 									shared_from_this(), 
-									boost::asio::placeholders::error
+									std::placeholders::_1
 									)
 								)
 							);
@@ -423,7 +434,7 @@ namespace te
 								std::bind(
 									&TlsCapableHttpBridge::OnUpstreamConnect, 
 									shared_from_this(), 
-									boost::asio::placeholders::error
+									std::placeholders::_1
 									)
 								)
 							);

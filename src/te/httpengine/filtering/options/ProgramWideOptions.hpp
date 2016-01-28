@@ -66,10 +66,21 @@ namespace te
 
 				public:
 
+					/// <summary>
+					/// Default constructor.
+					/// </summary>
 					ProgramWideOptions();
+
+					/// <summary>
+					/// No copy no move no thx.
+					/// </summary>					
 					ProgramWideOptions(const ProgramWideOptions&) = delete;
 					ProgramWideOptions(ProgramWideOptions&&) = delete;
 					ProgramWideOptions& operator=(const ProgramWideOptions&) = delete;
+					
+					/// <summary>
+					/// Default destructor.
+					/// </summary>
 					~ProgramWideOptions();
 
 					/// <summary>
