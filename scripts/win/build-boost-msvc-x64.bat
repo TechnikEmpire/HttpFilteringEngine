@@ -37,8 +37,8 @@
 :: Boost 1.59. So you'll have 
 :: HTTP_FILTER_ENGINE_ROOT_DIR\deps\boost\boost_1_59_0\SOURCES. Therefore, 
 :: set BOOST_VERSION to "boost_1_59_0" like so:
-:: BOOST_VERSION=boost_1_59_0 
-set BOOST_VERSION=
+:: BOOST_VERSION=boost_1_59_0
+set BOOST_VERSION=boost_1_60_0
 
 :: Again, BZIP_VERSION isn't just the version number, but the name 
 :: including the version number. This is how the folders of unizipped 
@@ -48,12 +48,12 @@ set BOOST_VERSION=
 :: HTTP_FILTER_ENGINE_ROOT_DIR\deps\bzip2\, resulting in 
 :: HTTP_FILTER_ENGINE_ROOT_DIR\deps\bzip2\bzip2-1.0.6\SOURCES. In this case, 
 :: you'd set the variable like so:
-:: BZIP_VERSION=bzip2-1.0.6 
-set BZIP_VERSION=
+:: BZIP_VERSION=bzip2-1.0.6
+set BZIP_VERSION=bzip2-1.0.6
 
 :: Exactly the same process as BOOST_VERSION and BZIP_VERSION. See 
-:: comments on them. 
-set ZLIB_VERSION=
+:: comments on them. - zlib-1.2.8
+set ZLIB_VERSION=zlib-1.2.8
 
 :: Checking to make sure that the required variables have been set, if 
 :: not, jump to the end and warn the user that the script requires minor 

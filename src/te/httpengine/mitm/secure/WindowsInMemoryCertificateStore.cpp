@@ -67,7 +67,7 @@ namespace te
 				WindowsInMemoryCertificateStore::WindowsInMemoryCertificateStore() :
 					BaseInMemoryCertificateStore()
 				{
-
+					WriteCertificateToFile(m_thisCa, m_caCommonName + u8".pem");
 				}
 
 				WindowsInMemoryCertificateStore::WindowsInMemoryCertificateStore(
@@ -80,7 +80,7 @@ namespace te
 						commonName
 						)
 				{
-
+					WriteCertificateToFile(m_thisCa, m_caCommonName + u8".pem");
 				}
 
 				WindowsInMemoryCertificateStore::~WindowsInMemoryCertificateStore()

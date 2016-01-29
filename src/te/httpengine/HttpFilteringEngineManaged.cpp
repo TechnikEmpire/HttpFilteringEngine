@@ -105,6 +105,16 @@ namespace Te {
 			m_httpsListenerPort = value;
 		}
 
+		bool Engine::IsRunning::get()
+		{			
+			if (m_handle != nullptr)
+			{
+				return fe_ctl_is_running(m_handle);
+			}
+
+			return false;
+		}
+
 		void Engine::Start()
 		{
 			if (m_handle != nullptr)

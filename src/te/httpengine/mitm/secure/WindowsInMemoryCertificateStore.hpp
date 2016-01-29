@@ -53,9 +53,12 @@ namespace te
 				public:
 
 					/// <summary>
-					/// Default constructor, delegates to the parameterized constructure which
-					/// takes country code, organization name and common name, with default values.
-					/// Be advised that the constructor that this delegates to can throw.
+					/// Default constructor, delegates to the parameterized constructure which takes
+					/// country code, organization name and common name, with default values. Be
+					/// advised that the constructor that this delegates to can throw.
+					/// 
+					/// Automatically writes the CA certificate generated at construction to a .pem
+					/// file with the same name as was supplied for the CA Common Name property.
 					/// </summary>
 					WindowsInMemoryCertificateStore();
 
@@ -64,6 +67,9 @@ namespace te
 					/// certificate, storing the generated EVP_PKEY and X509 structures in the
 					/// m_thisCaKeyPair and m_thisCa members respectively. This constructor invokes
 					/// members that can throw.
+					/// 
+					/// Automatically writes the CA certificate generated at construction to a .pem
+					/// file with the same name as was supplied for the CA Common Name property.
 					/// </summary>
 					/// <param name="countryCode">
 					/// The country code for the self signed CA to be generated.

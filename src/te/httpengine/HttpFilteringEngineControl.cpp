@@ -112,7 +112,10 @@ namespace te
 
 		HttpFilteringEngineControl::~HttpFilteringEngineControl()
 		{
-
+			if (m_isRunning)
+			{
+				Stop();
+			}
 		}
 
 		void HttpFilteringEngineControl::Start()

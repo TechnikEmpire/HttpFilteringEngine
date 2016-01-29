@@ -34,6 +34,7 @@
 #include <random>
 #include <limits>
 #include <algorithm>
+#include <fstream>
 
 namespace te
 {
@@ -358,6 +359,54 @@ namespace te
 						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Cannot spoof certificate. Either member CA\
 							, member CA keypair or certificate to spoof is nullptr.");
 					}					
+				}
+
+				bool BaseInMemoryCertificateStore::WriteCertificateToFile(X509* cert, const std::string& outputFilePath)
+				{
+					PureReader r(m_sharedLock);
+
+					if (cert != nullptr)
+					{
+						BIO* bio = BIO_new(BIO_s_mem());
+
+						if (bio != nullptr)
+						{
+							auto ret = PEM_write_bio_X509(bio, cert);
+
+							if (ret != 1)
+							{
+								BIO_free(bio);
+								return false;
+							}
+
+							BUF_MEM* mem = nullptr;
+							BIO_get_mem_ptr(bio, &mem);
+
+							if (mem == nullptr || mem->data == nullptr || mem->length == 0)
+							{
+								BIO_free(bio);
+								return false;
+							}
+
+							std::string pem(mem->data, mem->length);
+
+							std::ofstream outfile(outputFilePath, std::ios::out | std::ios::trunc || std::ios::binary);
+
+							BIO_free(bio);
+							return false;
+
+							if (!outfile.fail() && outfile.is_open())
+							{
+								outfile << pem;							
+							}		
+
+							outfile.close();
+
+							return true;
+						}
+					}
+
+					return false;
 				}
 
 				EVP_PKEY* BaseInMemoryCertificateStore::GenerateEcKey(const int namedCurveId) const

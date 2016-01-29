@@ -135,7 +135,18 @@ PHttpFilteringEngineCtl fe_ctl_create(
 
 void fe_ctl_destroy(PPHttpFilteringEngineCtl ptr)
 {	
-	delete reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(*ptr);
+	te::httpengine::HttpFilteringEngineControl* cppPtr = reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(*ptr);
+
+	if (cppPtr != nullptr)
+	{
+		if (cppPtr->IsRunning())
+		{
+			cppPtr->Stop();
+		}
+
+		delete reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(*ptr);
+	}
+
 	*ptr = nullptr;
 
 	#if BOOST_OS_WINDOWS

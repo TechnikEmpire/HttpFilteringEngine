@@ -72,6 +72,11 @@ namespace te
 				public:
 
 					/// <summary>
+					/// Holds the cipher list that is set on every generated context.
+					/// </summary>
+					static const std::string ContextCipherList;
+
+					/// <summary>
 					/// Default constructor, delegates to the parameterized constructure which
 					/// takes country code, organization name and common name, with default values.
 					/// Be advised that the constructor that this delegates to can throw.
@@ -203,9 +208,21 @@ namespace te
 					virtual void RevokeOsTrust() = 0;
 
 					/// <summary>
-					/// Holds the cipher list that is set on every generated context.
+					/// Attempts to write the given X509 structure to the given file path. Note that
+					/// if the supplied path points to an existing file, this method will overwrite
+					/// it. Use with caution.
 					/// </summary>
-					static const std::string ContextCipherList;
+					/// <param name="cert">
+					/// A valid ptr to the X509 structure to write to file storage.
+					/// </param>
+					/// <param name="outputFilePath">
+					/// The path to the file to write the output to.
+					/// </param>
+					/// <returns>
+					/// True if the contents of the supplied X509 structure were written to file
+					/// storage, false otherwise.
+					/// </returns>
+					virtual bool WriteCertificateToFile(X509* cert, const std::string& outputFilePath);
 
 				protected:
 

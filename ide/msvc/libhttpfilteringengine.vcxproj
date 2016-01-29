@@ -220,6 +220,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -267,6 +268,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -314,6 +316,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -361,6 +364,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -407,6 +411,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -453,6 +458,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -499,6 +505,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -545,6 +552,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
