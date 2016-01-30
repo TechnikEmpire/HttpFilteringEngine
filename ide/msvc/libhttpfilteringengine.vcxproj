@@ -221,7 +221,8 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\http-parser\msvc\$(Configuration)\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug x64|Win32'">
@@ -269,7 +270,8 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\http-parser\msvc\$(Configuration)\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug x86|x64'">
@@ -317,7 +319,8 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\http-parser\msvc\$(Configuration)\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug x64|x64'">
@@ -365,7 +368,8 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\http-parser\msvc\$(Configuration)\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x86|Win32'">
@@ -412,7 +416,8 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\http-parser\msvc\$(Configuration)\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x64|Win32'">
@@ -459,7 +464,8 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\http-parser\msvc\$(Configuration)\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x86|x64'">
@@ -506,7 +512,8 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\http-parser\msvc\$(Configuration)\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x64|x64'">
@@ -553,7 +560,8 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\http-parser\msvc\$(Configuration)\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -582,7 +590,6 @@ xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</C
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpAcceptor.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpBridge.hpp" />
-    <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpListener.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\WindowsInMemoryCertificateStore.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\network\SocketTypes.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\util\cb\EngineCallbackTypes.h" />
@@ -618,7 +625,6 @@ xcopy /Y "$(ProjectDir)..\..\deps\gq\msvc\$(Configuration)\*.dll" "$(OutDir)"</C
     <ClCompile Include="..\..\src\te\httpengine\mitm\http\HttpResponse.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpBridge.cpp" />
-    <ClCompile Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpListener.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\WindowsInMemoryCertificateStore.cpp" />
     <ClCompile Include="AssemblyInfo.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x64|Win32'">true</CompileAsManaged>

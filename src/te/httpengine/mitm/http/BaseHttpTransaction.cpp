@@ -99,7 +99,7 @@ namespace te
 				{
 					std::string headerNameCopy = name;
 
-					auto matchRange = m_headers.equal_range(name);
+					auto matchRange = m_headers.equal_range(headerNameCopy);
 
 					if (replaceIfExists)
 					{
@@ -110,7 +110,7 @@ namespace te
 							m_headers.erase(matchRange.first++);
 						}
 
-						m_headers.insert(std::make_pair(std::move(headerNameCopy), std::move(value)));
+						m_headers.insert(std::make_pair(headerNameCopy, value));
 
 						return;
 					}
@@ -121,7 +121,7 @@ namespace te
 						{
 							// If the exact same header and value exist, we clearly don't want to add
 							// another.
-							if (boost::iequals(it->second.c_str(), value.c_str()))
+							if (boost::iequals(it->second, value))
 							{
 								//Exists already, both name and value
 								return;
@@ -130,7 +130,7 @@ namespace te
 							++it;
 						}
 
-						m_headers.insert(std::make_pair(std::move(headerNameCopy), std::move(value)));
+						m_headers.insert(std::make_pair(headerNameCopy, value));
 					}
 				}
 
@@ -221,9 +221,9 @@ namespace te
 
 						m_unwrittenPayloadSize += bytesReceived;
 
-						if (nparsed != m_headerBuffer.size())
+						if (nparsed != bytesReceived)
 						{
-							std::string errMsg(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse headers. Got http_parser error number: ");
+							std::string errMsg(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse payload. Got http_parser error number: ");
 							errMsg.append(std::to_string(m_httpParser->http_errno));
 							ReportError(errMsg);							
 							return false;
@@ -317,6 +317,10 @@ namespace te
 							m_transactionData.push_back('\n');
 						}
 					}
+					else
+					{
+						success = true;
+					}
 
 					return success;
 				}
@@ -380,7 +384,7 @@ namespace te
 						}
 						else
 						{
-							throw new std::runtime_error(u8"In BaseHttpTransaction::GetPayloadReadBuffer() - Maximum buffer size reached.");
+							throw std::runtime_error(u8"In BaseHttpTransaction::GetPayloadReadBuffer() - Maximum buffer size reached.");
 						}						
 					}
 
@@ -401,7 +405,7 @@ namespace te
 							m_transactionData.resize(m_unwrittenPayloadSize);
 						}				
 
-						headersVector.insert(headersVector.begin(), std::make_move_iterator(m_transactionData.begin()), std::make_move_iterator(m_transactionData.end()));
+						headersVector.insert(headersVector.end(), std::make_move_iterator(m_transactionData.begin()), std::make_move_iterator(m_transactionData.end()));
 
 						m_transactionData = std::move(headersVector);
 
@@ -438,6 +442,7 @@ namespace te
 					RemoveHeader(util::http::headers::ContentEncoding);					
 
 					if (
+						m_transactionData.size() >= 4 &&
 						m_transactionData[m_transactionData.size() - 4] == '\r' &&
 						m_transactionData[m_transactionData.size() - 3] == '\n' &&
 						m_transactionData[m_transactionData.size() - 2] == '\r' &&
@@ -474,6 +479,7 @@ namespace te
 					RemoveHeader(util::http::headers::ContentEncoding);
 
 					if (
+						m_transactionData.size() >= 4 &&
 						m_transactionData[m_transactionData.size() - 4] == '\r' &&
 						m_transactionData[m_transactionData.size() - 3] == '\n' &&
 						m_transactionData[m_transactionData.size() - 2] == '\r' &&
@@ -841,22 +847,25 @@ namespace te
 
 				const bool BaseHttpTransaction::ConvertPayloadFromChunkedToFixedLength()
 				{
-					const boost::string_ref clrf = u8"\r\n";
+					const boost::string_ref crlf = u8"\r\n";
 
-					boost::string_ref payloadStrRef(m_transactionData.data());
+					boost::string_ref payloadStrRef(m_transactionData.data(), m_transactionData.size());
 
 					// All chunked content will be moved into this container, and m_transactionData
 					// will be reassigned to it on a successful conversion.
 					std::vector<char> result;
+					result.reserve(m_transactionData.size());
 
 					// Get the first position of the end of the first chunk header
-					auto pos = payloadStrRef.find(clrf);
+					auto pos = payloadStrRef.find(crlf);
 
 					std::stringstream ss;
 
 					size_t chunkLength = 0;
 
 					bool noError = false;
+
+					size_t globalPos = 0;
 
 					while (pos != boost::string_ref::npos)
 					{
@@ -893,44 +902,46 @@ namespace te
 							break;
 						}
 
-						if ((pos + chunkLength) > payloadStrRef.length())
+						// Advance beyond the chunk length terminating crlf.
+						pos += crlf.size();
+
+						if ((pos + chunkLength) > payloadStrRef.size())
 						{
-							ReportError(u8"In BaseHttpTransaction::ConvertPayloadFromChunkedToFixedLength() - Chunk length specified is greater than the total payload container size.");
+							ReportError(u8"In BaseHttpTransaction::ConvertPayloadFromChunkedToFixedLength() - New chunk length specified is greater than the total payload container size.");
 							break;
 						}
 
+						globalPos += pos;
+
 						// We know have a chunk, its start position and its end position. Move it.
-						result.insert(result.end(), std::make_move_iterator(m_transactionData.begin() + pos), std::make_move_iterator(m_transactionData.begin() + (pos + chunkLength)));
+						// XXX TODO - Change this to a straight up copy, moving char is slower.
+						result.insert(result.end(), (m_transactionData.begin() + globalPos), (m_transactionData.begin() + (globalPos + chunkLength)));
 
 						// Advance pos beyond clrf at the start of the chunk, then beyond the chunk length, then again beyond the
 						// terminating clrf before we search again.
-						pos += (clrf.length() + chunkLength + clrf.length());
-
-						if ((pos + chunkLength) > payloadStrRef.length())
+						pos += (chunkLength + crlf.size());
+						globalPos += (chunkLength + crlf.size());
+						
+						if (pos > payloadStrRef.length())
 						{
-							ReportError(u8"In BaseHttpTransaction::ConvertPayloadFromChunkedToFixedLength() - Chunk length specified is greater than the total payload container size.");
+							ReportError(u8"In BaseHttpTransaction::ConvertPayloadFromChunkedToFixedLength() - Next chunk length specified is greater than the total payload container size.");
 							break;
-						}
+						}						
 
-						boost::string_ref fromEndOfLastChunk = payloadStrRef.substr(pos);
+						payloadStrRef = payloadStrRef.substr(pos);
 
-						auto nextPos = fromEndOfLastChunk.find(clrf);
+						pos = payloadStrRef.find(crlf);
 
-						if (nextPos == boost::string_ref::npos)
+						if (pos == boost::string_ref::npos)
 						{
 							ReportError(u8"In BaseHttpTransaction::ConvertPayloadFromChunkedToFixedLength() - Final chunk not yet encountered, but failed to locate the next chunk header.");
 							break;
 						}
-
-						// Since nextPos is a position relative to where fromEndOfLastChunk was substr'd, we need
-						// to add it to pos to keep a correct global position. There should be no need to verify
-						// that this index is within bounds, because it clearly was if nextPos indicated a 
-						// successful search.
-						pos += nextPos;
 					}
 
 					if (noError)
 					{
+						result.resize(result.size());
 						m_transactionData = std::move(result);
 						m_unwrittenPayloadSize = m_transactionData.size();
 					}
@@ -950,7 +961,7 @@ namespace te
 
 						if (trans == nullptr)
 						{
-							throw new std::runtime_error(u8"In BaseHttpTransaction::OnMessageBegin() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
+							throw std::runtime_error(u8"In BaseHttpTransaction::OnMessageBegin() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 						
 						trans->m_payloadComplete = false;
@@ -959,13 +970,14 @@ namespace te
 						trans->m_headers.clear();
 						trans->m_unwrittenPayloadSize = 0;
 						trans->m_headersSent = false;
+						trans->m_headersComplete = false;
 						trans->m_transactionData.clear();
 						trans->m_lastHeader = std::string("");
 						
 					}
 					else
 					{
-						throw new std::runtime_error(u8"In BaseHttpTransaction::OnMessageBegin() - http_parser is nullptr, somehow. \
+						throw std::runtime_error(u8"In BaseHttpTransaction::OnMessageBegin() - http_parser is nullptr, somehow. \
 							This should never be allowed to happen ever because this apparently null object is supposed to be invoking \
 							this callback, but if you're reading this, somehow it did. Welcome to the twilight zone. Nobody can wag \
 							their finger at me for not wrapping a raw pointer with a null check.");
@@ -982,7 +994,7 @@ namespace te
 
 						if (trans == nullptr)
 						{
-							throw new std::runtime_error(u8"In BaseHttpTransaction::OnHeadersComplete() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
+							throw std::runtime_error(u8"In BaseHttpTransaction::OnHeadersComplete() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
 						trans->m_headersComplete = true;
@@ -991,7 +1003,7 @@ namespace te
 					}
 					else
 					{
-						throw new std::runtime_error(u8"In BaseHttpTransaction::OnHeadersComplete() - - http_parser is nullptr, somehow. \
+						throw std::runtime_error(u8"In BaseHttpTransaction::OnHeadersComplete() - - http_parser is nullptr, somehow. \
 							This should never be allowed to happen ever because this apparently null object is supposed to be invoking \
 							this callback, but if you're reading this, somehow it did. Welcome to the twilight zone. Nobody can wag \
 							their finger at me for not wrapping a raw pointer with a null check.");
@@ -1008,7 +1020,7 @@ namespace te
 
 						if (trans == nullptr)
 						{
-							throw new std::runtime_error(u8"In BaseHttpTransaction::OnMessageComplete() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
+							throw std::runtime_error(u8"In BaseHttpTransaction::OnMessageComplete() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
 						trans->m_payloadComplete = true;
@@ -1016,7 +1028,7 @@ namespace te
 					}
 					else
 					{
-						throw new std::runtime_error(u8"In BaseHttpTransaction::OnMessageComplete() - http_parser is nullptr, somehow. \
+						throw std::runtime_error(u8"In BaseHttpTransaction::OnMessageComplete() - http_parser is nullptr, somehow. \
 							This should never be allowed to happen ever because this apparently null object is supposed to be invoking \
 							this callback, but if you're reading this, somehow it did. Welcome to the twilight zone. Nobody can wag \
 							their finger at me for not wrapping a raw pointer with a null check.");
@@ -1036,7 +1048,7 @@ namespace te
 
 						if (trans == nullptr)
 						{
-							throw new std::runtime_error(u8"In BaseHttpTransaction::OnChunkHeader() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
+							throw std::runtime_error(u8"In BaseHttpTransaction::OnChunkHeader() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
 						// TODO - Do we even need this callback? I think not, as the only state information it
@@ -1048,7 +1060,7 @@ namespace te
 					}
 					else
 					{
-						throw new std::runtime_error(u8"In BaseHttpTransaction::OnChunkHeader() - http_parser is nullptr, somehow. \
+						throw std::runtime_error(u8"In BaseHttpTransaction::OnChunkHeader() - http_parser is nullptr, somehow. \
 							This should never be allowed to happen ever because this apparently null object is supposed to be invoking \
 							this callback, but if you're reading this, somehow it did. Welcome to the twilight zone. Nobody can wag \
 							their finger at me for not wrapping a raw pointer with a null check.");
@@ -1065,7 +1077,7 @@ namespace te
 
 						if (trans == nullptr)
 						{
-							throw new std::runtime_error(u8"In BaseHttpTransaction::OnChunkComplete() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
+							throw std::runtime_error(u8"In BaseHttpTransaction::OnChunkComplete() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
 						// TODO - Do we even need this callback? Methinks no, see notes in the ::OnChunkHeader
@@ -1074,7 +1086,7 @@ namespace te
 					}
 					else
 					{
-						throw new std::runtime_error(u8"In BaseHttpTransaction::OnChunkComplete() - http_parser is nullptr, somehow. \
+						throw std::runtime_error(u8"In BaseHttpTransaction::OnChunkComplete() - http_parser is nullptr, somehow. \
 							This should never be allowed to happen ever because this apparently null object is supposed to be invoking \
 							this callback, but if you're reading this, somehow it did. Welcome to the twilight zone. Nobody can wag \
 							their finger at me for not wrapping a raw pointer with a null check.");
@@ -1091,19 +1103,20 @@ namespace te
 
 						if (trans == nullptr)
 						{
-							throw new std::runtime_error(u8"In BaseHttpTransaction::OnHeaderField() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
+							throw std::runtime_error(u8"In BaseHttpTransaction::OnHeaderField() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
 						trans->m_lastHeader = std::string(at, length);
 
 						if (length == 0)
 						{
-							trans->ReportError(std::string(u8"In BaseHttpTransaction::OnHeaderField() - Length provided for the parsed header field/name is zero."));
+							trans->ReportError(u8"In BaseHttpTransaction::OnHeaderField() - Length provided for the parsed header field/name is zero.");
+							return -1;
 						}
 					}
 					else
 					{
-						throw new std::runtime_error(u8"In BaseHttpTransaction::OnHeaderField() - http_parser is nullptr, somehow. \
+						throw std::runtime_error(u8"In BaseHttpTransaction::OnHeaderField() - http_parser is nullptr, somehow. \
 							This should never be allowed to happen ever because this apparently null object is supposed to be invoking \
 							this callback, but if you're reading this, somehow it did. Welcome to the twilight zone. Nobody can wag \
 							their finger at me for not wrapping a raw pointer with a null check.");
@@ -1120,23 +1133,25 @@ namespace te
 
 						if (trans == nullptr)
 						{	
-							throw new std::runtime_error(u8"In BaseHttpTransaction::OnHeaderValue() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
+							throw std::runtime_error(u8"In BaseHttpTransaction::OnHeaderValue() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
 						if (trans->m_lastHeader.length() > 0)
-						{
+						{							
 							std::string headerValue(at, length);
-							trans->AddHeader(trans->m_lastHeader, std::move(headerValue), false);
+							trans->AddHeader(trans->m_lastHeader, headerValue, false);
+
 							trans->m_lastHeader.clear();
 						}
 						else
 						{
 							trans->ReportError(std::string(u8"In BaseHttpTransaction::OnHeaderValue() - OnHeaderValue called while BaseHttpTransaction::m_lastHeader was empty."));
+							return -1;
 						}
 					}
 					else 
 					{
-						throw new std::runtime_error(u8"In BaseHttpTransaction::OnHeaderValue() - http_parser is nullptr, somehow. \
+						throw std::runtime_error(u8"In BaseHttpTransaction::OnHeaderValue() - http_parser is nullptr, somehow. \
 							This should never be allowed to happen ever because this apparently null object is supposed to be invoking \
 							this callback, but if you're reading this, somehow it did. Welcome to the twilight zone. Nobody can wag \
 							their finger at me for not wrapping a raw pointer with a null check.");
@@ -1165,7 +1180,7 @@ namespace te
 
 						if (trans == nullptr)
 						{
-							throw new std::runtime_error(u8"In BaseHttpTransaction::OnBody() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
+							throw std::runtime_error(u8"In BaseHttpTransaction::OnBody() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
 						trans->m_transactionData.insert(trans->m_transactionData.end(), at, at + length);
@@ -1173,7 +1188,7 @@ namespace te
 					}
 					else
 					{
-						throw new std::runtime_error(u8"In BaseHttpTransaction::OnBody() - http_parser is nullptr, somehow. \
+						throw std::runtime_error(u8"In BaseHttpTransaction::OnBody() - http_parser is nullptr, somehow. \
 							This should never be allowed to happen ever because this apparently null object is supposed to be invoking \
 							this callback, but if you're reading this, somehow it did. Welcome to the twilight zone. Nobody can wag \
 							their finger at me for not wrapping a raw pointer with a null check.");

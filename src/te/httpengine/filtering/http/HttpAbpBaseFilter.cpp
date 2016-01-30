@@ -142,7 +142,7 @@ namespace te
 								case '|':
 								{
 									// Not properly formatted.
-									throw new std::runtime_error("In HttpAbpBaseFilter::HttpAbpBaseFilter(std::string, const HttpAbpFilterSettings, const uint8_t) - Anchored domain followed by request matching pipe '|' character.");
+									throw std::runtime_error("In HttpAbpBaseFilter::HttpAbpBaseFilter(std::string, const HttpAbpFilterSettings, const uint8_t) - Anchored domain followed by request matching pipe '|' character.");
 								}
 								break;
 
@@ -317,7 +317,7 @@ namespace te
 								case '|':
 								{
 									// Not properly formatted.
-									throw new std::runtime_error("In HttpAbpBaseFilter::HttpAbpBaseFilter(std::string, const HttpAbpFilterSettings, const uint8_t) - Anchored domain followed by request matching pipe '|' character.");
+									throw std::runtime_error("In HttpAbpBaseFilter::HttpAbpBaseFilter(std::string, const HttpAbpFilterSettings, const uint8_t) - Anchored domain followed by request matching pipe '|' character.");
 								}
 								break;
 

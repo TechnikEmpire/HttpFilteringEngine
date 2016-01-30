@@ -92,7 +92,7 @@ namespace te
 					#ifndef NDEBUG
 						assert(programOptions != nullptr && u8"In HttpFilteringEngine::HttpFilteringEngine(const options::ProgramWideOptions*, TextClassificationCallback) - ProgramWideOptions pointer must not be null. Options must exist and be available for the lifetime of the program for the software to function correctly.");
 					#else
-						if (programOptions == nullptr) { throw new std::exception(u8"In HttpFilteringEngine::HttpFilteringEngine(const options::ProgramWideOptions*, TextClassificationCallback) - ProgramWideOptions pointer must not be null. Options must exist and be available for the lifetime of the program for the software to function correctly."); };
+						if (programOptions == nullptr) { throw std::runtime_error(u8"In HttpFilteringEngine::HttpFilteringEngine(const options::ProgramWideOptions*, TextClassificationCallback) - ProgramWideOptions pointer must not be null. Options must exist and be available for the lifetime of the program for the software to function correctly."); };
 					#endif
 				}
 
@@ -231,7 +231,7 @@ namespace te
 					#else // !NEDEBUG
 						if (request == nullptr)
 						{
-							throw new std::runtime_error(u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - The HttpRequest parameter was supplied with a nullptr. The request is absolutely required to do accurate HTTP filtering.");
+							throw std::runtime_error(u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - The HttpRequest parameter was supplied with a nullptr. The request is absolutely required to do accurate HTTP filtering.");
 						}
 					#endif					
 					
@@ -553,7 +553,7 @@ namespace te
 					#else // !NEDEBUG
 						if (request == nullptr || response == nullptr)
 						{
-							throw new std::runtime_error(u8"In HttpFilteringEngine::ProcessHtmlResponse(const mhttp::HttpRequest*, const mhttp::HttpResponse*) const - The HttpRequest or HttpResponse parameter was supplied with a nullptr. Both are absolutely required to be valid to accurately filter html payloads.");
+							throw std::runtime_error(u8"In HttpFilteringEngine::ProcessHtmlResponse(const mhttp::HttpRequest*, const mhttp::HttpResponse*) const - The HttpRequest or HttpResponse parameter was supplied with a nullptr. Both are absolutely required to be valid to accurately filter html payloads.");
 						}
 					#endif
 
@@ -963,7 +963,7 @@ namespace te
 					#else // !NEDEBUG
 						if (sSelector == nullptr)
 						{
-							throw new std::runtime_error(u8"In HttpFilteringEngine::AddIncludeSelectorMultiDomain(boost::string_ref, const std::string&, const uint8_t) - Failed to allocate shared selector.");
+							throw std::runtime_error(u8"In HttpFilteringEngine::AddIncludeSelectorMultiDomain(boost::string_ref, const std::string&, const uint8_t) - Failed to allocate shared selector.");
 						}
 					#endif					
 
@@ -1092,7 +1092,7 @@ namespace te
 					#else // !NEDEBUG
 						if (sSelector == nullptr)
 						{
-							throw new std::runtime_error(u8"In HttpFilteringEngine::AddInclusionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) - Failed to allocate shared filter.");
+							throw std::runtime_error(u8"In HttpFilteringEngine::AddInclusionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) - Failed to allocate shared filter.");
 						}
 					#endif	
 
@@ -1279,7 +1279,7 @@ namespace te
 					#else // !NEDEBUG
 					if (sSelector == nullptr)
 						{
-							throw new std::runtime_error(u8"In HttpFilteringEngine::AddExceptionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) - Failed to allocate shared filter.");
+							throw std::runtime_error(u8"In HttpFilteringEngine::AddExceptionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) - Failed to allocate shared filter.");
 						}
 					#endif	
 

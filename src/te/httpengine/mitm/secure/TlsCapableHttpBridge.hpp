@@ -429,7 +429,7 @@ namespace te
 					/// Tells the minimum length that a peek read must be in order to even reach
 					/// the extensions area of a potentially accurate TLS client hello.
 					/// </summary>
-					static constexpr size_t MinTlsHelloLength = 44;
+					static constexpr size_t MinTlsHelloLength = 43;
 
 					/// <summary>
 					/// Used for extracting certificate name information on certificates passing
@@ -790,8 +790,7 @@ namespace te
 							}
 							else
 							{
-								ReportError(u8"In TlsCapableHttpBridge::OnUpstreamHeaders(const boost::system::error_code&, const size_t) - \
-									Failed to parse response.");
+								ReportError(u8"In TlsCapableHttpBridge::OnUpstreamHeaders(const boost::system::error_code&, const size_t) - Failed to parse response.");
 							}							
 						}
 						else
@@ -844,7 +843,7 @@ namespace te
 
 									std::vector<char> processedHtmlVector(processedHtmlString.begin(), processedHtmlString.end());
 
-									m_response->SetPayload(processedHtmlVector);
+									m_response->SetPayload(std::move(processedHtmlVector));
 								}
 								else if (m_response->IsPayloadComplete() == false && m_response->GetConsumeAllBeforeSending() == true)
 								{
@@ -889,8 +888,7 @@ namespace te
 							}
 							else
 							{
-								ReportError(u8"In TlsCapableHttpBridge::OnUpstreamRead(const boost::system::error_code&, const size_t) - \
-									Failed to parse response.");
+								ReportError(u8"In TlsCapableHttpBridge::OnUpstreamRead(const boost::system::error_code&, const size_t) - Failed to parse response.");
 							}
 						}
 						else
@@ -1068,8 +1066,7 @@ namespace te
 										{
 											// We don't really care what went wrong. We failed to parse the port in the host. We'll
 											// simply issue a warning, and assume port 80.
-											ReportWarning(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - \
-												Failed to parse port in host entry. Assuming port 80.");
+											ReportWarning(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Failed to parse port in host entry. Assuming port 80.");
 										}										
 									}								
 									
@@ -1136,14 +1133,12 @@ namespace te
 								}
 								else
 								{
-									ReportError(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - \
-										Failed to read Host header from request.");
+									ReportError(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Failed to read Host header from request.");
 								}
 							}
 							else
 							{
-								ReportError(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - \
-									Failed to parse request.");
+								ReportError(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Failed to parse request.");
 							}
 						}
 						else
@@ -1231,8 +1226,7 @@ namespace te
 							}
 							else
 							{
-								ReportError(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - \
-									Failed to parse request.");
+								ReportError(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Failed to parse request.");
 							}
 						}
 						else
@@ -1297,6 +1291,15 @@ namespace te
 
 								m_request.reset(new http::HttpRequest());
 								m_response.reset(new http::HttpResponse());
+
+								// XXX TODO - This is ugly, our bad design is showing. See notes in the
+								// EventReporter class header.
+								m_request->SetOnInfo(m_onInfo);
+								m_request->SetOnWarning(m_onWarning);
+								m_request->SetOnError(m_onError);
+								m_response->SetOnInfo(m_onInfo);
+								m_response->SetOnWarning(m_onWarning);
+								m_response->SetOnError(m_onError);
 
 								boost::asio::async_read_until(
 									m_downstreamSocket, 
@@ -1407,7 +1410,53 @@ namespace te
 					{
 						if (!error && m_upstreamCert != nullptr)
 						{
-							
+							boost::asio::ssl::context* serverCtx = m_certStore->GetServerContext(m_upstreamHost.c_str());
+
+							if (serverCtx == nullptr)
+							{
+								try
+								{
+									serverCtx = m_certStore->SpoofCertificate(m_upstreamHost, m_upstreamCert);
+								}
+								catch (std::exception& e)
+								{
+									serverCtx = nullptr;
+									std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\n\t");
+									errMessage.append(e.what());
+									ReportError(errMessage);
+								}								
+							}
+
+							if (serverCtx != nullptr)
+							{
+								if (SSL_set_SSL_CTX(m_downstreamSocket.native_handle(), serverCtx->native_handle()) == serverCtx->native_handle())
+								{
+									// Set timeouts
+									SetStreamTimeout(5000);
+									//
+									
+									m_downstreamSocket.async_handshake(
+										network::TlsSocket::server, 
+										m_downstreamStrand.wrap(
+											std::bind(
+												&TlsCapableHttpBridge::OnDownstreamHandshake, 
+												shared_from_this(), 
+												std::placeholders::_1
+												)
+											)
+										);
+
+									return;
+								}
+								else
+								{
+									ReportError(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Failed to correctly set context.");
+								}
+							}
+							else
+							{
+								ReportError(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Failed to fetch spoofed context.");
+							}
 						}
 						else
 						{
@@ -1442,7 +1491,33 @@ namespace te
 					/// </param>
 					void OnDownstreamHandshake(const boost::system::error_code& error)
 					{
+						if (!error)
+						{
+							SetNoDelay(UpstreamSocket(), true);
+							SetNoDelay(DownstreamSocket(), true);
 
+							boost::asio::async_read_until(
+								m_downstreamSocket, 
+								m_request->GetHeaderReadBuffer(), 
+								u8"\r\n\r\n", 
+								m_downstreamStrand.wrap(
+									std::bind(
+										&TlsCapableHttpBridge::OnDownstreamHeaders,
+										shared_from_this(), 
+										std::placeholders::_1, 
+										std::placeholders::_2
+										)
+									)
+								);
+							
+							return;
+						}
+
+						std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\n\t");
+						errMessage.append(error.message());
+						ReportError(errMessage);
+
+						Kill();
 					}
 	
 					/// <summary>
@@ -1471,7 +1546,7 @@ namespace te
 					/// </param>
 					void OnTlsPeek(const boost::system::error_code& error, const size_t bytesTransferred)
 					{
-
+						
 						// Parsing Numbers
 						//
 						// https://www.ietf.org/rfc/rfc5246.txt Sections 4.1, 4.4:
@@ -1487,181 +1562,215 @@ namespace te
 						// If hostname only contains US-ASCII chars, labels must be separated using 0x2E byte, representing
 						// the U+002E char.
 
-						if (!error && bytesTransferred > 0)
-						{
-							boost::string_ref hostName;
-
-							size_t pos = 0;
-							if (m_tlsPeekBuffer != nullptr && (bytesTransferred > MinTlsHelloLength))
+						if (m_tlsPeekBuffer != nullptr && !error && bytesTransferred > 0)
+						{						
+							if (bytesTransferred > MinTlsHelloLength)
 							{
-								// Handshake && client hello
-								if ((*m_tlsPeekBuffer)[0] == 0x16 && ((*m_tlsPeekBuffer)[5] == 0x01))
+								auto sharedThis = shared_from_this();
+								auto WithinBounds = [sharedThis, this]
+									(const std::unique_ptr< std::array<char, TlsPeekBufferSize> >& arr, const size_t position, const size_t validDataLength, int crumb = 0)->bool
 								{
-									pos = 5;
-
-									int helloLen = 
-										((reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[++pos]) << 16) + 
-										(reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[++pos]) << 8) +
-										reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[++pos]));
-
-									// Skip random bytes.
-									pos += 32;
-
-									// Skip past Session ID Length.
-									pos += static_cast<size_t>((*m_tlsPeekBuffer)[pos]);
-
-									int cipherSuitesLen = 
-										((reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[pos]) << 8) +
-										reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[++pos]));
-
-									pos += static_cast<size_t>(cipherSuitesLen);
-
-									// Skip past NULL-MD5, renegotation nfo.
-									pos += 4;
-
-									// Skip past Compression Methods Length.
-									pos += static_cast<size_t>((*m_tlsPeekBuffer)[pos]);
-
-									int extensionsLen = ((reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[pos]) << 8) + reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[++pos]));
-
-									// In case we didn't get the whole hello, adjust our bounds.
-									extensionsLen = std::min(extensionsLen, static_cast<int>(bytesTransferred));
-
-									bool notDone = true;
-									int extensionPos = static_cast<int>(pos);
-									bool isSni = false;
-									while((extensionPos + 1) < extensionsLen && notDone)
+									// Crumb param helps identify which point the check was done and failed. Not really
+									// sure if I should take this out after I finish sorting this parsing method, as it
+									// may assist in the future.
+									if (position >= arr->size() || position > validDataLength)
 									{
-										
-										if ((*m_tlsPeekBuffer)[extensionPos] == 0x00 && (*m_tlsPeekBuffer)[extensionPos + 1] == 0x00)
+										std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - ");
+										errMessage.append(u8"Index in buffer is out of bounds at position ").append(std::to_string(position)).append(u8".\n\n");
+										errMessage.append(u8"Went out of bounds at check ").append(std::to_string(crumb)).append(u8".");
+										ReportError(errMessage);
+										return false;
+									}
+
+									return true;
+								};
+
+								auto contentType = (*m_tlsPeekBuffer)[0];
+								auto versionMajor = (*m_tlsPeekBuffer)[1];
+								auto versionMinor = (*m_tlsPeekBuffer)[2];
+								auto handshakeType = (*m_tlsPeekBuffer)[5];
+
+								if ((versionMajor == 3 && versionMinor > 0) || (versionMinor > 3))
+								{
+									if (contentType == 22 && handshakeType == 1)
+									{
+										boost::string_ref hostName(m_tlsPeekBuffer->data(), bytesTransferred);
+										size_t hostnameLength = 0;
+
+										size_t position = MinTlsHelloLength;
+
+										// Get session ID length.
+										size_t sessionIdLength = reinterpret_cast<const char&>((*m_tlsPeekBuffer)[position]);
+
+										// Now skip past session ID.
+										position += sessionIdLength + 1;
+
+										if (!WithinBounds(m_tlsPeekBuffer, position + 1, bytesTransferred))
 										{
-											isSni = true;											
-										}	
+											Kill();
+											return;
+										}
 
-										extensionPos += 2;
+										// Get cipher suites length.
+										size_t cipherSuitesLength = ((reinterpret_cast<const char&>((*m_tlsPeekBuffer)[position])) << 8) | reinterpret_cast<const char&>((*m_tlsPeekBuffer)[position + 1]);
 
-										if (extensionPos < extensionsLen && (extensionPos + 1) < extensionsLen)
+										// Now skip past cipher suites.
+										position += cipherSuitesLength + 2;
+
+										if (!WithinBounds(m_tlsPeekBuffer, position, bytesTransferred, 1))
 										{
-											// If we're in-bounds, get the length of the extension.		
-											int thisExtensionLen =
-												(reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[extensionPos]) << 8) +
-												reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[extensionPos + 1]);
+											Kill();
+											return;
+										}
 
-											extensionPos += 2;
+										// Get compression methods length.
+										size_t compressionMethodsLength = reinterpret_cast<const char&>((*m_tlsPeekBuffer)[position]);
 
-											if(!isSni)
+										// Now skip past compression methods.
+										position += compressionMethodsLength + 1;
+
+										if (!WithinBounds(m_tlsPeekBuffer, position + 1, bytesTransferred, 2))
+										{
+											Kill();
+											return;
+										}
+
+										// Get extensions length.
+										size_t extensionsLength = ((reinterpret_cast<const char&>((*m_tlsPeekBuffer)[position])) << 8) | reinterpret_cast<const char&>((*m_tlsPeekBuffer)[position + 1]);
+
+										// Now skip past just the extensions length bytes.
+										position += 2;
+
+										if (!WithinBounds(m_tlsPeekBuffer, position, bytesTransferred, 3))
+										{
+											Kill();
+											return;
+										}
+
+										// Parse each extension till we hopefully find SNI
+										bool notDone = true;
+										while (position < bytesTransferred && notDone)
+										{
+											if (!WithinBounds(m_tlsPeekBuffer, position + 4, bytesTransferred, 4))
 											{
-												// Skip this much, since we don't have our SNI extension yet.
-												extensionPos += thisExtensionLen;
-												continue;
+												Kill();
+												return;
 											}
 
-											// Is SNI extension, but extension is multipart. Want only the portion of the
-											// extension that contains the actual hostname.
-											while ((extensionPos + 3) < thisExtensionLen && (extensionPos + 3) < extensionsLen && !notDone)
+											// Get the extension type.
+											size_t extensionType = ((reinterpret_cast<const char&>((*m_tlsPeekBuffer)[position])) << 8) | reinterpret_cast<const char&>((*m_tlsPeekBuffer)[position + 1]);
+
+											// Get the length of this extension.
+											size_t extensionLength = ((reinterpret_cast<const char&>((*m_tlsPeekBuffer)[position + 2])) << 8) | reinterpret_cast<const char&>((*m_tlsPeekBuffer)[position + 3]);
+												
+											// Skip beyond extension type and extension length.
+											position += 4;
+
+											// Check if it's SNI
+											if (extensionType == 0)
 											{
-												int sniPartLen = (reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[extensionPos + 1]) << 8) +
-													reinterpret_cast<unsigned char&>((*m_tlsPeekBuffer)[extensionPos + 2]);
+												// Skip Server Name Indication Length.
+												position += 2;
 
-
-												auto sniExtensionType = (*m_tlsPeekBuffer)[extensionPos];
-												extensionPos += 3;
-
-												switch (sniExtensionType)
+												if (!WithinBounds(m_tlsPeekBuffer, position + 4, bytesTransferred, 5))
 												{
-													case 0x00:
-													{
-														if (extensionPos + sniPartLen <= extensionsLen)
-														{
-															// If we're in bounds including our length, then we've got the entire hostname.
-															hostName = boost::string_ref(m_tlsPeekBuffer->data() + extensionPos, sniPartLen);
-														}
-														else
-														{
-															ReportWarning(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - \
-																Discovered SNI hostname entry, but entire entry was not read into the peek buffer.");
-														}
+													Kill();
+													return;
+												}
 
+												while (position < bytesTransferred && notDone)
+												{
+													if (!WithinBounds(m_tlsPeekBuffer, position + 3, bytesTransferred, 6))
+													{
+														Kill();
+														return;
+													}
+
+													// Get SNI part length.
+													size_t sniPartLength = ((reinterpret_cast<const char&>((*m_tlsPeekBuffer)[position + 1])) << 8) | reinterpret_cast<const char&>((*m_tlsPeekBuffer)[position + 2]);
+																									
+													if ((*m_tlsPeekBuffer)[position] == 0)
+													{
+														hostnameLength = sniPartLength;
+														hostName = hostName.substr(position + 3, sniPartLength);
 														notDone = false;
 														break;
 													}
-													break;
 
-													default:
-														ReportWarning(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - \
-															Skipping unknown SNI extension part.");
+													position += 3 + sniPartLength;
 												}
+											}
 
-												extensionPos += sniPartLen;
+											position += extensionLength;
+										}
+
+										if (hostnameLength > 0)
+										{
+
+											m_upstreamHost = hostName.to_string();
+
+											// XXX TODO - See notes in the version of ::OnResolve(...), specializedd for TLS clients.
+											m_upstreamHostPort = 443;
+
+											std::string extractedSniMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - ");
+											extractedSniMessage.append(u8"Extracted SNI hostname: ").append(hostName.to_string()).append(u8".");
+											ReportInfo(extractedSniMessage);
+
+											try
+											{
+												boost::asio::ip::tcp::resolver::query query(m_upstreamHost, "https");
+												m_resolver.async_resolve(
+													query, 
+													m_upstreamStrand.wrap(
+														std::bind(
+															&TlsCapableHttpBridge::OnResolve, 
+															shared_from_this(), 
+															std::placeholders::_1, 
+															std::placeholders::_2
+															)
+														)
+													);
+
+												return;
+											}
+											catch (std::exception& e)
+											{
+												std::string errorMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - Got Error:\n\t");
+												errorMessage.append(e.what());
+												ReportError(errorMessage);
 											}
 										}
-
-										notDone = false;
-									}
-
-									if (hostName.data() != nullptr && hostName.size() > 0)
-									{
-										// If we have a hostname, then we need to resolve it and let the specialized OnResolve method
-										// take over to correctly initiate the process of verifying the upstream requested server/host
-										// and certificate, fetching or generating a context, etc.
-
-										m_upstreamHost = hostName.to_string();
-
-										// XXX TODO - See notes in the version of ::OnResolve(...), specializedd for TLS clients.
-										m_upstreamHostPort = 443;
-
-										try
-										{	
-											boost::asio::ip::tcp::resolver::query query(m_upstreamHost, "https");
-											m_resolver.async_resolve(query, m_upstreamStrand.wrap(std::bind(&TlsCapableHttpBridge::OnResolve, shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
-											return;
-										}
-										catch (std::exception& e)
+										else
 										{
-											std::string errorMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - Got Error:\n\t");
-											errorMessage.append(e.what());
-											ReportError(errorMessage);
+											ReportError(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - Failed to extract hostname from SNI extension.");
 										}
 									}
-
-									ReportError(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - \
-										Failed to extract hostname from SNI extension.");
+									else
+									{
+										ReportWarning(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - Not a TLS client hello.");
+									}
 								}
 								else
 								{
-									// Not TLS client hello.
-									ReportWarning(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - \
-									 Peeked data is not TLS client hello.");
-								}
-							}
-							else
-							{
-								// TLS peek buffer is nullptr or bytesTransferred is less than or equal to MinTlsHelloLength
-								if (!m_tlsPeekBuffer)
-								{
-									ReportError(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - \
-									 m_tlsPeekBuffer is nullptr!");
-								}
-								else
-								{
-									ReportWarning(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - \
-									 Peeked data is not sufficient in length to be a TLS client hello.");
+									ReportWarning(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - Not a TLS client.");
 								}
 							}
 						}
 						else
-						{
-							// Error is set or bytesTransferred is 0
+						{							
 							if (error)
 							{
 								std::string errorMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - Got Error:\n\t");
 								errorMessage.append(error.message());
 								ReportError(errorMessage);
 							}
+							else if(!m_tlsPeekBuffer)
+							{
+								ReportError(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - TLS peek buffer is nullptr!");
+							}
 							else
 							{
-								ReportWarning(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - \
-									 Peeked data length is zero.");
+								ReportWarning(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - Peeked data length is zero.");
 							}
 						}
 
@@ -1749,8 +1858,7 @@ namespace te
 
 						if (err)
 						{
-							std::string errorMessage(u8"In TlsCapableHttpBridge<BridgeSocketType>::SetLinger(boost::asio::ip::tcp::socket&, const bool) - \
-								While setting linger state, got error:\n\t");
+							std::string errorMessage(u8"In TlsCapableHttpBridge<BridgeSocketType>::SetLinger(boost::asio::ip::tcp::socket&, const bool) - While setting linger state, got error:\n\t");
 							errorMessage.append(err.message());
 							ReportError(errorMessage);
 						}
@@ -1773,8 +1881,7 @@ namespace te
 
 						if (err)
 						{
-							std::string errorMessage(u8"In TlsCapableHttpBridge<BridgeSocketType>::SetNoDelay(boost::asio::ip::tcp::socket&, const bool) - \
-								While setting Nagle algorithm enabled state, got error:\n\t");
+							std::string errorMessage(u8"In TlsCapableHttpBridge<BridgeSocketType>::SetNoDelay(boost::asio::ip::tcp::socket&, const bool) - While setting Nagle algorithm enabled state, got error:\n\t");
 							errorMessage.append(err.message());
 							ReportError(errorMessage);
 						}

@@ -62,7 +62,7 @@ PHttpFilteringEngineCtl fe_ctl_create(
 		#else
 			//if (firewallCb == nullptr)
 			//{
-			//	throw new std::runtime_error(u8"In fe_ctl_create(FirewallCheckCallback, ReportMessageCallback, \
+			//	throw std::runtime_error(u8"In fe_ctl_create(FirewallCheckCallback, ReportMessageCallback, \
 			//			ReportMessageCallback, ReportMessageCallback, ReportBlockedRequestCallback, \
 			//			ReportBlockedElementsCallback) - On Windows, a valid firewall callback is required!");
 			//}
@@ -117,7 +117,7 @@ PHttpFilteringEngineCtl fe_ctl_create(
 		#else
 			// if (inst == nullptr)
 			// {
-			// 	throw new std::runtime_error(u8"In fe_ctl_create(FirewallCheckCallback, ReportMessageCallback, \
+			// 	throw std::runtime_error(u8"In fe_ctl_create(FirewallCheckCallback, ReportMessageCallback, \
 					// 		ReportMessageCallback, ReportMessageCallback, ReportBlockedRequestCallback, \
 			// 		ReportBlockedElementsCallback) - Failed to allocate new HttpFilteringEngineCtl instance!");
 			// }
@@ -139,15 +139,66 @@ void fe_ctl_destroy(PPHttpFilteringEngineCtl ptr)
 
 	if (cppPtr != nullptr)
 	{
+		#if _MSC_VER
+			// MSVC has a bug where locking a mutex around application shutdown bugs out
+			// and causes segfault. As such, we're kind of ***** for cleanly shutting down,
+			// so we just have to blow away the object.
+			//
+			// More at https://connect.microsoft.com/VisualStudio/feedback/details/1282596
+			//
+			// XXX TODO - Test that this will still cleanup correctly.
+		#else
+			if (cppPtr->IsRunning())
+			{
+				cppPtr->Stop();
+			}
+		#endif
+		
+
+		delete cppPtr;
+	}
+
+	*ptr = nullptr;
+
+	#if BOOST_OS_WINDOWS
+		WSACleanup();
+	#endif
+}
+
+void fe_ctl_destroy_unsafe(PHttpFilteringEngineCtl ptr)
+{
+	te::httpengine::HttpFilteringEngineControl* cppPtr = reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr);
+
+	if (cppPtr != nullptr)
+	{
+		#if _MSC_VER
+				// MSVC has a bug where locking a mutex around application shutdown bugs out
+				// and causes segfault. As such, we're kind of ***** for cleanly shutting down,
+				// so we just have to blow away the object.
+				//
+				// More at https://connect.microsoft.com/VisualStudio/feedback/details/1282596
+				//
+				// XXX TODO - Test that this will still cleanup correctly.
+				//
+				// Update - Appears that https://github.com/TechnikEmpire/HttpFilteringEngine/issues/25
+				// might have been the real issue.
+				//
+				// Ticket for this issue at https://github.com/TechnikEmpire/HttpFilteringEngine/issues/24.
+		#else
+				if (cppPtr->IsRunning())
+				{
+					cppPtr->Stop();
+				}
+		#endif
+
 		if (cppPtr->IsRunning())
 		{
 			cppPtr->Stop();
 		}
 
-		delete reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(*ptr);
-	}
 
-	*ptr = nullptr;
+		delete cppPtr;
+	}
 
 	#if BOOST_OS_WINDOWS
 		WSACleanup();
@@ -161,7 +212,7 @@ const bool fe_ctl_start(PHttpFilteringEngineCtl ptr)
 	#else
 		// if (ptr == nullptr)
 		// {
-		// 	throw new std::runtime_error(u8"In fe_ctl_start(PHttpFilteringEngineCtl) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		// 	throw std::runtime_error(u8"In fe_ctl_start(PHttpFilteringEngineCtl) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
 		// }
 	#endif
 
@@ -181,6 +232,8 @@ const bool fe_ctl_start(PHttpFilteringEngineCtl ptr)
 		}
 	}
 
+	assert(success == true && u8"In fe_ctl_start(PHttpFilteringEngineCtl) - Caught exception and failed to start.");
+
 	return success;
 }
 
@@ -191,7 +244,7 @@ void fe_ctl_stop(PHttpFilteringEngineCtl ptr)
 	#else
 		//if (ptr == nullptr)
 		//{
-		//	throw new std::runtime_error(u8"In fe_ctl_stop(PHttpFilteringEngineCtl) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		//	throw std::runtime_error(u8"In fe_ctl_stop(PHttpFilteringEngineCtl) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
 		//}
 	#endif
 
@@ -210,6 +263,8 @@ void fe_ctl_stop(PHttpFilteringEngineCtl ptr)
 	{
 
 	}
+
+	assert(success == true && u8"In fe_ctl_stop(PHttpFilteringEngineCtl) - Caught exception and failed to stop.");
 }
 
 const bool fe_ctl_is_running(PHttpFilteringEngineCtl ptr)
@@ -219,7 +274,7 @@ const bool fe_ctl_is_running(PHttpFilteringEngineCtl ptr)
 	#else
 		//if (ptr == nullptr)
 		//{
-		//	throw new std::runtime_error(u8"In fe_ctl_is_running(PHttpFilteringEngineCtl) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		//	throw std::runtime_error(u8"In fe_ctl_is_running(PHttpFilteringEngineCtl) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
 		//}
 	#endif
 
@@ -230,13 +285,14 @@ const bool fe_ctl_is_running(PHttpFilteringEngineCtl ptr)
 		if (ptr != nullptr)
 		{
 			return reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->IsRunning();
-			success = true;
 		}		
 	}
 	catch (std::exception& e)
 	{
 
 	}
+
+	assert(success == true && u8"In fe_ctl_is_running(PHttpFilteringEngineCtl) - Caught exception and failed to check status.");
 
 	return success;
 }
@@ -248,9 +304,11 @@ uint16_t fe_ctl_get_http_listener_port(PHttpFilteringEngineCtl ptr)
 	#else
 		//if (ptr == nullptr)
 		//{
-		//	throw new std::runtime_error(u8"In fe_ctl_get_http_listener_port(PHttpFilteringEngineCtl) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		//	throw std::runtime_error(u8"In fe_ctl_get_http_listener_port(PHttpFilteringEngineCtl) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
 		//}
 	#endif
+
+	bool success = false;
 
 	try
 	{
@@ -264,6 +322,8 @@ uint16_t fe_ctl_get_http_listener_port(PHttpFilteringEngineCtl ptr)
 
 	}
 
+	assert(success == true && u8"In fe_ctl_get_http_listener_port(PHttpFilteringEngineCtl) - Caught exception and failed to get HTTP listener port.");
+
 	return 0;
 }
 
@@ -274,9 +334,11 @@ uint16_t fe_ctl_get_https_listener_port(PHttpFilteringEngineCtl ptr)
 	#else
 		//if (ptr == nullptr)
 		//{
-		//	throw new std::runtime_error(u8"In fe_ctl_get_https_listener_port(PHttpFilteringEngineCtl) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		//	throw std::runtime_error(u8"In fe_ctl_get_https_listener_port(PHttpFilteringEngineCtl) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
 		//}
 	#endif
+
+	bool success = false;
 
 	try
 	{
@@ -290,6 +352,8 @@ uint16_t fe_ctl_get_https_listener_port(PHttpFilteringEngineCtl ptr)
 
 	}
 
+	assert(success == true && u8"In fe_ctl_get_https_listener_port(PHttpFilteringEngineCtl) - Caught exception and failed to get HTTPs listener port.");
+
 	return 0;
 }
 
@@ -300,23 +364,28 @@ const bool fe_ctl_get_option(PHttpFilteringEngineCtl ptr, const uint32_t optionI
 	#else
 		//if (ptr == nullptr)
 		//{
-		//	throw new std::runtime_error(u8"In fe_ctl_get_option(PHttpFilteringEngineCtl, const uint32_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		//	throw std::runtime_error(u8"In fe_ctl_get_option(PHttpFilteringEngineCtl, const uint32_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
 		//}
 	#endif
 
 	bool success = false;
+
+	bool callSuccess = false;
 
 	try
 	{
 		if (ptr != nullptr)
 		{
 			success = reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->GetOptionEnabled(optionId);
+			callSuccess = true;
 		}
 	}
 	catch (std::exception& e)
 	{
 
 	}
+
+	assert(callSuccess == true && u8"In fe_ctl_get_option(PHttpFilteringEngineCtl) - Caught exception and failed to get option.");
 
 	return success;
 }
@@ -328,23 +397,26 @@ void fe_ctl_set_option(PHttpFilteringEngineCtl ptr, const uint32_t optionId, con
 	#else
 		//if (ptr == nullptr)
 		//{
-		//	throw new std::runtime_error(u8"In fe_ctl_set_option(PHttpFilteringEngineCtl, const uint32_t, const bool) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		//	throw std::runtime_error(u8"In fe_ctl_set_option(PHttpFilteringEngineCtl, const uint32_t, const bool) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
 		//}
 	#endif
 
-	bool success = false;
+	bool callSuccess = false;
 
 	try
 	{
 		if (ptr != nullptr)
 		{
 			reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->SetOptionEnabled(optionId, val);
+			callSuccess = true;
 		}
 	}
 	catch (std::exception& e)
 	{
 
 	}
+
+	assert(callSuccess == true && u8"In fe_ctl_set_option(PHttpFilteringEngineCtl) - Caught exception and failed to set option.");
 }
 
 const bool fe_ctl_get_category(PHttpFilteringEngineCtl ptr, const uint8_t categoryId)
@@ -354,23 +426,27 @@ const bool fe_ctl_get_category(PHttpFilteringEngineCtl ptr, const uint8_t catego
 	#else
 		//if (ptr == nullptr)
 		//{
-		//	throw new std::runtime_error(u8"In fe_ctl_get_category(PHttpFilteringEngineCtl, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		//	throw std::runtime_error(u8"In fe_ctl_get_category(PHttpFilteringEngineCtl, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
 		//}
 	#endif
 
 	bool success = false;
+	bool callSuccess = false;
 
 	try
 	{
 		if (ptr != nullptr)
 		{
 			success = reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->GetCategoryEnabled(categoryId);
+			callSuccess = true;
 		}
 	}
 	catch (std::exception& e)
 	{
 
 	}
+
+	assert(callSuccess == true && u8"In fe_ctl_get_category(PHttpFilteringEngineCtl) - Caught exception and failed to get category.");
 
 	return success;
 }
@@ -382,21 +458,26 @@ void fe_ctl_set_category(PHttpFilteringEngineCtl ptr, const uint8_t categoryId, 
 	#else
 		//if (ptr == nullptr)
 		//{
-		//	throw new std::runtime_error(u8"In fe_ctl_set_category(PHttpFilteringEngineCtl, const uint8_t, const bool) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		//	throw std::runtime_error(u8"In fe_ctl_set_category(PHttpFilteringEngineCtl, const uint8_t, const bool) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
 		//}
 	#endif
+
+	bool callSuccess = false;
 
 	try
 	{
 		if (ptr != nullptr)
 		{
 			reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->SetCategoryEnabled(categoryId, val);
+			callSuccess = true;
 		}
 	}
 	catch (std::exception& e)
 	{
 
 	}
+
+	assert(callSuccess == true && u8"In fe_ctl_set_category(PHttpFilteringEngineCtl) - Caught exception and failed to set category.");
 }
 
 const bool fe_ctl_load_list_from_file(
@@ -413,15 +494,16 @@ const bool fe_ctl_load_list_from_file(
 	#else
 		//if (ptr == nullptr)
 		//{
-		//	throw new std::runtime_error(u8"In fe_ctl_set_category(PHttpFilteringEngineCtl, const char*, const size_t, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		//	throw std::runtime_error(u8"In fe_ctl_set_category(PHttpFilteringEngineCtl, const char*, const size_t, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
 		//}
 		//if (filePath == nullptr)
 		//{
-		//	throw new std::runtime_error(u8"In fe_ctl_set_category(PHttpFilteringEngineCtl, const char*, const size_t, const uint8_t) - Supplied file path ptr is nullptr!");
+		//	throw std::runtime_error(u8"In fe_ctl_set_category(PHttpFilteringEngineCtl, const char*, const size_t, const uint8_t) - Supplied file path ptr is nullptr!");
 		//}
 	#endif
 
 	bool success = false;
+	bool callSuccess = false;
 
 	try
 	{
@@ -429,12 +511,15 @@ const bool fe_ctl_load_list_from_file(
 		{
 			std::string filePathStr(filePath, filePathLength);			
 			success = reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->LoadFilteringListFromFile(filePathStr, listCategory, flushExisting);
+			callSuccess = true;
 		}
 	}
 	catch (std::exception& e)
 	{
 
 	}
+
+	assert(callSuccess == true && u8"In fe_ctl_load_list_from_file(...) - Caught exception and failed to set category.");
 
 	return success;
 }
@@ -453,15 +538,16 @@ const bool fe_ctl_load_list_from_string(
 	#else
 		//if (ptr == nullptr)
 		//{
-		//	throw new std::runtime_error(u8"In fe_ctl_set_category(PHttpFilteringEngineCtl, const char*, const size_t, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		//	throw std::runtime_error(u8"In fe_ctl_set_category(PHttpFilteringEngineCtl, const char*, const size_t, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
 		//}
 		//if (listString == nullptr)
 		//{
-		//	throw new std::runtime_error(u8"In fe_ctl_set_category(PHttpFilteringEngineCtl, const char*, const size_t, const uint8_t) - Supplied list string ptr is nullptr!");
+		//	throw std::runtime_error(u8"In fe_ctl_set_category(PHttpFilteringEngineCtl, const char*, const size_t, const uint8_t) - Supplied list string ptr is nullptr!");
 		//}
 	#endif
 
 	bool success = false;
+	bool callSuccess = false;
 
 	try
 	{
@@ -475,6 +561,8 @@ const bool fe_ctl_load_list_from_string(
 	{
 
 	}
+
+	assert(callSuccess == true && u8"In fe_ctl_load_list_from_string(...) - Caught exception and failed to set category.");
 
 	return success;
 }

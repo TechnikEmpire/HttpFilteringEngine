@@ -122,7 +122,7 @@ namespace te
 
 						if (certToSpoofName == nullptr)
 						{
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to load remote certificate X509_NAME data.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to load remote certificate X509_NAME data.");
 						}
 
 						cnLen = X509_NAME_get_text_by_NID(certToSpoofName, NID_commonName, cnBuff, 1024);
@@ -152,7 +152,7 @@ namespace te
 
 						if (spoofedCertKeypair == nullptr)
 						{
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to generate EC key for spoofed certificate.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to generate EC key for spoofed certificate.");
 						}
 
 						X509 * spoofedCert = IssueCertificate(spoofedCertKeypair, m_thisCaKeyPair, false, countryCode, organizationName, commonName);
@@ -161,7 +161,7 @@ namespace te
 						{
 							EVP_PKEY_free(spoofedCertKeypair);
 
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to generate X509 structure.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to generate X509 structure.");
 						}
 
 						// We need to get all the SAN, or Subject Alternative Names out of the certificate
@@ -249,7 +249,7 @@ namespace te
 							{
 								EVP_PKEY_free(spoofedCertKeypair);
 								X509_free(spoofedCert);
-								throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to set SAN's for spoofed certificate.");
+								throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to set SAN's for spoofed certificate.");
 							}
 						}
 
@@ -260,7 +260,7 @@ namespace te
 						{
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to allocate new server context for spoofed certificate.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to allocate new server context for spoofed certificate.");
 						}
 						
 						ctx->set_options(
@@ -274,21 +274,21 @@ namespace te
 						{
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to set context cipher list.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to set context cipher list.");
 						}
 
 						if (SSL_CTX_use_certificate(ctx->native_handle(), spoofedCert) != 1)
 						{
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to set server context certificate.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to set server context certificate.");
 						}
 
 						if (SSL_CTX_use_PrivateKey(ctx->native_handle(), spoofedCertKeypair) != 1)
 						{
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to set server context private key.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to set server context private key.");
 						}
 
 						SSL_CTX_set_options(ctx->native_handle(), SSL_OP_CIPHER_SERVER_PREFERENCE);
@@ -299,7 +299,7 @@ namespace te
 						{
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to allocate server context temporary negotiation EC key.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to allocate server context temporary negotiation EC key.");
 						}
 
 						if (EC_KEY_generate_key(tmpNegotiationEcKey) != 1)
@@ -307,12 +307,14 @@ namespace te
 							EC_KEY_free(tmpNegotiationEcKey);
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to generate server context temporary negotiation EC key.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to generate server context temporary negotiation EC key.");
 						}
 
 						SSL_CTX_set_tmp_ecdh(ctx->native_handle(), tmpNegotiationEcKey);
 
 						Writer w(m_sharedLock);
+
+						bool atLeastOneInsert = false;
 
 						if (sanDomains.size() > 0)
 						{
@@ -321,17 +323,7 @@ namespace te
 								if (m_hostContexts.find(domain) == m_hostContexts.end())
 								{
 									m_hostContexts.insert({domain, ctx});
-								}
-								else
-								{
-									// In this case, either the user has made an error and is duplicating data, or perhaps
-									// something more dirty is going on, where we have spoofed a certificate that is lying
-									// about its SN and or SAN's.
-									EC_KEY_free(tmpNegotiationEcKey);
-									EVP_PKEY_free(spoofedCertKeypair);
-									X509_free(spoofedCert);
-									w.unlock();
-									throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Context already exists for specified host.");
+									atLeastOneInsert = true;
 								}
 							}
 						}
@@ -339,8 +331,10 @@ namespace te
 						if (m_hostContexts.find(host) == m_hostContexts.end())
 						{
 							m_hostContexts.insert({ host, ctx });
+							atLeastOneInsert = true;
 						}
-						else
+
+						if (!atLeastOneInsert)
 						{
 							// In this case, either the user has made an error and is duplicating data, or perhaps
 							// something more dirty is going on, where we have spoofed a certificate that is lying
@@ -349,14 +343,14 @@ namespace te
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
 							w.unlock();
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Context already exists for specified host.");
-						}	
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Context already exists for specified host.");
+						}
 
 						return ctx;
 					}
 					else
 					{
-						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Cannot spoof certificate. Either member CA\
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Cannot spoof certificate. Either member CA\
 							, member CA keypair or certificate to spoof is nullptr.");
 					}					
 				}
@@ -415,7 +409,7 @@ namespace te
 
 					if ((eckey = EC_KEY_new_by_curve_name(namedCurveId)) == nullptr || EC_KEY_generate_key(eckey) != 1)
 					{
-						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateEcKey(const int) - Failed to allocate EC_KEY structure.");
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateEcKey(const int) - Failed to allocate EC_KEY structure.");
 					}
 					
 					EC_KEY_set_asn1_flag(eckey, OPENSSL_EC_NAMED_CURVE);
@@ -426,7 +420,7 @@ namespace te
 
 					if (pkey == nullptr)
 					{
-						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateEcKey(const int) - Failed to allocate EVP_PKEY structure.");
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateEcKey(const int) - Failed to allocate EVP_PKEY structure.");
 					}
 					else
 					{
@@ -434,7 +428,7 @@ namespace te
 						{
 							EVP_PKEY_free(pkey);
 
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateEcKey(const int) - Failed to assign EC_KEY to EVP_PKEY structure.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateEcKey(const int) - Failed to assign EC_KEY to EVP_PKEY structure.");
 						}
 					}
 
@@ -452,7 +446,7 @@ namespace te
 
 					if (selfSigned == nullptr)
 					{
-						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY*, std::string, std::string, std::string) \
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY*, std::string, std::string, std::string) \
 						- Failed to allocate X509 structure.");
 					}
 
@@ -461,7 +455,7 @@ namespace te
 					{
 						X509_free(selfSigned);
 
-						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY*, std::string, std::string, std::string) \
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY*, std::string, std::string, std::string) \
 								- Failed to set self signed CA constraints.");
 					}
 
@@ -469,7 +463,7 @@ namespace te
 					{
 						X509_free(selfSigned);
 
-						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY*, std::string, std::string, std::string) \
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY*, std::string, std::string, std::string) \
 								- Failed to set self signed CA key usage.");
 					}
 
@@ -489,7 +483,7 @@ namespace te
 					{
 						X509_free(selfSigned);
 
-						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY*, std::string, std::string, std::string) \
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY*, std::string, std::string, std::string) \
 								- Failed to set self signed CA subject key identifier.");
 					}
 
@@ -509,7 +503,7 @@ namespace te
 
 					if (!x509)
 					{
-						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
 						- Failed to allocate X509 structure.");
 					}
 
@@ -517,7 +511,7 @@ namespace te
 					{
 						X509_free(x509);
 
-						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
 						- Failed to set self signed CA version number.");
 					}
 
@@ -533,7 +527,7 @@ namespace te
 					{
 						X509_free(x509);
 
-						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
 						- Failed to set self signed CA certificate serial number.");
 					}
 
@@ -550,7 +544,7 @@ namespace te
 					{
 						X509_free(x509);
 
-						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
 						- Failed to set self signed CA public key.");
 					}
 
@@ -562,7 +556,7 @@ namespace te
 						{
 							X509_free(x509);
 
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
 								- Failed to set self signed CA certificate country code.");
 						}
 
@@ -570,7 +564,7 @@ namespace te
 						{
 							X509_free(x509);
 
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
 								- Failed to set self signed CA certificate organization.");
 						}
 
@@ -578,7 +572,7 @@ namespace te
 						{
 							X509_free(x509);
 
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
 								- Failed to set self signed CA common name.");
 						}
 					}
@@ -586,7 +580,7 @@ namespace te
 					{
 						X509_free(x509);
 
-						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
 								- Failed to set self signed CA common name.");
 					}
 
@@ -597,7 +591,7 @@ namespace te
 						{
 							X509_free(x509);
 
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
 								- Failed to set self signed CA isser name information.");
 						}
 					}
@@ -607,7 +601,7 @@ namespace te
 						{
 							X509_free(x509);
 
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
 								- Cannot issue certificate, as the member CA is nullptr.");
 						}
 
@@ -617,7 +611,7 @@ namespace te
 						{
 							X509_free(x509);
 
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
 								- Failed to get X509_NAME structure from member CA.");
 						}
 
@@ -625,7 +619,7 @@ namespace te
 						{
 							X509_free(x509);
 
-							throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
 								- Failed to set issuer name for non CA certificate.");
 						}
 					}										
@@ -634,7 +628,7 @@ namespace te
 					{
 						X509_free(x509);
 
-						throw new std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
 								- Failed to sign self signed CA.");
 					}
 

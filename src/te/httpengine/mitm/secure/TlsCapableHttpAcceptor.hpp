@@ -166,14 +166,14 @@ namespace te
 
 						bool isTls = std::is_same<AcceptorType, network::TlsSocket>::value;
 						#ifndef NDEBUG
-							assert((isTls == (m_store == nullptr)) &&
+							assert((isTls == (m_store != nullptr)) &&
 								u8"In TlsCapableHttpAcceptor::TlsCapableHttpAcceptor(...) - Either type is TlsAcceptor and \
 								supplied certificate store is nullptr, or type is TcpListener and a certificate store was supplied. \
 								Certificate stores are required only for TlsAcceptor types.");
 						#else
 							if (isTls && m_store == nullptr)
 							{
-								throw new std::runtime_error(u8"In TlsCapableHttpAcceptor::TlsCapableHttpAcceptor(...) - Supplied cert store is nullptr!");
+								throw std::runtime_error(u8"In TlsCapableHttpAcceptor::TlsCapableHttpAcceptor(...) - Supplied cert store is nullptr!");
 							}
 
 							if(!isTls && m_store != nullptr)
@@ -196,7 +196,7 @@ namespace te
 						{
 							if (m_store == nullptr)
 							{
-								throw new std::runtime_error(u8"In TlsCapableHttpAcceptor::TlsCapableHttpAcceptor(...) - Supplied cert store is nullptr!");
+								throw std::runtime_error(u8"In TlsCapableHttpAcceptor::TlsCapableHttpAcceptor(...) - Supplied cert store is nullptr!");
 							}
 
 							InitContexts();
@@ -302,6 +302,7 @@ namespace te
 							
 							boost::system::error_code loadRootsError;
 
+							m_defaultServerContext.set_default_verify_paths();
 							m_clientContext.set_default_verify_paths();
 
 							m_clientContext.load_verify_file(m_caBundleAbsolutePath, loadRootsError);

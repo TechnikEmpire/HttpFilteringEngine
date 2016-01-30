@@ -192,9 +192,6 @@
     <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\BaseDiverter.hpp">
       <Filter>Header Files\te\httpengine\mitm\diversion</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpListener.hpp">
-      <Filter>Header Files\te\httpengine\mitm\secure</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\network\SocketTypes.hpp">
       <Filter>Header Files\te\httpengine\network</Filter>
     </ClInclude>
@@ -268,9 +265,6 @@
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\diversion\BaseDiverter.cpp">
       <Filter>Source Files\te\httpengine\mitm\diversion</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpListener.cpp">
-      <Filter>Source Files\te\httpengine\mitm\secure</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.cpp">
       <Filter>Source Files\te\httpengine\mitm\secure</Filter>

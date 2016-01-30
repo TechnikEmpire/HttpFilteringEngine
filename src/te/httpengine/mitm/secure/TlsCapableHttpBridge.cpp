@@ -70,13 +70,22 @@ namespace te
 					#else
 						if (m_filteringEngine == nullptr)
 						{
-							throw new std::runtime_error(u8"In TlsCapableHttpBridge<network::TcpSocket>::TlsCapableHttpBridge(... args) - Supplied filtering engine pointer is nullptr!");
+							throw std::runtime_error(u8"In TlsCapableHttpBridge<network::TcpSocket>::TlsCapableHttpBridge(... args) - Supplied filtering engine pointer is nullptr!");
 						}
 					#endif
 					
 
 					m_request.reset(new http::HttpRequest());
 					m_response.reset(new http::HttpResponse());
+
+					// XXX TODO - This is ugly, our bad design is showing. See notes in the
+					// EventReporter class header.
+					m_request->SetOnInfo(m_onInfo);
+					m_request->SetOnWarning(m_onWarning);
+					m_request->SetOnError(m_onError);
+					m_response->SetOnInfo(m_onInfo);
+					m_response->SetOnWarning(m_onWarning);
+					m_response->SetOnError(m_onError);
 				}
 				
 				TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(
@@ -110,19 +119,28 @@ namespace te
 					#else
 						if (m_filteringEngine == nullptr)
 						{
-							throw new std::runtime_error(u8"In TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(... args) - Supplied filtering engine pointer is nullptr!");
+							throw std::runtime_error(u8"In TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(... args) - Supplied filtering engine pointer is nullptr!");
 						}
 
 						if (m_certStore == nullptr)
 						{
-							throw new std::runtime_error(u8"In TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(... args) - Supplied certificate store is nullptr!");
+							throw std::runtime_error(u8"In TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(... args) - Supplied certificate store is nullptr!");
 						}
 					#endif
 					
 
 					m_request.reset(new http::HttpRequest());
 					m_response.reset(new http::HttpResponse());
-					m_tlsPeekBuffer.reset(new std::array<char, TlsPeekBufferSize>());										
+					m_tlsPeekBuffer.reset(new std::array<char, TlsPeekBufferSize>());	
+
+					// XXX TODO - This is ugly, our bad design is showing. See notes in the
+					// EventReporter class header.
+					m_request->SetOnInfo(m_onInfo);
+					m_request->SetOnWarning(m_onWarning);
+					m_request->SetOnError(m_onError);
+					m_response->SetOnInfo(m_onInfo);
+					m_response->SetOnWarning(m_onWarning);
+					m_response->SetOnError(m_onError);
 				}
 
 				template<>
@@ -219,12 +237,8 @@ namespace te
 				template<>
 				void TlsCapableHttpBridge<network::TcpSocket>::OnUpstreamConnect(const boost::system::error_code& error)
 				{
-
 					if (!error)
-					{
-						SetNoDelay(UpstreamSocket(), true);
-						SetNoDelay(DownstreamSocket(), true);
-
+					{					
 						if (m_request->IsPayloadComplete() == false && m_request->GetConsumeAllBeforeSending() == true)
 						{
 							// Means that there is a request payload, it's not complete, and it's been flagged
@@ -273,8 +287,7 @@ namespace te
 					}
 					else
 					{
-						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - \
-							Got error:\n\t");
+						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - Got error:\n\t");
 						errMsg.append(error.message());
 						ReportError(errMsg);
 					}
@@ -327,16 +340,14 @@ namespace te
 						}
 						else
 						{
-							std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - \
-							While setting verification callback, got error:\n\t");
+							std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - While setting verification callback, got error:\n\t");
 							errMsg.append(error.message());
 							ReportError(errMsg);
 						}
 					}
 					else
 					{
-						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - \
-							Got error:\n\t");
+						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - Got error:\n\t");
 						errMsg.append(error.message());
 						ReportError(errMsg);
 					}
@@ -392,8 +403,7 @@ namespace te
 					}
 					else
 					{
-						std::string errMsg(u8"In TlsCapableHttpBridge<network::TcpSocket>::OnResolve(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator) - \
-							Got error:\n\t");
+						std::string errMsg(u8"In TlsCapableHttpBridge<network::TcpSocket>::OnResolve(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator) - Got error:\n\t");
 						errMsg.append(error.message());
 						ReportError(errMsg);
 					}
@@ -443,8 +453,7 @@ namespace te
 					}
 					else
 					{
-						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnResolve(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator) - \
-							Got error:\n\t");
+						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnResolve(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator) - Got error:\n\t");
 						errMsg.append(error.message());
 						ReportError(errMsg);
 					}

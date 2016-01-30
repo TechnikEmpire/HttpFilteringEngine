@@ -70,13 +70,11 @@ namespace te
 					#endif	
 
 					#ifndef NDEBUG
-						assert(m_diverter != nullptr && u8"In DiversionControl::DiversionControl(util::cb::MessageFunction, util::cb::MessageFunction, util::cb::MessageFunction) - \
-							Failed to allocate diverter class");
+						assert(m_diverter != nullptr && u8"In DiversionControl::DiversionControl(util::cb::MessageFunction, util::cb::MessageFunction, util::cb::MessageFunction) - Failed to allocate diverter class");
 					#else
 						if (m_diverter == nullptr)
 						{
-							throw new std::runtime_error(u8"In DiversionControl::DiversionControl(util::cb::MessageFunction, util::cb::MessageFunction, util::cb::MessageFunction) - \
-								Failed to allocate diverter class");
+							throw std::runtime_error(u8"In DiversionControl::DiversionControl(util::cb::MessageFunction, util::cb::MessageFunction, util::cb::MessageFunction) - Failed to allocate diverter class");
 						}
 					#endif
 				}

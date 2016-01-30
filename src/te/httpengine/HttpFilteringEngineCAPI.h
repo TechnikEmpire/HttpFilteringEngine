@@ -148,6 +148,19 @@ extern "C" {
 	HTTP_FILTERING_ENGINE_API void fe_ctl_destroy(PPHttpFilteringEngineCtl ptr);
 
 	/// <summary>
+	/// Destroys an existing Engine instance. If the Engine is running, it will be correctly shut
+	/// down. Regardless of its state, the Engine instance pointed to will be destroyed and the
+	/// supplied ptr argument will no longer be valid. The difference with this version over
+	/// the fe_ctl_destroy method is that it does not take a pointer to pointer, so users
+	/// have to take care that they don't double free. This is unfortunately required for
+	/// using correctly from C++ CLI.
+	/// </summary>
+	/// <param name="ptr">
+	/// A valid pointer to an existing Engine instance.
+	/// </param>
+	HTTP_FILTERING_ENGINE_API void fe_ctl_destroy_unsafe(PHttpFilteringEngineCtl ptr);
+
+	/// <summary>
 	/// Begins intercepting and diverting HTTP/S traffic through the Engine.
 	/// </summary>
 	/// <param name="ptr">

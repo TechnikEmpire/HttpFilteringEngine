@@ -40,7 +40,10 @@
 /// https://svn.boost.org/trac/boost/ticket/10911
 /// </summary>
 
+#pragma managed(push, off)
 #include "HttpFilteringEngineCAPI.h"
+#pragma managed(pop)
+
 #include <msclr\marshal_cppstd.h>
 
 using namespace System;

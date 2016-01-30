@@ -55,9 +55,8 @@ namespace Te {
 		{
 			if (m_handle != nullptr)
 			{
-				pin_ptr<PHttpFilteringEngineCtl> pinned = &m_handle;
-				auto pp = (PHttpFilteringEngineCtl)pinned;
-				fe_ctl_destroy(&pp);
+				fe_ctl_destroy_unsafe(m_handle);
+				m_handle = nullptr;
 			}
 		}
 
@@ -237,11 +236,11 @@ namespace Te {
 			m_unmanagedOnElementsBlockedCallback = gcnew UnmanagedReportElementsBlockedCallback(this, &Engine::UnmanagedOnElementsBlocked);
 
 			auto firewallCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedFirewallCheckCallback);
-			auto infoCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedFirewallCheckCallback);
-			auto warnCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedFirewallCheckCallback);
-			auto errorCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedFirewallCheckCallback);
-			auto blockedReqCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedFirewallCheckCallback);
-			auto blockedElmCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedFirewallCheckCallback);
+			auto infoCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnInfoCallback);
+			auto warnCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnWarningCallback);
+			auto errorCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnErrorCallback);
+			auto blockedReqCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnRequestBlockedCallback);
+			auto blockedElmCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnElementsBlockedCallback);
 
 			std::string caBundlePathStr(u8"none");
 

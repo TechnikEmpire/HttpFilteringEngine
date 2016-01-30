@@ -85,7 +85,7 @@ namespace te
 
 				WindowsInMemoryCertificateStore::~WindowsInMemoryCertificateStore()
 				{
-					RevokeOsTrust();
+					
 				}
 
 				bool WindowsInMemoryCertificateStore::EstablishOsTrust()
@@ -112,11 +112,11 @@ namespace te
 					{
 						if (!caAreadyGenerated)
 						{
-							throw new std::runtime_error("In WindowsInMemoryCertificateStore::EstablishOsTrust() - Attempted to install self signed certificate, to find that self signed cert is nullptr!");
+							throw std::runtime_error("In WindowsInMemoryCertificateStore::EstablishOsTrust() - Attempted to install self signed certificate, to find that self signed cert is nullptr!");
 						}
 						else
 						{
-							throw new std::runtime_error("In WindowsInMemoryCertificateStore::EstablishOsTrust() - Failed to open OS root certificate store.");
+							throw std::runtime_error("In WindowsInMemoryCertificateStore::EstablishOsTrust() - Failed to open OS root certificate store.");
 						}
 						
 					}
@@ -153,7 +153,7 @@ namespace te
 							{
 								if (!CertDeleteCertificateFromStore(pCert))
 								{
-									throw new std::runtime_error("In WindowsInMemoryCertificateStore::RevokeOsTrust() - Error removing old CA from OS store.");
+									throw std::runtime_error("In WindowsInMemoryCertificateStore::RevokeOsTrust() - Error removing old CA from OS store.");
 								}
 								else 
 								{
@@ -164,17 +164,11 @@ namespace te
 							}
 						}
 
-						unsigned char *buf = nullptr;
-
-						int encodedBytesLen = i2d_X509(m_thisCa, &buf);
-
-						CertAddEncodedCertificateToStore(hSysStore, X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, buf, encodedBytesLen, CERT_STORE_ADD_REPLACE_EXISTING, NULL);
-
 						CertCloseStore(hSysStore, 0);
 					}
 					else
 					{
-						throw new std::runtime_error("In WindowsInMemoryCertificateStore::RevokeOsTrust() - Failed to open OS root certificate store.");
+						throw std::runtime_error("In WindowsInMemoryCertificateStore::RevokeOsTrust() - Failed to open OS root certificate store.");
 					}
 				}
 

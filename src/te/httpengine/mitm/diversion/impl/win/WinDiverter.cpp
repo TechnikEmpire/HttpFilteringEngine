@@ -64,7 +64,7 @@ namespace te
 
 					if (!m_firewallCheckCb)
 					{
-						throw new std::runtime_error(u8"In WinDiverter::WinDiverter(...) - No valid firewall check callback was supplied.");
+						throw std::runtime_error(u8"In WinDiverter::WinDiverter(...) - No valid firewall check callback was supplied.");
 					}
 				}
 
@@ -116,7 +116,7 @@ namespace te
 							std::string errMessage("In WinDiverter::Run() - Failed to start Diversion, got invalid WinDivert handle with error:\n\t");
 							errMessage.append(std::to_string(GetLastError()));
 
-							throw new std::runtime_error(errMessage.c_str());
+							throw std::runtime_error(errMessage.c_str());
 						}
 
 						WinDivertSetParam(m_diversionHandle, WINDIVERT_PARAM_QUEUE_LEN, 8192);

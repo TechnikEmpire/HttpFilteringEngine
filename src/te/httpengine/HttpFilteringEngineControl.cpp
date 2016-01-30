@@ -112,15 +112,23 @@ namespace te
 
 		HttpFilteringEngineControl::~HttpFilteringEngineControl()
 		{
-			if (m_isRunning)
+			// Cleanup any installed certs HERE.
+			if (m_store != nullptr)
 			{
-				Stop();
+				try
+				{
+					m_store->RevokeOsTrust();
+				}
+				catch (std::runtime_error& e)
+				{
+					// XXX TODO What can we really do here?
+				}				
 			}
 		}
 
 		void HttpFilteringEngineControl::Start()
 		{
-			std::unique_lock<std::mutex> lock(m_ctlMutex);
+			std::lock_guard<std::mutex> lock(m_ctlMutex);
 
 			if (m_isRunning == false)
 			{
@@ -146,7 +154,7 @@ namespace te
 
 					if (!m_store->EstablishOsTrust())
 					{
-						throw new std::runtime_error(u8"In HttpFilteringEngineControl::Start() - Failed to establish certificate trust with OS.");
+						throw std::runtime_error(u8"In HttpFilteringEngineControl::Start() - Failed to establish certificate trust with OS.");
 					}
 				}
 
@@ -159,7 +167,12 @@ namespace te
 						new mitm::secure::TcpAcceptor(
 							m_service.get(), 
 							m_httpFilteringEngine.get(), 
-							m_httpListenerPort
+							m_httpListenerPort,
+							m_caBundleAbsolutePath,
+							nullptr,
+							m_onInfo,
+							m_onWarning,
+							m_onError
 							)
 						);
 				}
@@ -214,7 +227,7 @@ namespace te
 
 		void HttpFilteringEngineControl::Stop()
 		{
-			std::unique_lock<std::mutex> lock(m_ctlMutex);
+			std::lock_guard<std::mutex> lock(m_ctlMutex);
 			
 			if (m_isRunning == true)
 			{				
