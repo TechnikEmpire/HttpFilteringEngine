@@ -96,19 +96,6 @@ namespace te
 				{
 					std::string ret;
 
-					if (m_httpVersion == HttpProtocolVersion::HTTP1)
-					{
-						ret.append(u8"HTTP/1.0 ");
-					}
-					else if (m_httpVersion == HttpProtocolVersion::HTTP1_1)
-					{
-						ret.append(u8"HTTP/1.1 ");
-					}
-					else if (m_httpVersion == HttpProtocolVersion::HTTP2)
-					{
-						ret.append(u8"HTTP/2.0 ");
-					}
-
 					ret.append(m_statusString);					
 
 					for (auto header = m_headers.begin(); header != m_headers.end(); ++header)
@@ -161,24 +148,7 @@ namespace te
 							trans->m_httpVersion = HttpProtocolVersion::HTTP1_1;
 						}
 
-						trans->m_statusString.clear();
-
-						if (trans->m_httpVersion == HttpProtocolVersion::HTTP1)
-						{
-							trans->m_statusString.append(u8"HTTP 1.0 ");
-						}
-						else if (trans->m_httpVersion == HttpProtocolVersion::HTTP1_1)
-						{
-							trans->m_statusString.append(u8"HTTP 1.1 ");
-						}
-						else if (trans->m_httpVersion == HttpProtocolVersion::HTTP2)
-						{
-							trans->m_statusString.append(u8"HTTP 2.0 ");
-						}
-
-						trans->m_statusString.append(std::to_string(parser->status_code));
-						trans->m_statusString.append(u8" ").append(at, length);
-						
+						trans->StatusCode(parser->status_code);						
 					}
 					else {
 						return -1;
