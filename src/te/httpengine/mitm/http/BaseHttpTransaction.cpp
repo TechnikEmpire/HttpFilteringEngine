@@ -323,6 +323,10 @@ namespace te
 							m_transactionData.push_back('\r');
 							m_transactionData.push_back('\n');
 						}
+
+						// Reset the size, in case pushing terminating CRLF's adjusted it. Must be done, otherwise
+						// we'll ruin keep-alive.
+						m_unwrittenPayloadSize = m_transactionData.size();
 					}
 					else
 					{
@@ -434,8 +438,7 @@ namespace te
 				{
 					// XXX TODO - Cleanup this code duplication.
 
-					m_transactionData = std::move(payload);
-					m_unwrittenPayloadSize = m_transactionData.size();
+					m_transactionData = std::move(payload);					
 					m_payloadComplete = true;
 										
 					RemoveHeader(util::http::headers::ContentLength);
@@ -464,6 +467,10 @@ namespace te
 						m_transactionData.push_back('\r');
 						m_transactionData.push_back('\n');
 					}
+
+					// Reset the size, in case pushing terminating CRLF's adjusted it. Must be done, otherwise
+					// we'll ruin keep-alive.
+					m_unwrittenPayloadSize = m_transactionData.size();
 				}
 
 				void BaseHttpTransaction::SetPayload(const std::vector<char>& payload)
@@ -471,8 +478,7 @@ namespace te
 					// XXX TODO - Cleanup this code duplication.
 
 					m_transactionData = payload;
-
-					m_unwrittenPayloadSize = m_transactionData.size();
+					
 					m_payloadComplete = true;
 
 					RemoveHeader(util::http::headers::ContentLength);
@@ -501,6 +507,10 @@ namespace te
 						m_transactionData.push_back('\r');
 						m_transactionData.push_back('\n');
 					}
+
+					// Reset the size, in case pushing terminating CRLF's adjusted it. Must be done, otherwise
+					// we'll ruin keep-alive.
+					m_unwrittenPayloadSize = m_transactionData.size();
 				}
 
 				const bool BaseHttpTransaction::IsPayloadComplete() const
