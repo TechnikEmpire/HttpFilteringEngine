@@ -228,7 +228,7 @@ const bool fe_ctl_start(PHttpFilteringEngineCtl ptr)
 		}
 		catch (std::exception& e)
 		{
-
+			reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
 		}
 	}
 
@@ -261,7 +261,7 @@ void fe_ctl_stop(PHttpFilteringEngineCtl ptr)
 	}
 	catch (std::exception& e)
 	{
-
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
 	}
 
 	assert(success == true && u8"In fe_ctl_stop(PHttpFilteringEngineCtl) - Caught exception and failed to stop.");
@@ -289,7 +289,7 @@ const bool fe_ctl_is_running(PHttpFilteringEngineCtl ptr)
 	}
 	catch (std::exception& e)
 	{
-
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
 	}
 
 	assert(success == true && u8"In fe_ctl_is_running(PHttpFilteringEngineCtl) - Caught exception and failed to check status.");
@@ -319,7 +319,7 @@ uint16_t fe_ctl_get_http_listener_port(PHttpFilteringEngineCtl ptr)
 	}
 	catch (std::exception& e)
 	{
-
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
 	}
 
 	assert(success == true && u8"In fe_ctl_get_http_listener_port(PHttpFilteringEngineCtl) - Caught exception and failed to get HTTP listener port.");
@@ -349,7 +349,7 @@ uint16_t fe_ctl_get_https_listener_port(PHttpFilteringEngineCtl ptr)
 	}
 	catch (std::exception& e)
 	{
-
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
 	}
 
 	assert(success == true && u8"In fe_ctl_get_https_listener_port(PHttpFilteringEngineCtl) - Caught exception and failed to get HTTPs listener port.");
@@ -382,7 +382,7 @@ const bool fe_ctl_get_option(PHttpFilteringEngineCtl ptr, const uint32_t optionI
 	}
 	catch (std::exception& e)
 	{
-
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
 	}
 
 	assert(callSuccess == true && u8"In fe_ctl_get_option(PHttpFilteringEngineCtl) - Caught exception and failed to get option.");
@@ -413,7 +413,7 @@ void fe_ctl_set_option(PHttpFilteringEngineCtl ptr, const uint32_t optionId, con
 	}
 	catch (std::exception& e)
 	{
-
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
 	}
 
 	assert(callSuccess == true && u8"In fe_ctl_set_option(PHttpFilteringEngineCtl) - Caught exception and failed to set option.");
@@ -443,7 +443,7 @@ const bool fe_ctl_get_category(PHttpFilteringEngineCtl ptr, const uint8_t catego
 	}
 	catch (std::exception& e)
 	{
-
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
 	}
 
 	assert(callSuccess == true && u8"In fe_ctl_get_category(PHttpFilteringEngineCtl) - Caught exception and failed to get category.");
@@ -474,7 +474,7 @@ void fe_ctl_set_category(PHttpFilteringEngineCtl ptr, const uint8_t categoryId, 
 	}
 	catch (std::exception& e)
 	{
-
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
 	}
 
 	assert(callSuccess == true && u8"In fe_ctl_set_category(PHttpFilteringEngineCtl) - Caught exception and failed to set category.");
@@ -516,7 +516,7 @@ const bool fe_ctl_load_list_from_file(
 	}
 	catch (std::exception& e)
 	{
-
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
 	}
 
 	assert(callSuccess == true && u8"In fe_ctl_load_list_from_file(...) - Caught exception and failed to set category.");
@@ -559,7 +559,7 @@ const bool fe_ctl_load_list_from_string(
 	}
 	catch (std::exception& e)
 	{
-
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
 	}
 
 	assert(callSuccess == true && u8"In fe_ctl_load_list_from_string(...) - Caught exception and failed to set category.");

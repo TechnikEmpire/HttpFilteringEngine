@@ -43,7 +43,7 @@ namespace te
 		namespace mitm
 		{
 			namespace secure
-			{	
+			{
 				const std::string BaseInMemoryCertificateStore::ContextCipherList{ u8"HIGH:!SSLv2!SRP:!PSK" };
 
 				BaseInMemoryCertificateStore::BaseInMemoryCertificateStore() :
@@ -53,8 +53,8 @@ namespace te
 				}
 
 				BaseInMemoryCertificateStore::BaseInMemoryCertificateStore(
-					const std::string& countryCode, 
-					const std::string& organizationName, 
+					const std::string& countryCode,
+					const std::string& organizationName,
 					const std::string& commonName
 					) :
 					m_caCountryCode(countryCode),
@@ -86,29 +86,22 @@ namespace te
 					m_hostContexts.clear();
 				}
 
-				boost::asio::ssl::context* BaseInMemoryCertificateStore::GetServerContext(const char* hostName)
+				boost::asio::ssl::context* BaseInMemoryCertificateStore::GetServerContext(const std::string& hostname, X509* originalCertificate)
 				{
-					PureReader lock(m_sharedLock);
+					ScopedLock lock(m_spoofMutex);
 
-					std::string hostNameStr(hostName);
-					const auto& result = m_hostContexts.find(hostNameStr);
+					std::string host = hostname;
 
-					if (result != m_hostContexts.end())
-					{									
-						return result->second;
-					}
-
-					// We're telling the client that we do not yet have a context for this host.
-					// Client must do the lifting of connecting to the host, getting the host
-					// certificate and then asking us again to spoof this certificate.
-					return nullptr;
-				}
-
-				boost::asio::ssl::context* BaseInMemoryCertificateStore::SpoofCertificate(std::string host, X509* certificate)
-				{
 					std::transform(host.begin(), host.end(), host.begin(), ::tolower);
 
-					if (m_thisCa != nullptr && m_thisCaKeyPair != nullptr && certificate != nullptr)
+					const auto& result = m_hostContexts.find(host);
+
+					if (result != m_hostContexts.end())
+					{
+						return result->second;
+					}										
+
+					if (m_thisCa != nullptr && m_thisCaKeyPair != nullptr && originalCertificate != nullptr)
 					{
 						char countryBuff[1024];
 						char orgBuff[1024];
@@ -118,11 +111,11 @@ namespace te
 						int orgLen = 0;
 						int cnLen = 0;
 
-						X509_NAME* certToSpoofName = X509_get_subject_name(certificate);
+						X509_NAME* certToSpoofName = X509_get_subject_name(originalCertificate);
 
 						if (certToSpoofName == nullptr)
 						{
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to load remote certificate X509_NAME data.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to load remote certificate X509_NAME data.");
 						}
 
 						cnLen = X509_NAME_get_text_by_NID(certToSpoofName, NID_commonName, cnBuff, 1024);
@@ -152,16 +145,18 @@ namespace te
 
 						if (spoofedCertKeypair == nullptr)
 						{
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to generate EC key for spoofed certificate.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to generate EC key for spoofed certificate.");
 						}
 
-						X509 * spoofedCert = IssueCertificate(spoofedCertKeypair, m_thisCaKeyPair, false, countryCode, organizationName, commonName);
+						// We pass nullptr as the issuer keypair, because we don't want it to be signed yet. We
+						// still have modifications to make, such as adding SAN's.
+						X509* spoofedCert = IssueCertificate(spoofedCertKeypair, nullptr, false, countryCode, organizationName, commonName);
 
 						if (spoofedCert == nullptr)
 						{
 							EVP_PKEY_free(spoofedCertKeypair);
 
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to generate X509 structure.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to generate X509 structure.");
 						}
 
 						// We need to get all the SAN, or Subject Alternative Names out of the certificate
@@ -173,7 +168,7 @@ namespace te
 						int sanNamesCount = -1;
 						STACK_OF(GENERAL_NAME)* sanNames = nullptr;
 
-						sanNames = (STACK_OF(GENERAL_NAME)*) X509_get_ext_d2i(certificate, NID_subject_alt_name, nullptr, nullptr);
+						sanNames = (STACK_OF(GENERAL_NAME)*) X509_get_ext_d2i(originalCertificate, NID_subject_alt_name, nullptr, nullptr);
 
 						sanNamesCount = sk_GENERAL_NAME_num(sanNames);
 
@@ -193,48 +188,48 @@ namespace te
 
 							switch (currentName->type)
 							{
-								case GEN_DNS:
+							case GEN_DNS:
+							{
+								std::string dnsNameString(reinterpret_cast<char*>(ASN1_STRING_data(currentName->d.dNSName)));
+
+								auto len = ASN1_STRING_length(currentName->d.dNSName);
+
+								if (len == dnsNameString.size())
 								{
-									std::string dnsNameString(reinterpret_cast<char*>(ASN1_STRING_data(currentName->d.dNSName)));
+									std::transform(dnsNameString.begin(), dnsNameString.end(), dnsNameString.begin(), ::tolower);
 
-									auto len = ASN1_STRING_length(currentName->d.dNSName);
-
-									if (len == dnsNameString.size())
+									if (sanDomains.size() == 0)
 									{
-										std::transform(dnsNameString.begin(), dnsNameString.end(), dnsNameString.begin(), ::tolower);
-
-										if (sanDomains.size() == 0)
-										{
-											sanDnsString.append("DNS:");											
-										}
-										else
-										{
-											sanDnsString.append(",DNS:");
-										}
-
-										sanDnsString.append(dnsNameString);
-
-										sanDomains.push_back(dnsNameString);
+										sanDnsString.append("DNS:");
 									}
 									else
 									{
-										// Malformed certificate? SAN has embedded null perhaps?
-										break;
+										sanDnsString.append(",DNS:");
 									}
+
+									sanDnsString.append(dnsNameString);
+
+									sanDomains.push_back(dnsNameString);
 								}
-								break;
+								else
+								{
+									// Malformed certificate? SAN has embedded null perhaps?
+									break;
+								}
+							}
+							break;
 
-								// case GEN_OTHERNAME:
-								// case GEN_EMAIL:
-								// case GEN_X400:
-								// case GEN_DIRNAME:
-								// case GEN_EDIPARTY:
-								// case GEN_URI:
-								// case GEN_IPADD:
-								// case GEN_RID:
+							// case GEN_OTHERNAME:
+							// case GEN_EMAIL:
+							// case GEN_X400:
+							// case GEN_DIRNAME:
+							// case GEN_EDIPARTY:
+							// case GEN_URI:
+							// case GEN_IPADD:
+							// case GEN_RID:
 
-								default:
-									continue;
+							default:
+								continue;
 							}
 						} // End of SAN name loop
 
@@ -249,46 +244,55 @@ namespace te
 							{
 								EVP_PKEY_free(spoofedCertKeypair);
 								X509_free(spoofedCert);
-								throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to set SAN's for spoofed certificate.");
+								throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to set SAN's for spoofed certificate.");
 							}
+						}
+
+						// Now we're done altering the cert, so sign it.
+						if (m_thisCaKeyPair == nullptr || X509_sign(spoofedCert, m_thisCaKeyPair, EVP_sha256()) == 0)
+						{
+							EVP_PKEY_free(spoofedCertKeypair);
+							X509_free(spoofedCert);
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to sign certificate.");
 						}
 
 						// Now we can create our server context.
 						boost::asio::ssl::context* ctx = new boost::asio::ssl::context(boost::asio::ssl::context::tlsv12_server);
-						
+
 						if (ctx == nullptr)
 						{
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to allocate new server context for spoofed certificate.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to allocate new server context for spoofed certificate.");
 						}
-						
+
 						ctx->set_options(
-							boost::asio::ssl::context::no_compression | 
-							boost::asio::ssl::context::default_workarounds | 
-							boost::asio::ssl::context::no_sslv2 | boost::asio::ssl::context::no_sslv3
+							boost::asio::ssl::context::no_compression |
+							boost::asio::ssl::context::default_workarounds |
+							boost::asio::ssl::context::no_sslv2 | 
+							boost::asio::ssl::context::no_sslv3
 							);
 
-						
+
 						if (SSL_CTX_set_cipher_list(ctx->native_handle(), ContextCipherList.c_str()) != 1)
 						{
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to set context cipher list.");
-						}
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to set context cipher list.");
+						}						
 
 						if (SSL_CTX_use_certificate(ctx->native_handle(), spoofedCert) != 1)
 						{
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to set server context certificate.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to set server context certificate.");
 						}
 
 						if (SSL_CTX_use_PrivateKey(ctx->native_handle(), spoofedCertKeypair) != 1)
 						{
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to set server context private key.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to set server context private key.");
 						}
 
 						SSL_CTX_set_options(ctx->native_handle(), SSL_OP_CIPHER_SERVER_PREFERENCE);
@@ -299,7 +303,7 @@ namespace te
 						{
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to allocate server context temporary negotiation EC key.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to allocate server context temporary negotiation EC key.");
 						}
 
 						if (EC_KEY_generate_key(tmpNegotiationEcKey) != 1)
@@ -307,12 +311,10 @@ namespace te
 							EC_KEY_free(tmpNegotiationEcKey);
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Failed to generate server context temporary negotiation EC key.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to generate server context temporary negotiation EC key.");
 						}
 
 						SSL_CTX_set_tmp_ecdh(ctx->native_handle(), tmpNegotiationEcKey);
-
-						Writer w(m_sharedLock);
 
 						bool atLeastOneInsert = false;
 
@@ -322,7 +324,7 @@ namespace te
 							{
 								if (m_hostContexts.find(domain) == m_hostContexts.end())
 								{
-									m_hostContexts.insert({domain, ctx});
+									m_hostContexts.insert({ domain, ctx });
 									atLeastOneInsert = true;
 								}
 							}
@@ -342,23 +344,20 @@ namespace te
 							EC_KEY_free(tmpNegotiationEcKey);
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
-							w.unlock();
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Context already exists for specified host.");
+							delete ctx;
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Context already exists for specified host.");
 						}
 
 						return ctx;
 					}
 					else
 					{
-						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::SpoofCertificate(std::string, X509*) - Cannot spoof certificate. Either member CA\
-							, member CA keypair or certificate to spoof is nullptr.");
-					}					
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Cannot spoof certificate. Either member CA , member CA keypair or certificate to spoof is nullptr.");
+					}
 				}
 
 				bool BaseInMemoryCertificateStore::WriteCertificateToFile(X509* cert, const std::string& outputFilePath)
 				{
-					PureReader r(m_sharedLock);
-
 					if (cert != nullptr)
 					{
 						BIO* bio = BIO_new(BIO_s_mem());
@@ -386,13 +385,12 @@ namespace te
 
 							std::ofstream outfile(outputFilePath, std::ios::out | std::ios::trunc || std::ios::binary);
 
-							BIO_free(bio);
-							return false;
+							BIO_free(bio);							
 
 							if (!outfile.fail() && outfile.is_open())
 							{
-								outfile << pem;							
-							}		
+								outfile << pem;
+							}
 
 							outfile.close();
 
@@ -411,7 +409,7 @@ namespace te
 					{
 						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateEcKey(const int) - Failed to allocate EC_KEY structure.");
 					}
-					
+
 					EC_KEY_set_asn1_flag(eckey, OPENSSL_EC_NAMED_CURVE);
 
 					EVP_PKEY* pkey = nullptr;
@@ -433,12 +431,12 @@ namespace te
 					}
 
 					return pkey;
-				}	
+				}
 
 				X509* BaseInMemoryCertificateStore::GenerateSelfSignedCert(
-					EVP_PKEY* issuerKeypair, 
-					const std::string& countryCode, 
-					const std::string& organizationName, 
+					EVP_PKEY* issuerKeypair,
+					const std::string& countryCode,
+					const std::string& organizationName,
 					const std::string& commonName
 					) const
 				{
@@ -446,56 +444,18 @@ namespace te
 
 					if (selfSigned == nullptr)
 					{
-						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY*, std::string, std::string, std::string) \
-						- Failed to allocate X509 structure.");
-					}
-
-					// Following two extensions are standard for CA certs.
-					if (!Addx509Extension(selfSigned, NID_basic_constraints, u8"critical,CA:TRUE"))
-					{
-						X509_free(selfSigned);
-
-						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY*, std::string, std::string, std::string) \
-								- Failed to set self signed CA constraints.");
-					}
-
-					if (!Addx509Extension(selfSigned, NID_key_usage, u8"critical,keyCertSign,cRLSign"))
-					{
-						X509_free(selfSigned);
-
-						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY*, std::string, std::string, std::string) \
-								- Failed to set self signed CA key usage.");
-					}
-
-					// By supplying "hash" as the value for the Subject Key Identifier, apparently,
-					// openSSL will properly generate this field itself. From openSSL:
-					// 
-					// "This is really a string extension and can take two possible values. Either
-					// the word hash which will automatically follow the guidelines in RFC3280 or a
-					// hex string giving the extension value to include. The use of the hex string
-					// is strongly discouraged."
-					//
-					// More about this extension here:
-					// https://www.mankier.com/3/X509V3_get_d2i.3ssl#Supported_Extensions-Pkix_Certificate_Extensions
-					// and here:
-					// http://security.stackexchange.com/questions/27797/what-damage-could-be-done-if-a-malicious-certificate-had-an-identical-subject-k
-					if (!Addx509Extension(selfSigned, NID_subject_key_identifier, u8"hash"))
-					{
-						X509_free(selfSigned);
-
-						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY*, std::string, std::string, std::string) \
-								- Failed to set self signed CA subject key identifier.");
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GenerateSelfSignedCert(EVP_PKEY*, std::string, std::string, std::string) - Failed to allocate X509 structure.");
 					}
 
 					return selfSigned;
 				}
 
 				X509* BaseInMemoryCertificateStore::IssueCertificate(
-					EVP_PKEY* certificateKeypair, 
-					EVP_PKEY* issuerKeypair, 
-					const bool isCA, 
-					const std::string& countryCode, 
-					const std::string& organizationName, 
+					EVP_PKEY* certificateKeypair,
+					EVP_PKEY* issuerKeypair,
+					const bool isCA,
+					const std::string& countryCode,
+					const std::string& organizationName,
 					const std::string& commonName
 					) const
 				{
@@ -503,16 +463,14 @@ namespace te
 
 					if (!x509)
 					{
-						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
-						- Failed to allocate X509 structure.");
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to allocate X509 structure.");
 					}
 
 					if (X509_set_version(x509, 2) != 1)
 					{
 						X509_free(x509);
 
-						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
-						- Failed to set self signed CA version number.");
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to set self signed CA version number.");
 					}
 
 					// Generate random serial number for the cert.
@@ -527,8 +485,7 @@ namespace te
 					{
 						X509_free(x509);
 
-						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
-						- Failed to set self signed CA certificate serial number.");
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to set self signed CA certificate serial number.");
 					}
 
 					// Make cert expire in a year.
@@ -544,55 +501,64 @@ namespace te
 					{
 						X509_free(x509);
 
-						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
-						- Failed to set self signed CA public key.");
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to set self signed CA public key.");
 					}
 
 					X509_NAME* name = X509_get_subject_name(x509);
 
 					if (name != nullptr)
 					{
-						if (X509_NAME_add_entry_by_txt(name, u8"C", MBSTRING_ASC, reinterpret_cast<const unsigned char*>(countryCode.c_str()), -1, -1, 0) != 1)
+						if (X509_NAME_add_entry_by_txt(name, u8"C", MBSTRING_ASC, reinterpret_cast<const unsigned char*>(countryCode.c_str()), -1, -1, 0) == 0)
 						{
-							X509_free(x509);
+							//X509_free(x509);
 
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
-								- Failed to set self signed CA certificate country code.");
+							//throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to set self signed CA certificate country code.");
 						}
 
-						if (X509_NAME_add_entry_by_txt(name, u8"O", MBSTRING_ASC, reinterpret_cast<const unsigned char*>(organizationName.c_str()), -1, -1, 0) != 1)
+						if (X509_NAME_add_entry_by_txt(name, u8"O", MBSTRING_ASC, reinterpret_cast<const unsigned char*>(organizationName.c_str()), -1, -1, 0) == 0)
 						{
-							X509_free(x509);
+							//X509_free(x509);
 
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
-								- Failed to set self signed CA certificate organization.");
+							//throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to set self signed CA certificate organization.");
 						}
 
-						if (X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char*>(commonName.c_str()), -1, -1, 0) != 1)
+						if (X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char*>(commonName.c_str()), -1, -1, 0) == 0)
 						{
-							X509_free(x509);
+							//X509_free(x509);
 
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
-								- Failed to set self signed CA common name.");
+							//throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to set self signed CA common name.");
 						}
 					}
 					else
 					{
 						X509_free(x509);
 
-						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
-								- Failed to set self signed CA common name.");
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to set self signed CA common name.");
 					}
 
 					if (isCA)
 					{
+						// Following two extensions are standard for CA certs.
+						if (!Addx509Extension(x509, NID_basic_constraints, u8"critical,CA:TRUE"))
+						{
+							X509_free(x509);
+
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to set self signed CA constraints.");
+						}
+
 						// Self signed CA, issuer == self.
 						if (X509_set_issuer_name(x509, name) != 1)
 						{
 							X509_free(x509);
 
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
-								- Failed to set self signed CA isser name information.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to set self signed CA isser name information.");
+						}
+
+						if (!Addx509Extension(x509, NID_key_usage, u8"critical,keyCertSign,cRLSign"))
+						{
+							X509_free(x509);
+
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to set self signed CA key usage.");
 						}
 					}
 					else
@@ -601,8 +567,7 @@ namespace te
 						{
 							X509_free(x509);
 
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
-								- Cannot issue certificate, as the member CA is nullptr.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Cannot issue certificate, as the member CA is nullptr.");
 						}
 
 						X509_NAME * issuerName = X509_get_subject_name(m_thisCa);
@@ -611,25 +576,44 @@ namespace te
 						{
 							X509_free(x509);
 
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
-								- Failed to get X509_NAME structure from member CA.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to get X509_NAME structure from member CA.");
 						}
 
 						if (X509_set_issuer_name(x509, issuerName) != 1)
 						{
 							X509_free(x509);
 
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
-								- Failed to set issuer name for non CA certificate.");
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to set issuer name for non CA certificate.");
 						}
-					}										
+					}
 
-					if (!X509_sign(x509, issuerKeypair, EVP_sha256()))
+					// By supplying "hash" as the value for the Subject Key Identifier, apparently,
+					// openSSL will properly generate this field itself. From openSSL:
+					// 
+					// "This is really a string extension and can take two possible values. Either
+					// the word hash which will automatically follow the guidelines in RFC3280 or a
+					// hex string giving the extension value to include. The use of the hex string
+					// is strongly discouraged."
+					//
+					// More about this extension here:
+					// https://www.mankier.com/3/X509V3_get_d2i.3ssl#Supported_Extensions-Pkix_Certificate_Extensions
+					// and here:
+					// http://security.stackexchange.com/questions/27797/what-damage-could-be-done-if-a-malicious-certificate-had-an-identical-subject-k
+					if (!Addx509Extension(x509, NID_subject_key_identifier, u8"hash"))
 					{
 						X509_free(x509);
 
-						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) \
-								- Failed to sign self signed CA.");
+						throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string)  - Failed to set self signed CA subject key identifier.");
+					}
+
+					if (issuerKeypair != nullptr)
+					{
+						if (X509_sign(x509, issuerKeypair, EVP_sha256()) == 0)
+						{
+							X509_free(x509);
+
+							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::IssueCertificate(EVP_PKEY*, EVP_PKEY*, const bool, std::string, std::string, std::string) - Failed to sign certificate.");
+						}
 					}
 
 					return x509;

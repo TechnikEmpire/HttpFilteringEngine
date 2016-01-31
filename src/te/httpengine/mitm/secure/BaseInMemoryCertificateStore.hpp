@@ -36,8 +36,8 @@
 #include <openssl/obj_mac.h>
 #include <boost/predef.h>
 #include "../../network/SocketTypes.hpp"
-#include <boost/thread/lock_types.hpp>
-#include <boost/thread/shared_mutex.hpp>
+#include <mutex>
+#include <thread>
 
 namespace te
 {
@@ -113,30 +113,10 @@ namespace te
 					virtual ~BaseInMemoryCertificateStore();
 
 					/// <summary>
-					/// Attempts to, with a pure reader lock, look up the stored
-					/// boost::asio::ssl::context* pointer for the context appropriate for the
-					/// supplied host name. It is possible that no such context has been generated,
-					/// and in such an event, the method will return nullptr. Nullptr is a valid
-					/// return from this method, as it signals to clients that they need to retrieve
-					/// the upstream, normal certificate, verify it, then return to this object and
-					/// request a newly generated context containing a spoofed version of the certificate.
-					/// 
-					/// Does not throw.
-					/// </summary>
-					/// <param name="hostName">
-					/// The host for which to retrieve, if available, the correct server context.
-					/// </param>
-					/// <returns>
-					/// If a server context is found for the supplied host name, a pointer to that
-					/// context is returned. If no server context for the supplied host name is
-					/// found, nullptr is returned.
-					/// </returns>
-					boost::asio::ssl::context* GetServerContext(const char* hostName);					
-
-					/// <summary>
-					/// Attempts to clone the supplied certificate insofar as is necessary to pass
-					/// inspection once signed with our CA. This means that the subject and subject
-					/// alt names are copied. Once the certificate is spoofed successfully, a
+					/// Attempts to either retrieve an existing context for the supplied hostname,
+					/// or clone the supplied certificate insofar as is necessary to pass inspection
+					/// once signed with our CA. This means that the subject and subject alt names
+					/// are copied. Once the certificate is spoofed successfully, a
 					/// boost::asio::ssl::context is allocated and the generated certificate,
 					/// keypair, and temporary negotiation EC_KEY are assigned to the newly
 					/// allocated boost::asio::ssl::context.
@@ -146,22 +126,24 @@ namespace te
 					/// boost::asio::ssl::context. This is so that the same context can be
 					/// discovered for every single host that the certificate is meant to handle.
 					/// 
-					/// Every generated boost::asio::ssl::context is set to be a TLS1.2 server context.
+					/// Every generated boost::asio::ssl::context is set to be a TLS1.2 server
+					/// context.
 					/// 
 					/// As with basically every other method in this class, this can throw
 					/// runtime_error in the event that even a single openSSL operation does not
 					/// return a value indicating a successful operation. The ::what() member of the
 					/// thrown exception will provide detailed information about what went wrong.
 					/// These must be handled and the messages routed through any available
-					/// callbacks, as the design of this library is to provide a C API for certain targets.
+					/// callbacks, as the design of this library is to provide a C API for certain
+					/// targets.
 					/// </summary>
-					/// <param name="host">
+					/// <param name="hostname">
 					/// The host that the supplied certificate structure was received from. This
 					/// will be used, along with all discovered SAN's in the supplied X509
 					/// structure, to index the final generated server SSL context for lookup by
 					/// future users.
 					/// </param>
-					/// <param name="certificate">
+					/// <param name="originalCertificate">
 					/// A valid pointer to the received upstream certificate to spoof. Note that
 					/// users should have used the upstream SSL context, which loads the
 					/// cURL/Mozilla ca-bundle for validation, to validate certificates before
@@ -176,7 +158,7 @@ namespace te
 					/// configured to utilize the successfully spoofed certificate, keypair and
 					/// temporary negotiation EC key in a server context.
 					/// </returns>
-					boost::asio::ssl::context* SpoofCertificate(std::string host, X509* certificate);
+					boost::asio::ssl::context* GetServerContext(const std::string& hostname, X509* certificate);
 
 					/// <summary>
 					/// Attempts to install the current temporary root CA certificate for
@@ -227,17 +209,14 @@ namespace te
 				protected:
 
 					/// <summary>
-					/// Various locks because we have pure readers and pure writers for
-					/// synchronizing local storage of generated contexts, keys and certificates.
+					/// Lock for spoofing.
 					/// </summary>
-					using PureReader = boost::shared_lock<boost::shared_mutex>;
-					using ConditionalReader = boost::upgrade_lock<boost::shared_mutex>;
-					using Writer = boost::unique_lock<boost::shared_mutex>;
+					using ScopedLock = std::lock_guard<std::mutex>;
 
 					/// <summary>
 					/// For synchronizing local storage of generated keys, certificates and contexts.
 					/// </summary>
-					boost::shared_mutex m_sharedLock;
+					std::mutex m_spoofMutex;
 
 					/// <summary>
 					/// Stores either the provided or default country code information to use for
@@ -331,14 +310,15 @@ namespace te
 						) const;
 
 					/// <summary>
-					/// Generates a self signed certificate, signing with the supplied issuer
-					/// keypair, setting the public key of the issued certified from the supplied
-					/// certificateKeypair parameter. If bool isCA parameter is set to false, then
-					/// the issuer name of the generated certificate will be extracted from the
-					/// m_thisCA member. As such obviously m_thisCA must exist before call where the
-					/// bool isCA parameter is set to false. If the bool isCA parameter is set to
-					/// true, then as the certificate is generated, the issuer name information will
-					/// be set to the generated X509 structure's generated name information.
+					/// Generates a certificate, signing with the supplied issuer keypair if an
+					/// issue keypair is supplied, setting the public key of the issued certified
+					/// from the supplied certificateKeypair parameter. If bool isCA parameter is
+					/// set to false, then the issuer name of the generated certificate will be
+					/// extracted from the m_thisCA member. As such obviously m_thisCA must exist
+					/// before call where the bool isCA parameter is set to false. If the bool isCA
+					/// parameter is set to true, then as the certificate is generated, the issuer
+					/// name information will be set to the generated X509 structure's generated
+					/// name information.
 					/// 
 					/// Calling this method and suppling bool isCA to true is not sufficient to
 					/// generate a complete self signed CA. Additional stasndard CA contraints must
@@ -350,7 +330,8 @@ namespace te
 					/// return a value indicating a successful operation. The ::what() member of the
 					/// thrown exception will provide detailed information about what went wrong.
 					/// These must be handled and the messages routed through any available
-					/// callbacks, as the design of this library is to provide a C API for certain targets.
+					/// callbacks, as the design of this library is to provide a C API for certain
+					/// targets.
 					/// </summary>
 					/// <param name="certificateKeypair">
 					/// A valid pointer to a generated EVP_PKEY structure that will be used to write
@@ -359,11 +340,11 @@ namespace te
 					/// generating the certificate itself through this method.
 					/// </param>
 					/// <param name="issuerKeypair">
-					/// A valid pointer to the generated EVP_PKEY structure that will be used to
-					/// sign the generated certificate. In the event of generating a CA certificate,
-					/// supply the same keypair for both the certificateKeypair and issuerKeypair
-					/// parameters. Also once again, the generation of these structures must occur
-					/// prior to generating any kind of certificate.
+					/// An optional pointer to the generated EVP_PKEY structure that will be used to
+					/// sign the generated certificate if supplied. In the event of generating a CA
+					/// certificate, supply the same keypair for both the certificateKeypair and
+					/// issuerKeypair parameters. If the argument is nullptr, the certificate will
+					/// not be signed at all.
 					/// </param>
 					/// <param name="isCA">
 					/// Bool to indicate whether the generated certificate is purposed to be a CA
@@ -387,7 +368,8 @@ namespace te
 					/// <returns>
 					/// A pointer to the generated X509 structure.
 					/// </returns>
-					X509* IssueCertificate(EVP_PKEY* certificateKeypair, 
+					X509* IssueCertificate(
+						EVP_PKEY* certificateKeypair, 
 						EVP_PKEY* issuerKeypair, 
 						const bool isCA, 
 						const std::string& countryCode, 

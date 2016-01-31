@@ -138,9 +138,11 @@ namespace te
 					m_request->SetOnInfo(m_onInfo);
 					m_request->SetOnWarning(m_onWarning);
 					m_request->SetOnError(m_onError);
+
 					m_response->SetOnInfo(m_onInfo);
 					m_response->SetOnWarning(m_onWarning);
 					m_response->SetOnError(m_onError);
+
 				}
 
 				template<>
@@ -237,6 +239,11 @@ namespace te
 				template<>
 				void TlsCapableHttpBridge<network::TcpSocket>::OnUpstreamConnect(const boost::system::error_code& error)
 				{
+
+					#ifndef NDEBUG
+					ReportInfo(u8"TlsCapableHttpBridge<network::TcpSocket>::OnUpstreamConnect");
+					#endif // !NDEBUG
+
 					if (!error)
 					{					
 						if (m_request->IsPayloadComplete() == false && m_request->GetConsumeAllBeforeSending() == true)
@@ -244,24 +251,33 @@ namespace te
 							// Means that there is a request payload, it's not complete, and it's been flagged
 							// for inspection before being sent upstream. Another read from the client is
 							// required.
+							
+							try
+							{
+								auto requestReadBuffer = m_request->GetPayloadReadBuffer();
 
-							auto requestReadBuffer = m_request->GetPayloadReadBuffer();
-
-							boost::asio::async_read(
-								m_downstreamSocket, 
-								requestReadBuffer, 
-								boost::asio::transfer_at_least(1), 
-								m_downstreamStrand.wrap(
-									std::bind(
-										&TlsCapableHttpBridge::OnDownstreamRead, 
-										shared_from_this(), 
-										std::placeholders::_1,
-										std::placeholders::_2
+								boost::asio::async_read(
+									m_downstreamSocket,
+									requestReadBuffer,
+									boost::asio::transfer_at_least(1),
+									m_downstreamStrand.wrap(
+										std::bind(
+											&TlsCapableHttpBridge::OnDownstreamRead,
+											shared_from_this(),
+											std::placeholders::_1,
+											std::placeholders::_2
+											)
 										)
-									)
-								);
+									);
 
-							return;
+								return;
+							}
+							catch (std::exception& e)
+							{
+								std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - Got error:\n\t");
+								errMsg.append(e.what());
+								ReportError(errMsg);
+							}							
 						}
 
 						// Means that we need to start off by simply writing whatever we've got from the client to 
@@ -298,6 +314,11 @@ namespace te
 				template<>
 				void TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code& error)
 				{
+
+					#ifndef NDEBUG
+					ReportInfo(u8"TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect");
+					#endif // !NDEBUG
+
 					if (!error)
 					{
 						SetNoDelay(UpstreamSocket(), true);
@@ -358,9 +379,13 @@ namespace te
 				template<>
 				void TlsCapableHttpBridge<network::TcpSocket>::OnResolve(const boost::system::error_code& error, boost::asio::ip::tcp::resolver::iterator endpointIterator)
 				{
+
+					#ifndef NDEBUG
+					ReportInfo(u8"TlsCapableHttpBridge<network::TcpSocket>::OnResolve");
+					#endif // !NDEBUG
+
 					if (!error)
 					{
-
 						SetStreamTimeout(5000);
 
 						auto ep = *endpointIterator;
@@ -414,9 +439,13 @@ namespace te
 				template<>
 				void TlsCapableHttpBridge<network::TlsSocket>::OnResolve(const boost::system::error_code& error, boost::asio::ip::tcp::resolver::iterator endpointIterator)
 				{
+
+					#ifndef NDEBUG
+					ReportInfo(u8"TlsCapableHttpBridge<network::TlsSocket>::OnResolve");
+					#endif // !NDEBUG
+
 					if (!error)
 					{
-
 						SetStreamTimeout(5000);
 
 						SSL_set_tlsext_host_name(m_upstreamSocket.native_handle(), m_upstreamHost.c_str());
@@ -438,8 +467,10 @@ namespace te
 						// Care therefore needs to be taken, or a more robust system needs to be put in
 						// place starting at the diversion level.
 
+						boost::asio::ip::tcp::endpoint requestedEndpoint = *endpointIterator;
+
 						m_upstreamSocket.lowest_layer().async_connect(
-							*endpointIterator,
+							boost::asio::ip::tcp::endpoint(requestedEndpoint.address(), m_upstreamHostPort),
 							m_upstreamStrand.wrap(
 								std::bind(
 									&TlsCapableHttpBridge::OnUpstreamConnect, 

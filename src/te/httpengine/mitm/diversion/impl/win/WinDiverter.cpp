@@ -147,12 +147,12 @@ namespace te
 						for (auto& t : m_diversionThreads)
 						{
 							t.join();
-						}
+						}						
+					}
 
-						if (m_diversionHandle != nullptr)
-						{
-							WinDivertClose(m_diversionHandle);
-						}
+					if (m_diversionHandle != nullptr && m_diversionHandle != INVALID_HANDLE_VALUE)
+					{
+						WinDivertClose(m_diversionHandle);
 					}
 				}
 

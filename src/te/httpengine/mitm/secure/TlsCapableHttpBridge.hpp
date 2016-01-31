@@ -506,10 +506,15 @@ namespace te
 						while (m_killLock.test_and_set(std::memory_order_acquire))
 						{
 							cpu_relax();
-						}
+						}					
 
 						if (!m_killed)
 						{
+
+							#ifndef NDEBUG
+							ReportInfo(u8"TlsCapableHttpBridge<>::Kill");
+							#endif // !NDEBUG
+
 							// This will force any pending async operations to stop and their completion
 							// handlers to be called with operation_aborted as the error code.
 							
@@ -518,15 +523,20 @@ namespace te
 							// issues. Usually just complaints about state etc.
 
 							boost::system::error_code downstreamShutdownErr;
-							boost::system::error_code downstreamCloseErr;
+							boost::system::error_code downstreamCloseErr;	
 							boost::system::error_code upstreamShutdownErr;
 							boost::system::error_code upstreamCloseErr;
 
 							this->DownstreamSocket().shutdown(boost::asio::socket_base::shutdown_both, downstreamShutdownErr);
 							this->DownstreamSocket().close(downstreamCloseErr);
 
-							this->UpstreamSocket().shutdown(boost::asio::socket_base::shutdown_both, upstreamShutdownErr);
-							this->UpstreamSocket().close(upstreamCloseErr);
+							// To try and cut down annoying error messages about shutdown failures when the upstream
+							// socket hasn't even been used yet and ::Kill() has been called.
+							if (m_upstreamHost.size() > 0)
+							{						
+								this->UpstreamSocket().shutdown(boost::asio::socket_base::shutdown_both, upstreamShutdownErr);
+								this->UpstreamSocket().close(upstreamCloseErr);
+							}							
 
 							// We set the stream timeout to any negative value to force the stream
 							// to have any pending async_wait's cancelled and the new timeout set to
@@ -657,10 +667,15 @@ namespace te
 					/// </param>
 					void OnUpstreamHeaders(const boost::system::error_code& error, const size_t bytesTransferred)
 					{
+
+						#ifndef NDEBUG
+						ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamRead");
+						#endif // !NDEBUG
+
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
-						if (!error || (error.value() == boost::asio::error::eof))
+						if ((!error || (error.value() == boost::asio::error::eof)) && bytesTransferred > 0)
 						{
 							if (m_response->Parse(bytesTransferred))
 							{
@@ -759,7 +774,7 @@ namespace te
 
 										return;
 									}
-									catch (std::runtime_error& e)
+									catch (std::exception& e)
 									{
 										ReportError(e.what());
 									}									
@@ -793,7 +808,8 @@ namespace te
 								ReportError(u8"In TlsCapableHttpBridge::OnUpstreamHeaders(const boost::system::error_code&, const size_t) - Failed to parse response.");
 							}							
 						}
-						else
+
+						if (error)
 						{
 							std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamHeaders(const boost::system::error_code&, const size_t) - Got error:\n\t");
 							errMsg.append(error.message());
@@ -823,6 +839,10 @@ namespace te
 					/// </param>
 					void OnUpstreamRead(const boost::system::error_code& error, const size_t bytesTransferred)
 					{
+						#ifndef NDEBUG
+						ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamRead");
+						#endif // !NDEBUG
+
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
@@ -832,58 +852,78 @@ namespace te
 						// upstream headers were read, since all data that can possibly be used to determine
 						// if a block should take place would have been available there. So if we're even in this
 						// far, we only look for HTML content we can run CSS selectors on.
-						if (!error || (error.value() == boost::asio::error::eof))
+						if ((!error || (error.value() == boost::asio::error::eof)) && bytesTransferred > 0)
 						{
 							if (m_response->Parse(bytesTransferred))
 							{
 								// Let CSS selectors rip through the payload if it's complete and its HTML.
 								if (m_response->IsPayloadComplete() && m_response->GetConsumeAllBeforeSending() && m_response->IsPayloadHtml())
 								{
-									auto processedHtmlString = m_filteringEngine->ProcessHtmlResponse(m_request.get(), m_response.get());
+									// XXX TODO - This is broken. See https://github.com/TechnikEmpire/HttpFilteringEngine/issues/32
 
-									std::vector<char> processedHtmlVector(processedHtmlString.begin(), processedHtmlString.end());
-
-									m_response->SetPayload(std::move(processedHtmlVector));
+									ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamRead - NOT Processing HTML response.");
+									//ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamRead - Processing HTML response.");
+									//
+									//auto processedHtmlString = m_filteringEngine->ProcessHtmlResponse(m_request.get(), m_response.get());
+									//
+									//std::vector<char> processedHtmlVector(processedHtmlString.begin(), processedHtmlString.end());
+									//
+									//std::string nfo(u8"Processed HTML response size is ");
+									//nfo.append(std::to_string(processedHtmlVector.size()));
+									//ReportInfo(nfo);
+									//
+									//m_response->SetPayload(std::move(processedHtmlVector));
 								}
 								else if (m_response->IsPayloadComplete() == false && m_response->GetConsumeAllBeforeSending() == true)
 								{
 									SetStreamTimeout(5000);
 
-									auto readBuffer = m_response->GetPayloadReadBuffer();
+									try
+									{
+										auto readBuffer = m_response->GetPayloadReadBuffer();
 
-									boost::asio::async_read(
-										m_upstreamSocket, 
-										readBuffer, 
-										boost::asio::transfer_at_least(1), 
-										m_upstreamStrand.wrap(
-											std::bind(
-												&TlsCapableHttpBridge::OnUpstreamRead, 
-												shared_from_this(), 
-												std::placeholders::_1,
-												std::placeholders::_2
+										boost::asio::async_read(
+											m_upstreamSocket,
+											readBuffer,
+											boost::asio::transfer_at_least(1),
+											m_upstreamStrand.wrap(
+												std::bind(
+													&TlsCapableHttpBridge::OnUpstreamRead,
+													shared_from_this(),
+													std::placeholders::_1,
+													std::placeholders::_2
+													)
 												)
-											)
-										);
+											);
 
-									return;
+										return;
+									}
+									catch (std::exception& e)
+									{
+										std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamRead(const boost::system::error_code&, const size_t) - Got error:\n\t");
+										errMsg.append(e.what());
+										ReportError(errMsg);
+										Kill();
+										return;
+									}
 								}
-
+								
 								// Simply write what we've got to the client.
 								auto writeBuffer = m_response->GetWriteBuffer();
 
 								boost::asio::async_write(
-									m_downstreamSocket, 
-									writeBuffer, 
-									boost::asio::transfer_all(), 
+									m_downstreamSocket,
+									writeBuffer,
+									boost::asio::transfer_all(),
 									m_downstreamStrand.wrap(
 										std::bind(
-											&TlsCapableHttpBridge::OnDownstreamWrite, 
-											shared_from_this(), 
+											&TlsCapableHttpBridge::OnDownstreamWrite,
+											shared_from_this(),
 											std::placeholders::_1
 											)
 										)
 									);
-								
+
 								return;
 							}
 							else
@@ -891,7 +931,8 @@ namespace te
 								ReportError(u8"In TlsCapableHttpBridge::OnUpstreamRead(const boost::system::error_code&, const size_t) - Failed to parse response.");
 							}
 						}
-						else
+						
+						if (error)
 						{
 							std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamRead(const boost::system::error_code&, const size_t) - Got error:\n\t");
 							errMsg.append(error.message());
@@ -915,6 +956,11 @@ namespace te
 					/// </param>
 					void OnUpstreamWrite(const boost::system::error_code& error)
 					{
+
+						#ifndef NDEBUG
+						ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamWrite");
+						#endif // !NDEBUG
+
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
@@ -926,23 +972,32 @@ namespace te
 
 								SetStreamTimeout(5000);
 
-								auto readBuffer = m_request->GetPayloadReadBuffer();
+								try
+								{
+									auto readBuffer = m_request->GetPayloadReadBuffer();
 
-								boost::asio::async_read(
-									m_downstreamSocket, 
-									readBuffer, 
-									boost::asio::transfer_at_least(1), 
-									m_downstreamStrand.wrap(
-										std::bind(
-											&TlsCapableHttpBridge::OnDownstreamRead, 
-											shared_from_this(), 
-											std::placeholders::_1,
-											std::placeholders::_2
+									boost::asio::async_read(
+										m_downstreamSocket,
+										readBuffer,
+										boost::asio::transfer_at_least(1),
+										m_downstreamStrand.wrap(
+											std::bind(
+												&TlsCapableHttpBridge::OnDownstreamRead,
+												shared_from_this(),
+												std::placeholders::_1,
+												std::placeholders::_2
+												)
 											)
-										)
-									);
+										);
 
-								return;
+									return;
+								}
+								catch (std::exception& e)
+								{
+									std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamWrite(const boost::system::error_code&) - Got error:\n\t");
+									errMsg.append(e.what());
+									ReportError(errMsg);
+								}
 							}
 							else
 							{
@@ -1017,10 +1072,14 @@ namespace te
 					/// </param>
 					void OnDownstreamHeaders(const boost::system::error_code& error, const size_t bytesTransferred)
 					{
+						#ifndef NDEBUG
+						ReportInfo(u8"TlsCapableHttpBridge::OnDownstreamHeaders");
+						#endif // !NDEBUG
+
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
-						if (!error || (error.value() == boost::asio::error::eof))
+						if ((!error || (error.value() == boost::asio::error::eof)) && bytesTransferred > 0)
 						{
 							if (m_request->Parse(bytesTransferred))
 							{								
@@ -1068,13 +1127,19 @@ namespace te
 											// simply issue a warning, and assume port 80.
 											ReportWarning(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Failed to parse port in host entry. Assuming port 80.");
 										}										
-									}								
-									
-									
-									auto hostComparison = hostWithoutPort.compare(m_upstreamHost);
-									if (m_upstreamHost.size() == 0 || (hostComparison == 0 && m_keepAlive == false))
-									{
+									}
 
+									auto hostComparison = hostWithoutPort.compare(m_upstreamHost);
+									
+									// If we're secure, and the client is asking for a new host, gotta quit.
+									if (hostComparison != 0 && std::is_same<BridgeSocketType, network::TlsSocket>::value)
+									{
+										Kill();
+										return;
+									}
+									
+									if (hostComparison != 0)
+									{
 										// In the event that the upstream host name is empty, or that it's equal to the request
 										// host but keep-alive is set to false, then we need to establish a new connection to 
 										// the host in question. We'll do this by simply resolving the host. The resolve handler
@@ -1128,8 +1193,10 @@ namespace te
 										return;
 									}
 									
+									// XXX TODO - Double check this.
 									// Host is defined but is different than the requested host.
-									// Need to let this die. Not an error, nothing to even warn about.
+									ReportWarning(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Host is different than expected. Aborting.");
+									
 								}
 								else
 								{
@@ -1141,7 +1208,8 @@ namespace te
 								ReportError(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Failed to parse request.");
 							}
 						}
-						else
+
+						if (error)
 						{
 							std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Got error:\n\t");
 							errMsg.append(error.message());
@@ -1171,10 +1239,14 @@ namespace te
 					/// </param>
 					void OnDownstreamRead(const boost::system::error_code& error, const size_t bytesTransferred)
 					{
+						#ifndef NDEBUG
+						ReportInfo(u8"TlsCapableHttpBridge::OnDownstreamRead");
+						#endif // !NDEBUG
+
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
-						if (!error || (error.value() == boost::asio::error::eof))
+						if ((!error || (error.value() == boost::asio::error::eof)) && bytesTransferred > 0)
 						{
 							if (m_request->Parse(bytesTransferred))
 							{
@@ -1185,23 +1257,32 @@ namespace te
 
 									SetStreamTimeout(5000);
 
-									auto readBuffer = m_request->GetPayloadReadBuffer();
+									try
+									{
+										auto readBuffer = m_request->GetPayloadReadBuffer();
 
-									boost::asio::async_read(
-										m_downstreamSocket, 
-										readBuffer, 
-										boost::asio::transfer_at_least(1), 
-										m_downstreamStrand.wrap(
-											std::bind(
-												&TlsCapableHttpBridge::OnDownstreamRead, 
-												shared_from_this(), 
-												std::placeholders::_1,
-												std::placeholders::_2
+										boost::asio::async_read(
+											m_downstreamSocket,
+											readBuffer,
+											boost::asio::transfer_at_least(1),
+											m_downstreamStrand.wrap(
+												std::bind(
+													&TlsCapableHttpBridge::OnDownstreamRead,
+													shared_from_this(),
+													std::placeholders::_1,
+													std::placeholders::_2
+													)
 												)
-											)
-										);
+											);
 
-									return;
+										return;
+									}
+									catch (std::exception& e)
+									{
+										std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamRead(const boost::system::error_code&, const size_t) - Got error:\n\t");
+										errMsg.append(e.what());
+										ReportError(errMsg);
+									}
 								}
 
 								SetStreamTimeout(5000);
@@ -1229,7 +1310,8 @@ namespace te
 								ReportError(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Failed to parse request.");
 							}
 						}
-						else
+
+						if (error)
 						{
 							std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamRead(const boost::system::error_code&, const size_t) - Got error:\n\t");
 							errMsg.append(error.message());
@@ -1253,6 +1335,10 @@ namespace te
 					/// </param>
 					void OnDownstreamWrite(const boost::system::error_code& error)
 					{
+						#ifndef NDEBUG
+						ReportInfo(u8"TlsCapableHttpBridge::OnDownstreamWrite");
+						#endif // !NDEBUG
+
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
@@ -1264,59 +1350,72 @@ namespace te
 
 								SetStreamTimeout(5000);
 
-								auto readBuffer = m_response->GetPayloadReadBuffer();
+								try
+								{
+									auto readBuffer = m_response->GetPayloadReadBuffer();
 
-								boost::asio::async_read(
-									m_upstreamSocket, 
-									readBuffer, 
-									boost::asio::transfer_at_least(1), 
-									m_upstreamStrand.wrap(
-										std::bind(
-											&TlsCapableHttpBridge::OnUpstreamRead,
-											shared_from_this(), 
-											std::placeholders::_1,
-											std::placeholders::_2
+									boost::asio::async_read(
+										m_upstreamSocket,
+										readBuffer,
+										boost::asio::transfer_at_least(1),
+										m_upstreamStrand.wrap(
+											std::bind(
+												&TlsCapableHttpBridge::OnUpstreamRead,
+												shared_from_this(),
+												std::placeholders::_1,
+												std::placeholders::_2
+												)
 											)
-										)
-									);
-								
-								return;
+										);
+
+									return;
+								}
+								catch (std::exception& e)
+								{
+									std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamWrite(const boost::system::error_code&) - Got error:\n\t");
+									errMsg.append(e.what());
+									ReportError(errMsg);
+								}
 							}
+							else
+							{							
+								// We've fulfilled the request. Now, if keep-alive was specified, we'll reset and
+								// start over again. Otherwise, we'll just die.
+								if (m_keepAlive)
+								{
+									ReportInfo(u8"In TlsCapableHttpBridge::OnDownstreamWrite(const boost::system::error_code&) - Keep-alive specified, initiating new read.");
 
-							// We've fulfilled the request. Now, if keep-alive was specified, we'll reset and
-							// start over again. Otherwise, we'll just die.
-							if (m_keepAlive)
-							{
-								SetStreamTimeout(5000);
+									SetStreamTimeout(5000);
 
-								m_request.reset(new http::HttpRequest());
-								m_response.reset(new http::HttpResponse());
+									m_request.reset(new http::HttpRequest());
+									m_response.reset(new http::HttpResponse());
 
-								// XXX TODO - This is ugly, our bad design is showing. See notes in the
-								// EventReporter class header.
-								m_request->SetOnInfo(m_onInfo);
-								m_request->SetOnWarning(m_onWarning);
-								m_request->SetOnError(m_onError);
-								m_response->SetOnInfo(m_onInfo);
-								m_response->SetOnWarning(m_onWarning);
-								m_response->SetOnError(m_onError);
+									// XXX TODO - This is ugly, our bad design is showing. See notes in the
+									// EventReporter class header.
+									m_request->SetOnInfo(m_onInfo);
+									m_request->SetOnWarning(m_onWarning);
+									m_request->SetOnError(m_onError);
+									m_response->SetOnInfo(m_onInfo);
+									m_response->SetOnWarning(m_onWarning);
+									m_response->SetOnError(m_onError);
 
-								boost::asio::async_read_until(
-									m_downstreamSocket, 
-									m_request->GetHeaderReadBuffer(), 
-									u8"\r\n\r\n",
-									m_downstreamStrand.wrap(
-										std::bind(
-											&TlsCapableHttpBridge::OnDownstreamHeaders, 
-											shared_from_this(), 
-											std::placeholders::_1,
-											std::placeholders::_2
+									boost::asio::async_read_until(
+										m_downstreamSocket,
+										m_request->GetHeaderReadBuffer(),
+										u8"\r\n\r\n",
+										m_downstreamStrand.wrap(
+											std::bind(
+												&TlsCapableHttpBridge::OnDownstreamHeaders,
+												shared_from_this(),
+												std::placeholders::_1,
+												std::placeholders::_2
+												)
 											)
-										)
-									);
+										);
 
-								return;
-							}
+									return;
+								}
+							}							
 						}
 						else
 						{
@@ -1345,6 +1444,11 @@ namespace te
 					/// </param>
 					void OnStreamTimeout(const boost::system::error_code& error)
 					{
+
+						#ifndef NDEBUG
+						ReportInfo(u8"TlsCapableHttpBridge<network::TlsSocket>::OnStreamTimeout");
+						#endif // !NDEBUG
+
 						if (error)
 						{
 							if (error.value() == boost::asio::error::operation_aborted)
@@ -1408,23 +1512,25 @@ namespace te
 					/// </param>
 					void OnUpstreamHandshake(const boost::system::error_code& error)
 					{
+
+						#ifndef NDEBUG
+						ReportInfo(u8"TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake");
+						#endif // !NDEBUG
+
 						if (!error && m_upstreamCert != nullptr)
 						{
-							boost::asio::ssl::context* serverCtx = m_certStore->GetServerContext(m_upstreamHost.c_str());
+							boost::asio::ssl::context* serverCtx = nullptr;
 
-							if (serverCtx == nullptr)
+							try
 							{
-								try
-								{
-									serverCtx = m_certStore->SpoofCertificate(m_upstreamHost, m_upstreamCert);
-								}
-								catch (std::exception& e)
-								{
-									serverCtx = nullptr;
-									std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\n\t");
-									errMessage.append(e.what());
-									ReportError(errMessage);
-								}								
+								serverCtx = m_certStore->GetServerContext(m_upstreamHost, m_upstreamCert);
+							}
+							catch (std::exception& e)
+							{
+								serverCtx = nullptr;
+								std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\n\t");
+								errMessage.append(e.what());
+								ReportError(errMessage);
 							}
 
 							if (serverCtx != nullptr)
@@ -1491,6 +1597,11 @@ namespace te
 					/// </param>
 					void OnDownstreamHandshake(const boost::system::error_code& error)
 					{
+
+						#ifndef NDEBUG
+						ReportInfo(u8"TlsCapableHttpBridge<network::TlsSocket>::OnDownstreamHandshake");
+						#endif // !NDEBUG
+
 						if (!error)
 						{
 							SetNoDelay(UpstreamSocket(), true);
@@ -1546,7 +1657,11 @@ namespace te
 					/// </param>
 					void OnTlsPeek(const boost::system::error_code& error, const size_t bytesTransferred)
 					{
-						
+					
+						#ifndef NDEBUG
+						ReportInfo(u8"TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek");
+						#endif // !NDEBUG
+
 						// Parsing Numbers
 						//
 						// https://www.ietf.org/rfc/rfc5246.txt Sections 4.1, 4.4:
@@ -1575,10 +1690,10 @@ namespace te
 									// may assist in the future.
 									if (position >= arr->size() || position > validDataLength)
 									{
-										std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - ");
-										errMessage.append(u8"Index in buffer is out of bounds at position ").append(std::to_string(position)).append(u8".\n\n");
-										errMessage.append(u8"Went out of bounds at check ").append(std::to_string(crumb)).append(u8".");
-										ReportError(errMessage);
+										//std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - ");
+										//errMessage.append(u8"Index in buffer is out of bounds at position ").append(std::to_string(position)).append(u8".\n\n");
+										//errMessage.append(u8"Went out of bounds at check ").append(std::to_string(crumb)).append(u8".");
+										//ReportError(errMessage);
 										return false;
 									}
 
@@ -1709,7 +1824,7 @@ namespace te
 
 											m_upstreamHost = hostName.to_string();
 
-											// XXX TODO - See notes in the version of ::OnResolve(...), specializedd for TLS clients.
+											// XXX TODO - See notes in the version of ::OnResolve(...), specialized for TLS clients.
 											m_upstreamHostPort = 443;
 
 											std::string extractedSniMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - ");
@@ -1768,10 +1883,6 @@ namespace te
 							{
 								ReportError(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - TLS peek buffer is nullptr!");
 							}
-							else
-							{
-								ReportWarning(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - Peeked data length is zero.");
-							}
 						}
 
 						Kill();
@@ -1806,6 +1917,11 @@ namespace te
 					/// </returns>
 					bool VerifyServerCertificateCallback(bool preverified, boost::asio::ssl::verify_context& ctx)
 					{
+
+						#ifndef NDEBUG
+						ReportInfo(u8"TlsCapableHttpBridge<network::TlsSocket>::VerifyServerCertificateCallback");
+						#endif // !NDEBUG
+
 						boost::asio::ssl::rfc2818_verification v(m_upstreamHost);
 
 						bool verified = v(preverified, ctx);

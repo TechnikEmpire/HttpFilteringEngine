@@ -296,14 +296,21 @@ namespace te
 							boost::asio::ssl::context::no_sslv3
 							);
 
+						m_defaultServerContext.set_options(
+							boost::asio::ssl::context::no_compression |
+							boost::asio::ssl::context::default_workarounds |
+							boost::asio::ssl::context::no_sslv2 |
+							boost::asio::ssl::context::no_sslv3
+							);
+
+						m_defaultServerContext.set_default_verify_paths();
+						m_clientContext.set_default_verify_paths();
+
 						if (m_caBundleAbsolutePath.compare(u8"none") != 0)
 						{
 							ReportInfo(u8"User specified an absolutel path to ca-bundle for the client context. Attempting to load...");
 							
-							boost::system::error_code loadRootsError;
-
-							m_defaultServerContext.set_default_verify_paths();
-							m_clientContext.set_default_verify_paths();
+							boost::system::error_code loadRootsError;							
 
 							m_clientContext.load_verify_file(m_caBundleAbsolutePath, loadRootsError);
 
