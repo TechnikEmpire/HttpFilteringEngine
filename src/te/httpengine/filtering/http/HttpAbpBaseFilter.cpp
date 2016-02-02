@@ -52,6 +52,7 @@ namespace te
 					) :
 					m_settings(settings), m_category(category)
 				{
+
 					// We do the final stages of parsing inside the object here. As already
 					// mentioned, some processing of the rule has already been done by the
 					// HttpFilterEngine object before getting to this point. Here, the job to be

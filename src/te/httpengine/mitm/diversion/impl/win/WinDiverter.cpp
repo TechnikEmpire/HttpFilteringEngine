@@ -113,7 +113,7 @@ namespace te
 
 						if (m_diversionHandle == INVALID_HANDLE_VALUE)
 						{
-							std::string errMessage("In WinDiverter::Run() - Failed to start Diversion, got invalid WinDivert handle with error:\n\t");
+							std::string errMessage("In WinDiverter::Run() - Failed to start Diversion, got invalid WinDivert handle with error:\t");
 							errMessage.append(std::to_string(GetLastError()));
 
 							throw std::runtime_error(errMessage.c_str());
@@ -226,7 +226,7 @@ namespace te
 
 							if (recvEvent == nullptr)
 							{
-								std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - While creating RecvEx event, got error:\n\t");
+								std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - While creating RecvEx event, got error:\t");
 								errMessage.append(std::to_string(GetLastError()));
 								ReportError(errMessage);
 								continue;
@@ -239,7 +239,7 @@ namespace te
 								auto err = GetLastError();
 								if (err != ERROR_IO_PENDING)
 								{
-									std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, got error:\n\t");
+									std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, got error:\t");
 									errMessage.append(std::to_string(err));
 									ReportError(errMessage);
 									continue;
@@ -259,7 +259,7 @@ namespace te
 									}
 									else
 									{
-										std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, got error:\n\t");
+										std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, got error:\t");
 										errMessage.append(std::to_string(GetLastError()));
 										ReportError(errMessage);
 									}
@@ -270,7 +270,7 @@ namespace te
 
 								if (!GetOverlappedResult(divertHandle, &recvOverlapped, &recvAsyncIoLen, TRUE))
 								{
-									std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, while fetching overlapped result, got error:\n\t");
+									std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, while fetching overlapped result, got error:\t");
 									errMessage.append(std::to_string(GetLastError()));
 									ReportError(errMessage);
 
@@ -286,7 +286,7 @@ namespace te
 
 							if (!WinDivertRecv(divertHandle, m_buffer.get(), PacketBufferLength, &addr, &recvLength))
 							{
-								std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert Recv, got error:\n\t");
+								std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert Recv, got error:\t");
 								errMessage.append(std::to_string(GetLastError()));
 								ReportError(errMessage);
 								continue;
@@ -475,7 +475,7 @@ namespace te
 							// XXX TODO - Perhaps report warning instead? This isn't exactly critical. Maybe a single
 							// packet gets lost, maybe it completes under the hood. Either way we can do nothing, and
 							// this should be expected to happen at least once.
-							std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert SendEx, got error:\n\t");
+							std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert SendEx, got error:\t");
 							errMessage.append(std::to_string(GetLastError()));
 							ReportError(errMessage);
 							continue;
@@ -588,6 +588,14 @@ namespace te
 					else
 					{
 						ReportError(u8"In WinDiverter::GetPacketProcess(uint16_t, uint32_t, PMIB_TCPTABLE2, DWORD&) - Failed to populate table.");
+
+						if (*table != nullptr)
+						{
+							free(*table);
+							*table = nullptr;							
+						}
+
+						currentTableSize = 0;
 					}
 
 					return 0;
@@ -672,6 +680,14 @@ namespace te
 					else
 					{
 						ReportError(u8"In WinDiverter::GetPacketProcess(uint16_t, uint32_t[4], PMIB_TCP6TABLE2, DWORD&) - Failed to populate table.");
+
+						if (*table != nullptr)
+						{
+							free(*table);
+							*table = nullptr;
+						}
+
+						currentTableSize = 0;
 					}
 
 					return 0;

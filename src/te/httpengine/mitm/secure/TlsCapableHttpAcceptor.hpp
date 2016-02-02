@@ -187,7 +187,7 @@ namespace te
 
 						if (reuseAddrEc)
 						{
-							std::string errMessage(u8"In TlsCapableHttpAcceptor::StopAccepting(const boost::system::error_code&) - Got error:\n\t");
+							std::string errMessage(u8"In TlsCapableHttpAcceptor::StopAccepting(const boost::system::error_code&) - Got error:\t");
 							errMessage.append(reuseAddrEc.message());
 							ReportError(errMessage);
 						}
@@ -254,7 +254,7 @@ namespace te
 							}
 							catch (std::exception& e)
 							{
-								std::string errMessage(u8"In TlsCapableHttpAcceptor::HandleAccept(const boost::system::error_code&) - Got error:\n\t");
+								std::string errMessage(u8"In TlsCapableHttpAcceptor::HandleAccept(const boost::system::error_code&) - Got error:\t");
 								errMessage.append(e.what());
 								ReportError(errMessage);
 							}
@@ -274,7 +274,7 @@ namespace te
 
 						if (e)
 						{
-							std::string errMessage(u8"In TlsCapableHttpAcceptor::StopAccepting(const boost::system::error_code&) - Got error:\n\t");
+							std::string errMessage(u8"In TlsCapableHttpAcceptor::StopAccepting(const boost::system::error_code&) - Got error:\t");
 							errMessage.append(e.message());
 							ReportError(errMessage);
 						}
@@ -308,7 +308,7 @@ namespace te
 
 						if (m_caBundleAbsolutePath.compare(u8"none") != 0)
 						{
-							ReportInfo(u8"User specified an absolutel path to ca-bundle for the client context. Attempting to load...");
+							ReportInfo(u8"User specified an absolute path to ca-bundle for the client context. Attempting to load...");
 							
 							boost::system::error_code loadRootsError;							
 
@@ -319,7 +319,7 @@ namespace te
 								// XXX TODO - Should we throw or something here? I think maybe not, since failing to load
 								// the ca-bundle doesn't really hurt anything, just if the default verify paths are not
 								// configured, client will get errors trying to browse secured stuff.
-								std::string errMessage(u8"In TlsCapableHttpAcceptor::InitContexts() - While loading ca-bundle verification file, got error:\n\t");
+								std::string errMessage(u8"In TlsCapableHttpAcceptor::InitContexts() - While loading ca-bundle verification file, got error:\t");
 								errMessage.append(loadRootsError.message());
 								ReportError(errMessage);
 							}
@@ -370,7 +370,7 @@ namespace te
 						{
 							if (error)
 							{
-								std::string errMessage(u8"In TlsCapableHttpAcceptor::HandleAccept(const boost::system::error_code&) - Got error:\n\t");
+								std::string errMessage(u8"In TlsCapableHttpAcceptor::HandleAccept(const boost::system::error_code&) - Got error:\t");
 								errMessage.append(error.message());
 							}
 							else

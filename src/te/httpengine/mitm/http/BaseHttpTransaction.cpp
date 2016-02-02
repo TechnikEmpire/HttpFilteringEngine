@@ -453,13 +453,13 @@ namespace te
 						m_transactionData[m_transactionData.size() - 1] == '\n'
 						)
 					{
-						auto sizeString = std::to_string(m_unwrittenPayloadSize - 4);
+						auto sizeString = std::to_string(payload.size() - 4);
 						AddHeader(util::http::headers::ContentLength, sizeString);
 					}
 					else 
 					{
 
-						auto sizeString = std::to_string(m_unwrittenPayloadSize);
+						auto sizeString = std::to_string(payload.size());
 						AddHeader(util::http::headers::ContentLength, sizeString);
 
 						m_transactionData.push_back('\r');
@@ -493,13 +493,13 @@ namespace te
 						m_transactionData[m_transactionData.size() - 1] == '\n'
 						)
 					{
-						auto sizeString = std::to_string(m_unwrittenPayloadSize - 4);
+						auto sizeString = std::to_string(payload.size() - 4);
 						AddHeader(util::http::headers::ContentLength, sizeString);
 					}
 					else
 					{
 
-						auto sizeString = std::to_string(m_unwrittenPayloadSize);
+						auto sizeString = std::to_string(payload.size());
 						AddHeader(util::http::headers::ContentLength, sizeString);
 
 						m_transactionData.push_back('\r');

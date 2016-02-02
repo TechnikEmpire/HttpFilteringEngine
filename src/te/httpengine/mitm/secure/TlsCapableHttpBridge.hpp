@@ -547,28 +547,28 @@ namespace te
 
 							if (downstreamShutdownErr)
 							{
-								std::string err(u8"In TlsCapableHttpBridge<BridgeSocketType>::Kill() - When shutting down downstream socket, got error:\n\t");
+								std::string err(u8"In TlsCapableHttpBridge<BridgeSocketType>::Kill() - When shutting down downstream socket, got error:\t");
 								err.append(downstreamShutdownErr.message());
 								ReportError(err);
 							}
 
 							if (downstreamCloseErr)
 							{
-								std::string err(u8"In TlsCapableHttpBridge<BridgeSocketType>::Kill() - When closing downstream socket, got error:\n\t");
+								std::string err(u8"In TlsCapableHttpBridge<BridgeSocketType>::Kill() - When closing downstream socket, got error:\t");
 								err.append(downstreamCloseErr.message());
 								ReportError(err);
 							}
 
 							if (upstreamShutdownErr)
 							{
-								std::string dErrMessage(u8"In TlsCapableHttpBridge<BridgeSocketType>::Kill() - When shutting down upstream socket, got error:\n\t");
+								std::string dErrMessage(u8"In TlsCapableHttpBridge<BridgeSocketType>::Kill() - When shutting down upstream socket, got error:\t");
 								dErrMessage.append(upstreamShutdownErr.message());
 								ReportError(dErrMessage);
 							}
 
 							if (upstreamCloseErr)
 							{
-								std::string err(u8"In TlsCapableHttpBridge<BridgeSocketType>::Kill() - When closing upstream socket, got error:\n\t");
+								std::string err(u8"In TlsCapableHttpBridge<BridgeSocketType>::Kill() - When closing upstream socket, got error:\t");
 								err.append(upstreamCloseErr.message());
 								ReportError(err);
 							}
@@ -811,7 +811,7 @@ namespace te
 
 						if (error)
 						{
-							std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamHeaders(const boost::system::error_code&, const size_t) - Got error:\n\t");
+							std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamHeaders(const boost::system::error_code&, const size_t) - Got error:\t");
 							errMsg.append(error.message());
 							ReportError(errMsg);
 						}
@@ -860,19 +860,21 @@ namespace te
 								if (m_response->IsPayloadComplete() && m_response->GetConsumeAllBeforeSending() && m_response->IsPayloadHtml())
 								{
 									// XXX TODO - This is broken. See https://github.com/TechnikEmpire/HttpFilteringEngine/issues/32
+									
+									ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamRead - Processing HTML response.");
+									
+									auto processedHtmlString = m_filteringEngine->ProcessHtmlResponse(m_request.get(), m_response.get());
+									
+									if (processedHtmlString.size() > 0)
+									{
+										std::vector<char> processedHtmlVector(processedHtmlString.begin(), processedHtmlString.end());
 
-									ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamRead - NOT Processing HTML response.");
-									//ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamRead - Processing HTML response.");
-									//
-									//auto processedHtmlString = m_filteringEngine->ProcessHtmlResponse(m_request.get(), m_response.get());
-									//
-									//std::vector<char> processedHtmlVector(processedHtmlString.begin(), processedHtmlString.end());
-									//
-									//std::string nfo(u8"Processed HTML response size is ");
-									//nfo.append(std::to_string(processedHtmlVector.size()));
-									//ReportInfo(nfo);
-									//
-									//m_response->SetPayload(std::move(processedHtmlVector));
+										std::string nfo(u8"Processed HTML response size is ");
+										nfo.append(std::to_string(processedHtmlVector.size()));
+										ReportInfo(nfo);
+
+										m_response->SetPayload(processedHtmlVector);
+									}									
 								}
 								else if (m_response->IsPayloadComplete() == false && m_response->GetConsumeAllBeforeSending() == true)
 								{
@@ -900,7 +902,7 @@ namespace te
 									}
 									catch (std::exception& e)
 									{
-										std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamRead(const boost::system::error_code&, const size_t) - Got error:\n\t");
+										std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamRead(const boost::system::error_code&, const size_t) - Got error:\t");
 										errMsg.append(e.what());
 										ReportError(errMsg);
 										Kill();
@@ -934,7 +936,7 @@ namespace te
 						
 						if (error)
 						{
-							std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamRead(const boost::system::error_code&, const size_t) - Got error:\n\t");
+							std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamRead(const boost::system::error_code&, const size_t) - Got error:\t");
 							errMsg.append(error.message());
 							ReportError(errMsg);
 						}
@@ -994,7 +996,7 @@ namespace te
 								}
 								catch (std::exception& e)
 								{
-									std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamWrite(const boost::system::error_code&) - Got error:\n\t");
+									std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamWrite(const boost::system::error_code&) - Got error:\t");
 									errMsg.append(e.what());
 									ReportError(errMsg);
 								}
@@ -1024,7 +1026,7 @@ namespace te
 						}
 						else
 						{
-							std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamWrite(const boost::system::error_code&) - Got error:\n\t");
+							std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamWrite(const boost::system::error_code&) - Got error:\t");
 							errMsg.append(error.message());
 							ReportError(errMsg);
 						}
@@ -1211,7 +1213,7 @@ namespace te
 
 						if (error)
 						{
-							std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Got error:\n\t");
+							std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Got error:\t");
 							errMsg.append(error.message());
 							ReportError(errMsg);
 						}
@@ -1279,7 +1281,7 @@ namespace te
 									}
 									catch (std::exception& e)
 									{
-										std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamRead(const boost::system::error_code&, const size_t) - Got error:\n\t");
+										std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamRead(const boost::system::error_code&, const size_t) - Got error:\t");
 										errMsg.append(e.what());
 										ReportError(errMsg);
 									}
@@ -1313,7 +1315,7 @@ namespace te
 
 						if (error)
 						{
-							std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamRead(const boost::system::error_code&, const size_t) - Got error:\n\t");
+							std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamRead(const boost::system::error_code&, const size_t) - Got error:\t");
 							errMsg.append(error.message());
 							ReportError(errMsg);
 						}
@@ -1372,7 +1374,7 @@ namespace te
 								}
 								catch (std::exception& e)
 								{
-									std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamWrite(const boost::system::error_code&) - Got error:\n\t");
+									std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamWrite(const boost::system::error_code&) - Got error:\t");
 									errMsg.append(e.what());
 									ReportError(errMsg);
 								}
@@ -1383,7 +1385,9 @@ namespace te
 								// start over again. Otherwise, we'll just die.
 								if (m_keepAlive)
 								{
+									#ifndef NDEBUG
 									ReportInfo(u8"In TlsCapableHttpBridge::OnDownstreamWrite(const boost::system::error_code&) - Keep-alive specified, initiating new read.");
+									#endif
 
 									SetStreamTimeout(5000);
 
@@ -1419,7 +1423,7 @@ namespace te
 						}
 						else
 						{
-							std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamWrite(const boost::system::error_code&) - Got error:\n\t");
+							std::string errMsg(u8"In TlsCapableHttpBridge::OnDownstreamWrite(const boost::system::error_code&) - Got error:\t");
 							errMsg.append(error.message());
 							ReportError(errMsg);
 						}
@@ -1461,7 +1465,7 @@ namespace te
 							{
 								// XXX TODO - Perhaps in the event of an error, we should return and avoid
 								// calling ::Kill()?
-								std::string errMessage(u8"In TlsCapableHttpBridge<BridgeSocketType>::OnStreamTimeout(const boost::system::error_code&) - Got error:\n\t");
+								std::string errMessage(u8"In TlsCapableHttpBridge<BridgeSocketType>::OnStreamTimeout(const boost::system::error_code&) - Got error:\t");
 								errMessage.append(error.message());
 								ReportError(errMessage);
 							}
@@ -1528,7 +1532,7 @@ namespace te
 							catch (std::exception& e)
 							{
 								serverCtx = nullptr;
-								std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\n\t");
+								std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\t");
 								errMessage.append(e.what());
 								ReportError(errMessage);
 							}
@@ -1568,7 +1572,7 @@ namespace te
 						{
 							if (error)
 							{
-								std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\n\t");
+								std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\t");
 								errMsg.append(error.message());
 								ReportError(errMsg);
 							}
@@ -1624,7 +1628,7 @@ namespace te
 							return;
 						}
 
-						std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\n\t");
+						std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\t");
 						errMessage.append(error.message());
 						ReportError(errMessage);
 
@@ -1850,7 +1854,7 @@ namespace te
 											}
 											catch (std::exception& e)
 											{
-												std::string errorMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - Got Error:\n\t");
+												std::string errorMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - Got Error:\t");
 												errorMessage.append(e.what());
 												ReportError(errorMessage);
 											}
@@ -1875,7 +1879,7 @@ namespace te
 						{							
 							if (error)
 							{
-								std::string errorMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - Got Error:\n\t");
+								std::string errorMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - Got Error:\t");
 								errorMessage.append(error.message());
 								ReportError(errorMessage);
 							}
@@ -1974,7 +1978,7 @@ namespace te
 
 						if (err)
 						{
-							std::string errorMessage(u8"In TlsCapableHttpBridge<BridgeSocketType>::SetLinger(boost::asio::ip::tcp::socket&, const bool) - While setting linger state, got error:\n\t");
+							std::string errorMessage(u8"In TlsCapableHttpBridge<BridgeSocketType>::SetLinger(boost::asio::ip::tcp::socket&, const bool) - While setting linger state, got error:\t");
 							errorMessage.append(err.message());
 							ReportError(errorMessage);
 						}
@@ -1997,7 +2001,7 @@ namespace te
 
 						if (err)
 						{
-							std::string errorMessage(u8"In TlsCapableHttpBridge<BridgeSocketType>::SetNoDelay(boost::asio::ip::tcp::socket&, const bool) - While setting Nagle algorithm enabled state, got error:\n\t");
+							std::string errorMessage(u8"In TlsCapableHttpBridge<BridgeSocketType>::SetNoDelay(boost::asio::ip::tcp::socket&, const bool) - While setting Nagle algorithm enabled state, got error:\t");
 							errorMessage.append(err.message());
 							ReportError(errorMessage);
 						}

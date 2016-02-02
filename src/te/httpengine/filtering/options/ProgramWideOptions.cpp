@@ -63,7 +63,7 @@ namespace te
 						return false;
 					}
 
-					return m_httpContentFilteringCategories[static_cast<uint32_t>(category)];
+					return m_httpContentFilteringCategories[category];
 				}
 
 				void ProgramWideOptions::SetIsHttpCategoryFiltered(const uint8_t category, const bool value)
@@ -74,7 +74,7 @@ namespace te
 						return;
 					}
 
-					m_httpContentFilteringCategories[static_cast<uint32_t>(category)] = value;
+					m_httpContentFilteringCategories[category] = value;
 				}
 
 				bool ProgramWideOptions::GetIsHttpFilteringOptionEnabled(const http::HttpFilteringOption option) const

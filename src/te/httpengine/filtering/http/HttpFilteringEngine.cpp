@@ -66,25 +66,29 @@ namespace te
 					{ u8"~stylesheet" , notstylesheet },
 					{ u8"object" , object },
 					{ u8"~object" , notobject },
-					{ u8"object_subrequest" , object_subrequest },
-					{ u8"~object_subrequest" , notobject_subrequest },
+					{ u8"object-subrequest" , object_subrequest },
+					{ u8"~object-subrequest" , notobject_subrequest },
 					{ u8"subdocument" , subdocument },
 					{ u8"~subdocument" , notsubdocument },
 					{ u8"document" , document },
 					{ u8"~document" , notdocument },
 					{ u8"elemhide" , elemhide },
 					{ u8"~elemhide" , notelemhide },
-					{ u8"third_party" , third_party },
-					{ u8"~third_party" , notthird_party },
+					{ u8"third-party" , third_party },
+					{ u8"~third-party" , notthird_party },
 					{ u8"xmlhttprequest" , xmlhttprequest },
 					{ u8"~xmlhttprequest" , notxmlhttprequest }
 				};
 				
 				HttpFilteringEngine::HttpFilteringEngine(
 					const options::ProgramWideOptions* programOptions,
+					util::cb::MessageFunction onInfo,
+					util::cb::MessageFunction onWarn,
+					util::cb::MessageFunction onError,
 					util::cb::RequestBlockFunction onRequestBlocked,
 					util::cb::ElementBlockFunction onElementsBlocked
 					) :
+					util::cb::EventReporter(onInfo, onWarn, onError),
 					m_programOptions(programOptions),
 					m_onRequestBlocked(onRequestBlocked),
 					m_onElementsBlocked(onElementsBlocked)
@@ -268,7 +272,7 @@ namespace te
 						const auto hostHeader = request->GetHeader(util::http::headers::Host);
 						if (hostHeader.first != hostHeader.second)
 						{
-							fullRequest = hostHeader.first->second + u8"/" + fullRequest;
+							fullRequest = hostHeader.first->second + fullRequest;
 						}
 
 						ReportRequestBlocked(blockCategory, blockedContentSize, fullRequest);
@@ -599,7 +603,7 @@ namespace te
 					catch (std::runtime_error& e)
 					{						
 						// This would only happen, AFAIK, if we failed to parse any valid HTML.
-						std::string errMessage(u8"In HttpFilteringEngine::ProcessHtmlResponse(const mhttp::HttpRequest*, const mhttp::HttpResponse*) const - Error:\n\t");
+						std::string errMessage(u8"In HttpFilteringEngine::ProcessHtmlResponse(const mhttp::HttpRequest*, const mhttp::HttpResponse*) const - Error:\t");
 						errMessage.append(e.what());
 						ReportError(errMessage);
 						return std::string();
@@ -607,8 +611,6 @@ namespace te
 
 					// Where we're going to collect all matched nodes.
 					gq::NodeMutationCollection collection;		
-
-					int numberOfHtmlElementsRemoved = 0;
 
 					// We'll start out getting global selectors and running them against the
 					// document, collecting all results into the NodeMutationCollection structure.
@@ -621,16 +623,8 @@ namespace te
 							if (m_programOptions->GetIsHttpCategoryFiltered(selector->GetCategory()))
 							{
 								doc->Each(selector->GetSelector(),
-									[&collection, &numberOfHtmlElementsRemoved](const gq::Node* node)->void
+									[&collection](const gq::Node* node)->void
 								{
-									// XXX TODO - This needs to be dropped after GQ is updated to give
-									// NodeMutationCollection a ::Size() member, because this crude
-									// counting method may count duplicates. GQ does not do duplicate
-									// filtering before invoking these callbacks. Instead, since
-									// NodeMutationCollection internally uses an unordered_set, it's
-									// provided internally.
-									++numberOfHtmlElementsRemoved;
-
 									collection.Add(node);
 								});
 							}							
@@ -660,16 +654,8 @@ namespace te
 								if (m_programOptions->GetIsHttpCategoryFiltered(selector->GetCategory()))
 								{
 									doc->Each(selector->GetSelector(),
-										[&collection, &numberOfHtmlElementsRemoved](const gq::Node* node)->void
+										[&collection](const gq::Node* node)->void
 									{
-										// XXX TODO - This needs to be dropped after GQ is updated to give
-										// NodeMutationCollection a ::Size() member, because this crude
-										// counting method may count duplicates. GQ does not do duplicate
-										// filtering before invoking these callbacks. Instead, since
-										// NodeMutationCollection internally uses an unordered_set, it's
-										// provided internally.
-										++numberOfHtmlElementsRemoved;
-
 										collection.Add(node);
 									});
 								}								
@@ -689,16 +675,8 @@ namespace te
 								if (m_programOptions->GetIsHttpCategoryFiltered(selector->GetCategory()))
 								{
 									doc->Each(selector->GetSelector(),
-										[&collection, &numberOfHtmlElementsRemoved](const gq::Node* node)->void
+										[&collection](const gq::Node* node)->void
 									{
-										// XXX TODO - This needs to be dropped after GQ is updated to give
-										// NodeMutationCollection a ::Size() member, because this crude
-										// counting method may count duplicates. GQ does not do duplicate
-										// filtering before invoking these callbacks. Instead, since
-										// NodeMutationCollection internally uses an unordered_set, it's
-										// provided internally.
-										--numberOfHtmlElementsRemoved;
-
 										collection.Remove(node);
 									});
 								}
@@ -717,23 +695,23 @@ namespace te
 							{
 
 								doc->Each(selector->GetSelector(),
-									[&collection, &numberOfHtmlElementsRemoved](const gq::Node* node)->void
+									[&collection](const gq::Node* node)->void
 								{
-									// XXX TODO - This needs to be dropped after GQ is updated to give
-									// NodeMutationCollection a ::Size() member, because this crude
-									// counting method may count duplicates. GQ does not do duplicate
-									// filtering before invoking these callbacks. Instead, since
-									// NodeMutationCollection internally uses an unordered_set, it's
-									// provided internally.
-									--numberOfHtmlElementsRemoved;
-
 									collection.Remove(node);
 								});
 							}
 						}
 					}
 
-					// XXX TODO - Report numberOfHtmlElementsRemoved
+					
+
+					// Report numberOfHtmlElementsRemoved
+					if (collection.Size() > 0)
+					{
+						std::string fullRequestString = hostStringRef.to_string();
+						fullRequestString += request->RequestURI();
+						ReportElementsBlocked(static_cast<uint32_t>(collection.Size()), fullRequestString);
+					}					
 
 					// Now we can serialize the result, removing our final collection of nodes.
 					auto serialized = gq::Serializer::Serialize(doc.get(), &collection);
@@ -810,7 +788,7 @@ namespace te
 						// matches is either a single domain or multiple domains separated by commas.
 						auto selectorStartPosition = rule.find(u8"#");						
 						
-						if (selectorStartPosition != std::string::npos && (selectorStartPosition + 1 < rule.size()))
+						if (selectorStartPosition != std::string::npos && (selectorStartPosition + 2 < rule.size()))
 						{
 							boost::string_ref domains = boost::string_ref(rule.c_str(), selectorStartPosition);
 
@@ -819,18 +797,25 @@ namespace te
 							if (rule[selectorStartPosition + 1] == '@')
 							{
 								// Exception selector that is domain specific
-								AddSelectorMultiDomain(m_globalRuleKey, rule.substr(2), category, true);
+								AddSelectorMultiDomain(m_globalRuleKey, rule.substr(selectorStartPosition + 2), category, true);
 								return true;
 							}
 							else
 							{
 								// Inclusion selector that is domain specific
-								AddSelectorMultiDomain(m_globalRuleKey, rule.substr(2), category);
+								AddSelectorMultiDomain(m_globalRuleKey, rule.substr(selectorStartPosition + 2), category);
 								return true;
 							}
 						}
 						else
 						{
+							// Means we got a selector rule but the bounds were not sufficient.
+							if (selectorStartPosition != std::string::npos)
+							{
+								ReportWarning(u8"In HttpFilteringEngine::ProcessAbpFormattedRule(const std::string&, const uint8_t) - Selector rule key '#' found but was at end of rule string bounds. Ignoring.");
+								return false;
+							}
+
 							// This is a filtering rule.
 
 							// Check if there are attached options to the rule. These begin with "$".
@@ -875,10 +860,14 @@ namespace te
 								{
 									// If no commas, we'll just push the rule to the vector as to not
 									// add unnecessary complexity.
-									allRuleOptions.push_back(ruleOptions);
+									if (ruleOptions.size() > 0)
+									{
+										allRuleOptions.push_back(ruleOptions);
+									}									
 								}
 
 								auto len = allRuleOptions.size();
+								size_t totalIgnored = 0;
 
 								for (size_t i = 0; i < len; ++i)
 								{
@@ -898,14 +887,23 @@ namespace te
 										{
 											// Invalid rule.
 											std::string errMsg(u8"In HttpFilteringEngine::ProcessAbpFormattedRule(const std::string&, const uint8_t) - Invalid filtering rule option ");
-											errMsg.append(str.to_string());
+											errMsg.append(str.to_string()).append(u8". Option ignored.");
 											ReportError(errMsg);
+											++totalIgnored;
 											continue;
 										}
 
 										// We have found a valid option, so we just set it to true.
 										filterRuleOptions.set(optionEnumResult->second, true);
 									}
+								}
+
+								// If we ignored all options on a rule, we need to discard it because we'd be using it
+								// improperly.
+								if (totalIgnored > 0 && totalIgnored == allRuleOptions.size())
+								{
+									ReportWarning(u8"In HttpFilteringEngine::ProcessAbpFormattedRule(const std::string&, const uint8_t) - Ignoring rule because all configured options are unsupported.");
+									return false;
 								}
 
 								bool isException = false;
@@ -925,6 +923,8 @@ namespace te
 								{
 									AddInclusionFilterMultiDomain(ruleDomains, extractedRule, filterRuleOptions, category);
 								}
+
+								return true;
 							}
 						}
 					}
@@ -952,7 +952,7 @@ namespace te
 					}
 					catch (std::runtime_error& e)
 					{
-						std::string errMsg(u8"In HttpFilteringEngine::AddIncludeSelectorMultiDomain(boost::string_ref, const std::string&, const uint8_t) Error:\n\t");
+						std::string errMsg(u8"In HttpFilteringEngine::AddIncludeSelectorMultiDomain(boost::string_ref, const std::string&, const uint8_t) Error:\t");
 						errMsg.append(e.what());
 						ReportError(errMsg);
 						return;
@@ -1081,7 +1081,7 @@ namespace te
 					}
 					catch (std::runtime_error& e)
 					{
-						std::string errMsg(u8"In HttpFilteringEngine::AddInclusionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) Error:\n\t");
+						std::string errMsg(u8"In HttpFilteringEngine::AddInclusionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) Error:\t");
 						errMsg.append(e.what());
 						ReportError(errMsg);
 						return;
@@ -1268,7 +1268,7 @@ namespace te
 					}
 					catch (std::runtime_error& e)
 					{
-						std::string errMsg(u8"In HttpFilteringEngine::AddExceptionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) Error:\n\t");
+						std::string errMsg(u8"In HttpFilteringEngine::AddExceptionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) Error:\t");
 						errMsg.append(e.what());
 						ReportError(errMsg);
 						return;

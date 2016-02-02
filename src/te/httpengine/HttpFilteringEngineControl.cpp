@@ -104,7 +104,7 @@ namespace te
 			m_httpsListenerPort(httpsListenerPort),
 			m_proxyNumThreads(proxyNumThreads),
 			m_programWideOptions(new filtering::options::ProgramWideOptions()),
-			m_httpFilteringEngine(new filtering::http::HttpFilteringEngine(m_programWideOptions.get(), m_onRequestBlockedCb, m_onElementsBlockedCb)),
+			m_httpFilteringEngine(new filtering::http::HttpFilteringEngine(m_programWideOptions.get(), onInfo, onWarn, onError, m_onRequestBlockedCb, m_onElementsBlockedCb)),
 			m_isRunning(false)
 		{
 			
@@ -289,7 +289,7 @@ namespace te
 			{
 				if (option < static_cast<uint32_t>(filtering::options::http::HttpFilteringOption::NUMBER_OF_ENTRIES))
 				{
-					m_programWideOptions->GetIsHttpFilteringOptionEnabled(static_cast<filtering::options::http::HttpFilteringOption>(option));
+					return m_programWideOptions->GetIsHttpFilteringOptionEnabled(static_cast<filtering::options::http::HttpFilteringOption>(option));
 				}
 			}
 
@@ -308,7 +308,7 @@ namespace te
 		{
 			if (m_programWideOptions != nullptr)
 			{
-				m_programWideOptions->GetIsHttpCategoryFiltered(category);
+				return m_programWideOptions->GetIsHttpCategoryFiltered(category);
 			}
 
 			return false;

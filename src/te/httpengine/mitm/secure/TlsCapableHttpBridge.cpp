@@ -171,7 +171,7 @@ namespace te
 					}
 					catch (std::exception& e)
 					{
-						std::string errMessage(u8"IN TlsCapableHttpBridge<network::TcpSocket>::Start() - Got error:\n\t");
+						std::string errMessage(u8"IN TlsCapableHttpBridge<network::TcpSocket>::Start() - Got error:\t");
 						errMessage.append(e.what());
 						ReportError(errMessage);
 					}
@@ -204,7 +204,7 @@ namespace te
 					}
 					catch (std::exception& e)
 					{
-						std::string errMessage(u8"IN TlsCapableHttpBridge<network::TlsSocket>::Start() - Got error:\n\t");
+						std::string errMessage(u8"IN TlsCapableHttpBridge<network::TlsSocket>::Start() - Got error:\t");
 						errMessage.append(e.what());						
 						ReportError(errMessage);
 					}
@@ -274,7 +274,7 @@ namespace te
 							}
 							catch (std::exception& e)
 							{
-								std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - Got error:\n\t");
+								std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - Got error:\t");
 								errMsg.append(e.what());
 								ReportError(errMsg);
 							}							
@@ -303,7 +303,7 @@ namespace te
 					}
 					else
 					{
-						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - Got error:\n\t");
+						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - Got error:\t");
 						errMsg.append(error.message());
 						ReportError(errMsg);
 					}
@@ -361,14 +361,14 @@ namespace te
 						}
 						else
 						{
-							std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - While setting verification callback, got error:\n\t");
+							std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - While setting verification callback, got error:\t");
 							errMsg.append(error.message());
 							ReportError(errMsg);
 						}
 					}
 					else
 					{
-						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - Got error:\n\t");
+						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamConnect(const boost::system::error_code&) - Got error:\t");
 						errMsg.append(error.message());
 						ReportError(errMsg);
 					}
@@ -428,7 +428,7 @@ namespace te
 					}
 					else
 					{
-						std::string errMsg(u8"In TlsCapableHttpBridge<network::TcpSocket>::OnResolve(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator) - Got error:\n\t");
+						std::string errMsg(u8"In TlsCapableHttpBridge<network::TcpSocket>::OnResolve(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator) - Got error:\t");
 						errMsg.append(error.message());
 						ReportError(errMsg);
 					}
@@ -484,7 +484,7 @@ namespace te
 					}
 					else
 					{
-						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnResolve(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator) - Got error:\n\t");
+						std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnResolve(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator) - Got error:\t");
 						errMsg.append(error.message());
 						ReportError(errMsg);
 					}

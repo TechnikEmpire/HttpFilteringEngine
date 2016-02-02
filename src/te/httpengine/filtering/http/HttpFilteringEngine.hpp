@@ -112,8 +112,7 @@ namespace te
 				private:
 										
 					using Reader = boost::shared_lock<boost::shared_mutex>;
-					using Writer = boost::unique_lock<boost::shared_mutex>;
-					
+					using Writer = boost::unique_lock<boost::shared_mutex>;					
 
 					using SharedInclusionFilter = std::shared_ptr<HttpAbpInclusionFilter>;
 					using SharedExceptionFilter = std::shared_ptr<HttpAbpExceptionFilter>;
@@ -140,6 +139,9 @@ namespace te
 					/// </param>
 					HttpFilteringEngine(
 						const options::ProgramWideOptions* programOptions,
+						util::cb::MessageFunction onInfo = nullptr,
+						util::cb::MessageFunction onWarn = nullptr,
+						util::cb::MessageFunction onError = nullptr,
 						util::cb::RequestBlockFunction onRequestBlocked = nullptr,
 						util::cb::ElementBlockFunction onElementsBlocked = nullptr
 						);				
