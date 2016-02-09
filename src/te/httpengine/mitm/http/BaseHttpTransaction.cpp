@@ -172,6 +172,12 @@ namespace te
 				{
 					bool success = false;
 
+					// We keep a copy of the current unwritten bytes size here. We do this because the parser
+					// callbacks reset this member, and because of our fiasco with how body data bleeds
+					// over into the header buffer, this can put us out of sync unless we take a copy
+					// before letting the http_parser run.
+					auto unwrittenBytesCopy = m_unwrittenPayloadSize;
+
 					if (!m_headersComplete)
 					{
 						const char* data = boost::asio::buffer_cast<const char*>(m_headerBuffer.data());
@@ -203,7 +209,10 @@ namespace te
 							std::istreambuf_iterator<char> extraDataStart(&m_headerBuffer);
 
 							// Store exactly how much payload/body data is being copied out to the payload vector.
-							m_unwrittenPayloadSize = (m_headerBuffer.size() - bytesReceived);
+							unwrittenBytesCopy += (m_headerBuffer.size() - bytesReceived);
+
+							// Payload should be empty, so let's ensure it is.
+							m_transactionData.clear();
 
 							size_t offset = bytesReceived;
 
@@ -223,7 +232,7 @@ namespace te
 					{
 						auto nparsed = http_parser_execute(m_httpParser, &m_httpParserSettings, m_transactionData.data() + m_unwrittenPayloadSize, bytesReceived);
 
-						m_unwrittenPayloadSize += bytesReceived;
+						unwrittenBytesCopy += bytesReceived;
 
 						if (nparsed != bytesReceived)
 						{
@@ -240,6 +249,10 @@ namespace te
 							}							
 						}
 					}
+
+					// Now that the parser has run, we can set our member which holds the number of bytes
+					// ready to be written back.
+					m_unwrittenPayloadSize = unwrittenBytesCopy;
 
 					// If the body is complete, then we need to provide some things which are guaranteed, such as
 					// automatic decompression when ::ConsumeAllBeforeSending() is true, and automatic conversion
@@ -383,14 +396,18 @@ namespace te
 					{
 						if (m_transactionData.size() < MaxPayloadResize)
 						{
+
+							auto freeSpace = m_transactionData.size() - m_unwrittenPayloadSize;							
+
 							// So, if the payload container already contains data, and we want to read more, and the 
 							// difference between the size of the existing valid data and the size of the container
 							// is less than our hard-coded buffer size of 131072, resize the container so it has
 							// 131072 bytes available for populating.
 							// This way, we should always have a buffer length of 131072.
-							if ((m_transactionData.size() - m_unwrittenPayloadSize) < PayloadBufferReadSize)
+							if (freeSpace < PayloadBufferReadSize)
 							{
-								m_transactionData.resize(m_transactionData.size() + (PayloadBufferReadSize - (m_transactionData.size() - m_unwrittenPayloadSize)));
+								freeSpace = (PayloadBufferReadSize - freeSpace);
+								m_transactionData.resize(m_transactionData.size() + freeSpace);
 							}
 						}
 						else
@@ -569,8 +586,11 @@ namespace te
 
 					m_transactionData.assign(fs.begin(), fs.end());
 
+					m_unwrittenPayloadSize = m_transactionData.size();
+
 					m_headersSent = true;
 					m_headersComplete = true;
+					m_payloadComplete = true;
 				}
 
 				const bool BaseHttpTransaction::GetConsumeAllBeforeSending() const

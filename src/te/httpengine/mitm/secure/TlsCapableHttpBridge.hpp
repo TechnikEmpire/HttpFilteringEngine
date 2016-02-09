@@ -669,7 +669,7 @@ namespace te
 					{
 
 						#ifndef NDEBUG
-						ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamRead");
+						ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamHeaders");
 						#endif // !NDEBUG
 
 						// EOF doesn't necessarily mean something critical happened. Could simply be
@@ -859,8 +859,6 @@ namespace te
 								// Let CSS selectors rip through the payload if it's complete and its HTML.
 								if (m_response->IsPayloadComplete() && m_response->GetConsumeAllBeforeSending() && m_response->IsPayloadHtml())
 								{
-									// XXX TODO - This is broken. See https://github.com/TechnikEmpire/HttpFilteringEngine/issues/32
-									
 									ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamRead - Processing HTML response.");
 									
 									auto processedHtmlString = m_filteringEngine->ProcessHtmlResponse(m_request.get(), m_response.get());

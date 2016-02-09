@@ -638,7 +638,7 @@ namespace te
 
 					if (hostHeaders.first != hostHeaders.second)
 					{
-						hostStringRef = boost::string_ref(hostHeaders.first->first);
+						hostStringRef = boost::string_ref(hostHeaders.first->second);
 					}
 
 					// If we got host information, we'll move to host specific selectors and collect
@@ -768,18 +768,10 @@ namespace te
 						//
 						// Beyond this point, we don't need to concern ourselves. The selector engine will deal with that. We just
 						// need to trim off the special characters that the ABP syntax adds to the selectors.
-						if (rule[1] == '@')
-						{
-							// Exception selector aka whitelist selector
-							AddSelectorMultiDomain(m_globalRuleKey, rule.substr(2), category, true);
-							return true;
-						}
-						else
-						{
-							// Inclusion selector aka blacklist selector
-							AddSelectorMultiDomain(m_globalRuleKey, rule.substr(2), category);
-							return true;
-						}
+
+						bool exception = (rule[1] == '@');
+						AddSelectorMultiDomain(m_globalRuleKey, rule.substr(2), category, exception);
+						return true;
 					}
 					else
 					{
@@ -788,7 +780,7 @@ namespace te
 						// matches is either a single domain or multiple domains separated by commas.
 						auto selectorStartPosition = rule.find(u8"#");						
 						
-						if (selectorStartPosition != std::string::npos && (selectorStartPosition + 2 < rule.size()))
+						if (selectorStartPosition != std::string::npos && (selectorStartPosition + 3 < rule.size()))
 						{
 							boost::string_ref domains = boost::string_ref(rule.c_str(), selectorStartPosition);
 
@@ -796,13 +788,19 @@ namespace te
 
 							if (rule[selectorStartPosition + 1] == '@')
 							{
-								// Exception selector that is domain specific
-								AddSelectorMultiDomain(m_globalRuleKey, rule.substr(selectorStartPosition + 2), category, true);
+								// Exception selector that is domain specific. Note we cut at 3 here, instead of 2. This is
+								// because it's a domain-specific exception selector. Exception selectors that are domain
+								// specific employ a unique format, in that the "actual" selector string is preceeded by
+								// #@## instead of simply #@. So a class selector would look like #@#.
+								AddSelectorMultiDomain(m_globalRuleKey, rule.substr(selectorStartPosition + 3), category, true);
 								return true;
 							}
 							else
 							{
-								// Inclusion selector that is domain specific
+								// Inclusion selector that is domain specific. In constrast to the domain specific exception
+								// selectors, the inclusion selectors (elements that should be hidden) follow the same syntax
+								// as global selectors. That is, they are preceeded by only 2 padding characters, "##". So
+								// a domain specific class selector would look like ##.class, so we trim at pos 2.
 								AddSelectorMultiDomain(m_globalRuleKey, rule.substr(selectorStartPosition + 2), category);
 								return true;
 							}
@@ -952,18 +950,18 @@ namespace te
 					}
 					catch (std::runtime_error& e)
 					{
-						std::string errMsg(u8"In HttpFilteringEngine::AddIncludeSelectorMultiDomain(boost::string_ref, const std::string&, const uint8_t) Error:\t");
+						std::string errMsg(u8"In HttpFilteringEngine::AddSelectorMultiDomain(boost::string_ref, const std::string&, const uint8_t) Error:\t");
 						errMsg.append(e.what());
 						ReportError(errMsg);
 						return;
 					}					
 
 					#ifndef NEDEBUG
-						assert(sSelector != nullptr && u8"In HttpFilteringEngine::AddIncludeSelectorMultiDomain(boost::string_ref, const std::string&, const uint8_t) - Failed to allocate shared selector.");
+						assert(sSelector != nullptr && u8"In HttpFilteringEngine::AddSelectorMultiDomain(boost::string_ref, const std::string&, const uint8_t) - Failed to allocate shared selector.");
 					#else // !NEDEBUG
 						if (sSelector == nullptr)
 						{
-							throw std::runtime_error(u8"In HttpFilteringEngine::AddIncludeSelectorMultiDomain(boost::string_ref, const std::string&, const uint8_t) - Failed to allocate shared selector.");
+							throw std::runtime_error(u8"In HttpFilteringEngine::AddSelectorMultiDomain(boost::string_ref, const std::string&, const uint8_t) - Failed to allocate shared selector.");
 						}
 					#endif					
 
