@@ -778,7 +778,12 @@ namespace te
 						// Note that this rule could still be a selector, but it would be bound to a specific domain. If
 						// either of these strings are found, then it is a selection filter and the text preceeding these
 						// matches is either a single domain or multiple domains separated by commas.
-						auto selectorStartPosition = rule.find(u8"#");						
+						auto selectorStartPosition = rule.find(u8"##");	
+
+						if (selectorStartPosition == std::string::npos)
+						{
+							selectorStartPosition = rule.find(u8"#@");
+						}
 						
 						if (selectorStartPosition != std::string::npos && (selectorStartPosition + 3 < rule.size()))
 						{
@@ -795,7 +800,7 @@ namespace te
 								AddSelectorMultiDomain(m_globalRuleKey, rule.substr(selectorStartPosition + 3), category, true);
 								return true;
 							}
-							else
+							else if(rule[selectorStartPosition + 1] == '#')
 							{
 								// Inclusion selector that is domain specific. In constrast to the domain specific exception
 								// selectors, the inclusion selectors (elements that should be hidden) follow the same syntax

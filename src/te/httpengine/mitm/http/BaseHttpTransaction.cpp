@@ -30,6 +30,7 @@
 */
 
 #include <sstream>
+#include <string>
 #include <stdexcept>
 #include <utility>
 #include <algorithm>
@@ -65,7 +66,9 @@ namespace te
 
 				const boost::string_ref BaseHttpTransaction::ContentTypeJavascript = u8"javascript";
 
-				BaseHttpTransaction::BaseHttpTransaction()
+				BaseHttpTransaction::BaseHttpTransaction() 
+					: 
+					m_headerBuffer(MaxPayloadResize)
 				{					
 					m_httpParserSettings.on_body = &OnBody;
 					m_httpParserSettings.on_chunk_complete = &OnChunkComplete;
@@ -74,7 +77,7 @@ namespace te
 					m_httpParserSettings.on_header_field = &OnHeaderField;
 					m_httpParserSettings.on_header_value = &OnHeaderValue;
 					m_httpParserSettings.on_message_begin = &OnMessageBegin;
-					m_httpParserSettings.on_message_complete = &OnMessageComplete;
+					m_httpParserSettings.on_message_complete = &OnMessageComplete;					
 				}
 
 				BaseHttpTransaction::~BaseHttpTransaction()
@@ -180,19 +183,20 @@ namespace te
 
 					if (!m_headersComplete)
 					{
-						const char* data = boost::asio::buffer_cast<const char*>(m_headerBuffer.data());
+						std::string hdrString{ (std::istreambuf_iterator<char>(&m_headerBuffer)), std::istreambuf_iterator<char>() };
+
+						auto bytesToParse = hdrString.size();
 
 						// The parser must ALWAYS be called first. The OnMessageBegin callback will reset the state
-						// of this object, clearing everything including payload data. If the parser is called second,
-						// this transaction will be irreparably broken.
-						auto nparsed = http_parser_execute(m_httpParser, &m_httpParserSettings, data, m_headerBuffer.size());
+						// of this object, clearing everything excluding the payload data.
+						auto nparsed = http_parser_execute(m_httpParser, &m_httpParserSettings, hdrString.c_str(), bytesToParse);
 
-						if (nparsed != m_headerBuffer.size())
+						if (nparsed != bytesToParse)
 						{
 							if (m_httpParser->http_errno != 0)
-							{
-								std::string errMsg(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse headers. Got http_parser error number: ");
-								errMsg.append(std::to_string(m_httpParser->http_errno));
+							{								
+								std::string errMsg(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse headers. Got http_parser error: ");								
+								errMsg.append(http_errno_description(HTTP_PARSER_ERRNO(m_httpParser)));
 								ReportError(errMsg);
 								return false;
 							}
@@ -202,28 +206,18 @@ namespace te
 							}							
 						}
 
-						if (bytesReceived < m_headerBuffer.size())
+						if (bytesReceived < bytesToParse)
 						{
 							// Body/payload data has come through into our header buffer. This data must be
 							// copied out to the m_transactionPayload vector.
-							std::istreambuf_iterator<char> extraDataStart(&m_headerBuffer);
 
 							// Store exactly how much payload/body data is being copied out to the payload vector.
-							unwrittenBytesCopy += (m_headerBuffer.size() - bytesReceived);
+							unwrittenBytesCopy += (bytesToParse - bytesReceived);
 
 							// Payload should be empty, so let's ensure it is.
 							m_transactionData.clear();
 
-							size_t offset = bytesReceived;
-
-							while (offset > 0)
-							{
-								extraDataStart++;
-								offset--;
-							}
-
-							// Copy the payload data to the request transaction payload vector
-							std::copy(extraDataStart, std::istreambuf_iterator<char>(), std::back_inserter(m_transactionData));
+							m_transactionData.assign(hdrString.begin() + bytesReceived, hdrString.end());
 						}
 
 						success = true;
@@ -238,8 +232,8 @@ namespace te
 						{
 							if (m_httpParser->http_errno != 0)
 							{
-								std::string errMsg(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse payload. Got http_parser error number: ");
-								errMsg.append(std::to_string(m_httpParser->http_errno));
+								std::string errMsg(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse payload. Got http_parser error: ");
+								errMsg.append(http_errno_description(HTTP_PARSER_ERRNO(m_httpParser)));
 								ReportError(errMsg);
 								return false;
 							}
@@ -276,7 +270,7 @@ namespace te
 
 						const auto contentEncoding = GetHeader(util::http::headers::ContentEncoding);
 
-						if (contentEncoding.first != contentEncoding.second)
+						if (finalizationFailed == false && contentEncoding.first != contentEncoding.second)
 						{
 							if (boost::iequals(contentEncoding.first->second, u8"gzip"))
 							{
@@ -318,28 +312,32 @@ namespace te
 						// Ensure that the terminating CRLF's are present and that they are not factored
 						// into Content-Length calculation.
 
-						if (
-							m_transactionData[m_transactionData.size() - 4] == '\r' &&
-							m_transactionData[m_transactionData.size() - 3] == '\n' &&
-							m_transactionData[m_transactionData.size() - 2] == '\r' &&
-							m_transactionData[m_transactionData.size() - 1] == '\n'
-							)
+						if (success)
 						{
-							AddHeader(util::http::headers::ContentLength, std::to_string(m_transactionData.size() - 4), true);
-						}
-						else {
+							if (
+								m_transactionData.size() >= 4 &&
+								m_transactionData[m_transactionData.size() - 4] == '\r' &&
+								m_transactionData[m_transactionData.size() - 3] == '\n' &&
+								m_transactionData[m_transactionData.size() - 2] == '\r' &&
+								m_transactionData[m_transactionData.size() - 1] == '\n'
+								)
+							{
+								AddHeader(util::http::headers::ContentLength, std::to_string(m_transactionData.size() - 4), true);
+							}
+							else {
 
-							AddHeader(util::http::headers::ContentLength, std::to_string(m_transactionData.size()), true);
-							
-							m_transactionData.push_back('\r');
-							m_transactionData.push_back('\n');
-							m_transactionData.push_back('\r');
-							m_transactionData.push_back('\n');
-						}
+								AddHeader(util::http::headers::ContentLength, std::to_string(m_transactionData.size()), true);
 
-						// Reset the size, in case pushing terminating CRLF's adjusted it. Must be done, otherwise
-						// we'll ruin keep-alive.
-						m_unwrittenPayloadSize = m_transactionData.size();
+								m_transactionData.push_back('\r');
+								m_transactionData.push_back('\n');
+								m_transactionData.push_back('\r');
+								m_transactionData.push_back('\n');
+							}
+
+							// Reset the size, in case pushing terminating CRLF's adjusted it. Must be done, otherwise
+							// we'll ruin keep-alive.
+							m_unwrittenPayloadSize = m_transactionData.size();
+						}						
 					}
 					else
 					{
@@ -389,6 +387,7 @@ namespace te
 						// This is easy, leave the buffer at its current size and just return it. Any existing data
 						// will be overwritten, and in the ::Parse(...) method, m_unwrittenPayloadSize will be
 						// adjusted to reflect the length of the accurate data.
+						m_unwrittenPayloadSize = 0;
 						return boost::asio::mutable_buffers_1(m_transactionData.data(), m_transactionData.size());
 					}
 
@@ -462,6 +461,8 @@ namespace te
 					RemoveHeader(util::http::headers::TransferEncoding);
 					RemoveHeader(util::http::headers::ContentEncoding);					
 
+					size_t payloadSize = 0;
+
 					if (
 						m_transactionData.size() >= 4 &&
 						m_transactionData[m_transactionData.size() - 4] == '\r' &&
@@ -470,20 +471,19 @@ namespace te
 						m_transactionData[m_transactionData.size() - 1] == '\n'
 						)
 					{
-						auto sizeString = std::to_string(payload.size() - 4);
-						AddHeader(util::http::headers::ContentLength, sizeString);
+						payloadSize = m_transactionData.size() - 4;
 					}
 					else 
 					{
-
-						auto sizeString = std::to_string(payload.size());
-						AddHeader(util::http::headers::ContentLength, sizeString);
+						payloadSize = m_transactionData.size();
 
 						m_transactionData.push_back('\r');
 						m_transactionData.push_back('\n');
 						m_transactionData.push_back('\r');
 						m_transactionData.push_back('\n');
 					}
+
+					AddHeader(util::http::headers::ContentLength, std::to_string(payloadSize));
 
 					// Reset the size, in case pushing terminating CRLF's adjusted it. Must be done, otherwise
 					// we'll ruin keep-alive.
@@ -502,6 +502,8 @@ namespace te
 					RemoveHeader(util::http::headers::TransferEncoding);
 					RemoveHeader(util::http::headers::ContentEncoding);
 
+					size_t payloadSize = 0;
+
 					if (
 						m_transactionData.size() >= 4 &&
 						m_transactionData[m_transactionData.size() - 4] == '\r' &&
@@ -510,20 +512,20 @@ namespace te
 						m_transactionData[m_transactionData.size() - 1] == '\n'
 						)
 					{
-						auto sizeString = std::to_string(payload.size() - 4);
-						AddHeader(util::http::headers::ContentLength, sizeString);
+						payloadSize = m_transactionData.size() - 4;						
 					}
 					else
 					{
-
-						auto sizeString = std::to_string(payload.size());
-						AddHeader(util::http::headers::ContentLength, sizeString);
+						payloadSize = m_transactionData.size();
+						auto sizeString = std::to_string(m_transactionData.size());
 
 						m_transactionData.push_back('\r');
 						m_transactionData.push_back('\n');
 						m_transactionData.push_back('\r');
 						m_transactionData.push_back('\n');
 					}
+
+					AddHeader(util::http::headers::ContentLength, std::to_string(payloadSize));
 
 					// Reset the size, in case pushing terminating CRLF's adjusted it. Must be done, otherwise
 					// we'll ruin keep-alive.
@@ -543,7 +545,11 @@ namespace te
 				void BaseHttpTransaction::SetShouldBlock(const uint8_t category)
 				{
 					m_shouldBlock = category;
-					m_payloadComplete = true;
+
+					if (category > 0)
+					{
+						m_payloadComplete = true;
+					}					
 				}
 
 				void BaseHttpTransaction::Make204()
@@ -809,7 +815,7 @@ namespace te
 						boost::iostreams::filtering_streambuf<boost::iostreams::input> in;
 
 						in.push(boost::iostreams::gzip_decompressor());
-						in.push(boost::iostreams::array_source(m_transactionData.data(), m_unwrittenPayloadSize));
+						in.push(boost::iostreams::array_source(m_transactionData.data(), m_transactionData.size()));
 
 						boost::iostreams::copy(in, std::back_insert_iterator<std::vector<char>>(decompressed));
 
@@ -822,13 +828,15 @@ namespace te
 						return false;
 					}
 
-					if (decompressed.size() > 0)
-					{
-						m_transactionData = std::move(decompressed);
-						m_unwrittenPayloadSize = m_transactionData.size();
+					m_transactionData = std::move(decompressed);
+					m_unwrittenPayloadSize = m_transactionData.size();
+
+					if (m_transactionData.size() > 0)
+					{						
 						return true;
 					}
-					else {
+					else 
+					{
 						return false;
 					}
 				}
@@ -866,7 +874,7 @@ namespace te
 						boost::iostreams::filtering_streambuf<boost::iostreams::input> in;
 
 						in.push(boost::iostreams::zlib_decompressor());
-						in.push(boost::iostreams::array_source(m_transactionData.data(), m_unwrittenPayloadSize));
+						in.push(boost::iostreams::array_source(m_transactionData.data(), m_transactionData.size()));
 
 						boost::iostreams::copy(in, std::back_insert_iterator<std::vector<char>>(decompressed));
 
@@ -879,10 +887,11 @@ namespace te
 						return false;
 					}
 
-					if (decompressed.size() > 0)
-					{
-						m_transactionData = std::move(decompressed);
-						m_unwrittenPayloadSize = m_transactionData.size();
+					m_transactionData = std::move(decompressed);
+					m_unwrittenPayloadSize = m_transactionData.size();
+
+					if (m_transactionData.size() > 0)
+					{						
 						return true;
 					}
 					else {
@@ -1022,7 +1031,6 @@ namespace te
 						trans->m_unwrittenPayloadSize = 0;
 						trans->m_headersSent = false;
 						trans->m_headersComplete = false;
-						trans->m_transactionData.clear();
 						trans->m_lastHeader = std::string("");
 						
 					}

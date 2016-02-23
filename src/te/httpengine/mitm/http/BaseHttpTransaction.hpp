@@ -694,7 +694,7 @@ namespace te
 					/// <summary>
 					/// Maximum size that the payload buffer can be resized to.
 					/// </summary>
-					static constexpr uint32_t MaxPayloadResize = 10000000;
+					static constexpr uint32_t MaxPayloadResize = 10485760;
 
 					/// <summary>
 					/// The http_parser object that gets stuck with doing all of the hard work.

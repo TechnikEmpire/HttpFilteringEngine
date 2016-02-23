@@ -320,10 +320,7 @@ namespace te
 					#endif // !NDEBUG
 
 					if (!error)
-					{
-						SetNoDelay(UpstreamSocket(), true);
-						SetNoDelay(DownstreamSocket(), true);
-
+					{						
 						SetStreamTimeout(5000);
 
 						m_upstreamSocket.set_verify_mode(boost::asio::ssl::verify_peer | boost::asio::ssl::verify_fail_if_no_peer_cert);

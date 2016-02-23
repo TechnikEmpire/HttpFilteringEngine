@@ -867,11 +867,7 @@ namespace te
 									{
 										std::vector<char> processedHtmlVector(processedHtmlString.begin(), processedHtmlString.end());
 
-										std::string nfo(u8"Processed HTML response size is ");
-										nfo.append(std::to_string(processedHtmlVector.size()));
-										ReportInfo(nfo);
-
-										m_response->SetPayload(processedHtmlVector);
+										m_response->SetPayload(std::move(processedHtmlVector));
 									}									
 								}
 								else if (m_response->IsPayloadComplete() == false && m_response->GetConsumeAllBeforeSending() == true)
@@ -1006,7 +1002,7 @@ namespace te
 								SetStreamTimeout(5000);
 
 								boost::asio::async_read_until(
-									m_upstreamSocket, 
+									m_upstreamSocket,
 									m_response->GetHeaderReadBuffer(), 
 									u8"\r\n\r\n",
 									m_upstreamStrand.wrap(
@@ -1129,26 +1125,30 @@ namespace te
 										}										
 									}
 
-									auto hostComparison = hostWithoutPort.compare(m_upstreamHost);
-									
-									// If we're secure, and the client is asking for a new host, gotta quit.
-									if (hostComparison != 0 && std::is_same<BridgeSocketType, network::TlsSocket>::value)
+									// If the we're already connected to a host and it's not the same, just quit.
+									bool needsResolve = true;
+									if (m_upstreamHost.size() > 0)
 									{
-										Kill();
-										return;
-									}
-									
-									if (hostComparison != 0)
-									{
-										// In the event that the upstream host name is empty, or that it's equal to the request
-										// host but keep-alive is set to false, then we need to establish a new connection to 
-										// the host in question. We'll do this by simply resolving the host. The resolve handler
-										// will take it from there.
+										auto hostComparison = hostWithoutPort.compare(m_upstreamHost);
+										
+										if (hostComparison != 0)
+										{
+											Kill();
+											return;
+										}
 
+										needsResolve = false;
+									}
+
+									if (needsResolve)
+									{
+										// If we're not already connected to a host, then we need to resolve it and
+										// connect to it. This **should** only ever be true in the event that its a 
+										// non-TLS (plain HTTP) connection.
 										SetStreamTimeout(5000);
 
 										m_upstreamHost = hostWithoutPort;
-										boost::asio::ip::tcp::resolver::query query(m_upstreamHost, "http");
+										boost::asio::ip::tcp::resolver::query query(m_upstreamHost, std::is_same<BridgeSocketType, network::TlsSocket>::value ? "https" : "http");
 
 										m_resolver.async_resolve(
 											query,
@@ -1162,41 +1162,34 @@ namespace te
 												)
 											);
 
-										return;										
-									}
-									else if (hostComparison == 0 && m_keepAlive == true)
-									{
-										// Just write to the server that we're apparently already connected to. We
-										// don't concern ourselves with the ShouldBlock value here on the request.
-										// Once we get the upstream response headers, which gives us data about the
-										// size of a yet-to-be-completed request, we will block if the value was set
-										// here, but not before the http filtering engine reports this data to
-										// any observer(s).
-
-										SetStreamTimeout(5000);
-
-										auto writeBuffer = m_request->GetWriteBuffer();
-
-										boost::asio::async_write(
-											m_upstreamSocket, 
-											writeBuffer, 
-											boost::asio::transfer_all(), 
-											m_upstreamStrand.wrap(
-												std::bind(
-													&TlsCapableHttpBridge::OnUpstreamWrite, 
-													shared_from_this(), 
-													std::placeholders::_1
-													)
-												)
-											);
-
 										return;
 									}
 									
-									// XXX TODO - Double check this.
-									// Host is defined but is different than the requested host.
-									ReportWarning(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Host is different than expected. Aborting.");
-									
+									// Just write to the server that we're apparently already connected to. We
+									// don't concern ourselves with the ShouldBlock value here on the request.
+									// Once we get the upstream response headers, which gives us data about the
+									// size of a yet-to-be-completed request, we will block if the value was set
+									// here, but not before the http filtering engine reports this data to
+									// any observer(s).
+
+									SetStreamTimeout(5000);
+
+									auto writeBuffer = m_request->GetWriteBuffer();
+
+									boost::asio::async_write(
+										m_upstreamSocket,
+										writeBuffer,
+										boost::asio::transfer_all(),
+										m_upstreamStrand.wrap(
+											std::bind(
+												&TlsCapableHttpBridge::OnUpstreamWrite,
+												shared_from_this(),
+												std::placeholders::_1
+												)
+											)
+										);
+
+									return;
 								}
 								else
 								{
@@ -1386,6 +1379,20 @@ namespace te
 									#ifndef NDEBUG
 									ReportInfo(u8"In TlsCapableHttpBridge::OnDownstreamWrite(const boost::system::error_code&) - Keep-alive specified, initiating new read.");
 									#endif
+
+									// We cannot use keep-alive when we've actively blocked a
+									// transaction from completing early. If we do, then the follow
+									// up response from the server on the new request will be
+									// polluted by the left over data from the previous, aborted
+									// (blocked) request. Therefore, we have no choice but to
+									// entirely terminate the bridge and force the client to open a
+									// new connection.
+
+									if ((m_request && m_request->GetShouldBlock() != 0) || (m_response && m_response->GetShouldBlock() != 0))
+									{
+										Kill();
+										return;
+									}
 
 									SetStreamTimeout(5000);
 
