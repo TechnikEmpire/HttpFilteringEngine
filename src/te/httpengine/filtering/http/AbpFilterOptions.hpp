@@ -29,7 +29,10 @@
 * with Http Filtering Engine. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "HttpAbpInclusionFilter.hpp"
+#pragma once
+
+#include <bitset>
+#include <cstdint>
 
 namespace te
 {
@@ -39,16 +42,43 @@ namespace te
 		{
 			namespace http
 			{
-				HttpAbpInclusionFilter::HttpAbpInclusionFilter(const std::string& rule, const HttpAbpFilterSettings settings, const uint8_t category) :
-					HttpAbpBaseFilter(rule, settings, category)
+
+				/// <summary>
+				/// Each ABP Filter can specify many details about just what type of requests and
+				/// content a filter ought to apply to. By configuring these options, it's possible to
+				/// develop filters that will return a match against images, but not against scripts, or
+				/// against third-party CSS Documents, etc. This enum serves as convenient key system
+				/// for checking and setting options on the AbpFilterSettings object, a fixed-size
+				/// bitset where any of these options, by the corresponding enum key, can be
+				/// manipulated.
+				/// </summary>
+				enum AbpFilterOption
+					: size_t
 				{
+					script = 0,
+					notscript = 1,
+					image = 2,
+					notimage = 3,
+					stylesheet = 4,
+					notstylesheet = 5,
+					object = 6,
+					notobject = 7,
+					object_subrequest = 8,
+					notobject_subrequest = 9,
+					subdocument = 10,
+					notsubdocument = 11,
+					document = 12,
+					notdocument = 13,
+					elemhide = 14,
+					notelemhide = 15,
+					third_party = 16,
+					notthird_party = 17,
+					xmlhttprequest = 18,
+					notxmlhttprequest = 19
+				};
 
-				}
+				typedef std::bitset<20> AbpFilterSettings;
 
-				HttpAbpInclusionFilter::~HttpAbpInclusionFilter()
-				{
-
-				}
 			} /* namespace http */
 		} /* namespace filtering */
 	} /* namespace httpengine */

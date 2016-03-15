@@ -150,15 +150,6 @@
     <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpFilteringEngine.hpp">
       <Filter>Header Files\te\httpengine\filtering\http</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpBaseFilter.hpp">
-      <Filter>Header Files\te\httpengine\filtering\http</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpExceptionFilter.hpp">
-      <Filter>Header Files\te\httpengine\filtering\http</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpInclusionFilter.hpp">
-      <Filter>Header Files\te\httpengine\filtering\http</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\mitm\http\BaseHttpTransaction.hpp">
       <Filter>Header Files\te\httpengine\mitm\http</Filter>
     </ClInclude>
@@ -207,9 +198,6 @@
     <ClInclude Include="..\..\src\te\httpengine\util\cb\EventReporter.hpp">
       <Filter>Header Files\te\httpengine\util\cb</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpFilterOptions.hpp">
-      <Filter>Header Files\te\httpengine\filtering\http</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\DiversionControl.hpp">
       <Filter>Header Files\te\httpengine\mitm\diversion</Filter>
     </ClInclude>
@@ -225,21 +213,21 @@
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpAcceptor.hpp">
       <Filter>Header Files\te\httpengine\mitm\secure</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\filtering\http\AbpFilterParser.hpp">
+      <Filter>Header Files\te\httpengine\filtering\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\filtering\http\AbpFilter.hpp">
+      <Filter>Header Files\te\httpengine\filtering\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\filtering\http\AbpFilterOptions.hpp">
+      <Filter>Header Files\te\httpengine\filtering\http</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpFilteringEngine.cpp">
-      <Filter>Source Files\te\httpengine\filtering\http</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpAbpBaseFilter.cpp">
-      <Filter>Source Files\te\httpengine\filtering\http</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpAbpExceptionFilter.cpp">
-      <Filter>Source Files\te\httpengine\filtering\http</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpAbpInclusionFilter.cpp">
       <Filter>Source Files\te\httpengine\filtering\http</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\http\BaseHttpTransaction.cpp">
@@ -283,6 +271,12 @@
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineCAPI.cpp">
       <Filter>Source Files\te\httpengine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\filtering\http\AbpFilterParser.cpp">
+      <Filter>Source Files\te\httpengine\filtering\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\filtering\http\AbpFilter.cpp">
+      <Filter>Source Files\te\httpengine\filtering\http</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

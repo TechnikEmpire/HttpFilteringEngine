@@ -33,9 +33,13 @@
 
 #include <vector>
 #include <string>
+#include <tuple>
+#include <unordered_set>
+#include "../../../util/string/StringRefUtil.hpp"
 #include <boost/utility/string_ref.hpp>
 #include "../options/HttpFilteringOptions.hpp"
-#include "HttpAbpFilterOptions.hpp"
+#include "AbpFilterOptions.hpp"
+#include "../../util/cb/EventReporter.hpp"
 
 namespace te
 {
@@ -47,36 +51,93 @@ namespace te
 			{				
 
 				/// <summary>
-				/// The HttpAbpBaseFilter object contains all of the base code for finalizing the
-				/// parsing and matching of Adblock Plus Filters.
+				/// The AbpFilter object serves the purpose of denying or permitting an HTTP request
+				/// or response from being completed based on host, URI and generated response
+				/// payload content types.
 				/// </summary>
-				class HttpAbpBaseFilter
+				class AbpFilter : public util::cb::EventReporter
 				{
 
+					/// <summary>
+					/// Allow the parser that constructs this object to be a friend. We all need
+					/// friends.
+					/// </summary>
+					friend class AbpFilterParser;
+
+				private:
+
+					/// <summary>
+					/// A single-char pattern that can match / & ? etc.
+					/// </summary>
+					static const boost::string_ref SeparatorStrRef;
+
+					/// <summary>
+					/// Simple named keys for determing the type of a rule part.
+					/// </summary>
+					enum RulePartType
+					{
+
+						/// <summary>
+						/// An anchored domain string must be present exactly within the domain
+						/// portion of the request in order to qualify as a match. The string must
+						/// either match exactly from position 0 until LENGTH_OF_MATCH_STRING, or
+						/// match at POSITION_OF_PERIOD_INDICATING_SUBDOMAIN until
+						/// LENGTH_OF_MATCH_STRING. So, ||example.com can match http://example.com,
+						/// http://www.example.com, http://sub.example.com, etc.
+						/// </summary>
+						AnchoredAddress = 0,
+
+						/// <summary>
+						/// Match anything.
+						/// </summary>
+						Wildcard = 1,
+
+						/// <summary>
+						/// Matches a valid URL seperator character, such as "/, ?, &" etc.
+						/// </summary>
+						Separator = 2,
+
+						/// <summary>
+						/// An exact string match.
+						/// </summary>
+						StringLiteral = 3,
+
+						/// <summary>
+						/// Any characters between an opening and (optional) ending pipe must
+						/// exactly match the address of a request. If the end enclosing pipe is
+						/// omitted, then then the text following the opening pipe up until EOF or
+						/// another special character must exactly be present within the address of
+						/// the request.
+						/// </summary>
+						AddressMatch = 4,
+
+						/// <summary>
+						/// End of address match applies whenever a single pipe is placed in a
+						/// filter beyond position 0. Such a rule is interpreted in such a way that
+						/// all text preceeding the ending pipe must exactly match a substring of
+						/// the end of the request in equal length to LENGTH_OF_MATCH_STRING.
+						/// </summary>
+						EndOfAddressMatch = 5
+					};					
+				
 				public:
 
 					/// <summary>
-					/// Constructs a new HttpAbpBaseFilter object. Note that some preprocessing of the
-					/// raw filter rule must have already been done to extract the options for the rule.
-					/// This is handled by the HttpFilteringEngine object, so you should not try to
-					/// contruct one of these objects directly, but rather use the provided interface in
-					/// HttpFilteringEngine to load rules.
+					/// Constructs a new AbpFilter object. XXX TODO - This really should be private
+					/// that only the parser can create instances, but I don't want the headache of
+					/// a hack solution for make_shared to correctly function while this is private
+					/// right now.
 					/// </summary>
-					/// <param name="rule">
-					/// The raw Adblock Plus formatted rule string to parse. 
-					/// </param>
-					/// <param name="settings">
-					/// The settings specified for the rule. 
-					/// </param>
-					/// <param name="category">
-					/// The category that the rule belongs to. Ads, Malware etc.
-					/// </param>
-					HttpAbpBaseFilter(std::string rule, const HttpAbpFilterSettings settings, const uint8_t category);
-				
+					AbpFilter(
+						util::cb::MessageFunction onInfo = nullptr,
+						util::cb::MessageFunction onWarning = nullptr,
+						util::cb::MessageFunction onError = nullptr
+						);
+
 					/// <summary>
 					/// Default virtual destructor. 
 					/// </summary>
-					virtual ~HttpAbpBaseFilter();
+					virtual ~AbpFilter();
 
 					/// <summary>
 					/// Determine if the supplied data, given the options and the host, is found to
@@ -103,7 +164,7 @@ namespace te
 					/// filters so that they don't need to individually perform this task.
 					/// </param>
 					/// <returns>True if the filter was a match, false if not.</returns>
-					virtual bool IsMatch(boost::string_ref data, const HttpAbpFilterSettings dataSettings, boost::string_ref dataHost) const;
+					virtual bool IsMatch(boost::string_ref data, const AbpFilterSettings dataSettings, boost::string_ref dataHost) const;
 
 					/// <summary>
 					/// The original formatting of ABP filters is lost during multiple stages of
@@ -132,16 +193,16 @@ namespace te
 					/// <returns>
 					/// The configured filter settings. 
 					/// </returns>
-					HttpAbpFilterSettings GetFilterSettings() const;
+					AbpFilterSettings GetFilterSettings() const;
 
 					/// <summary>
-					/// Convenience function for determining if, according to the settings for this
-					/// filter, the filter's matching operation is bound to type information. This
-					/// information is only ever available in an HTTP response, so by checking this
-					/// property, the filtering engine can optimize away filter checks that are
-					/// impossible to match at present. Obviously when the filter engine is checking
-					/// a brand new request, it's not possible to have type information, so all
-					/// typed selectors can simply be bypassed.
+					/// Indicates if, according to the settings for this filter, the filter's
+					/// matching operation is bound to type information. This information is only
+					/// ever available in an HTTP response, so by checking this property, the
+					/// filtering engine can optimize away filter checks that are impossible to
+					/// match at present. Obviously when the filter engine is checking a brand new
+					/// request, it's not possible to have response type information, so all typed
+					/// selectors can simply be bypassed in this intial check.
 					/// </summary>
 					/// <returns>
 					/// True if this filter's matching operation is bound to a specific
@@ -149,84 +210,38 @@ namespace te
 					/// </returns>
 					bool IsTypeBound() const;
 
-				protected:
+					/// <summary>
+					/// Indicates whether or not a positive match from this AbpFilter object
+					/// indicates that the transaction should be whitelisted or not.
+					/// </summary>
+					/// <returns>
+					/// True if a positive match from this AbpFilter object should be interpreted as
+					/// meaning that the transaction should be whitelisted, false otherwise.
+					/// </returns>
+					bool IsException() const;
+
+					const std::unordered_set<boost::string_ref, util::string::StringRefHash>& GetExceptionDomains() const;
+
+					const std::unordered_set<boost::string_ref, util::string::StringRefHash>& GetInclusionDomains() const;
+
+				protected:					
+
+					using FilterPart = std::tuple<boost::string_ref, RulePartType>;
 
 					/// <summary>
-					/// Simple named keys for determing the type of a rule part.
+					/// Components of the filtering rule.
 					/// </summary>
-					enum RulePartType
-					{
-
-						/// <summary>
-						/// Anchored addresses bind the following rule to a specified domain. In the
-						/// case of an anchored domain, all that must match is the HOST portion of
-						/// the request.
-						/// </summary>
-						AnchoredAddress = 0,
-
-						/// <summary>
-						/// Match anything.
-						/// </summary>
-						Wildcard = 1,
-
-						/// <summary>
-						/// Matches a valid URL seperator character, such as "/, ?, &" etc.
-						/// </summary>
-						Separator = 2,
-
-						/// <summary>
-						/// An exact string match.
-						/// </summary>
-						StringLiteral = 3,
-
-						/// <summary>
-						/// This is a very messy type of rule, because it's rather loosely defined
-						/// and thus, complex. It's possible to define rules like
-						/// |https://www.example.com/|, where the entire request string must match
-						/// everything in between the two pipes exactly. However, it's also possible
-						/// to use the opening pipe, but omit the closing pipe entirely. This
-						/// complicates the rule, because in this case it's not possible to exactly
-						/// match, since the closing pipe is omitted. We take such rules to be
-						/// substring/partial matches of the request.
-						/// </summary>
-						RequestLiteralMatch = 4,
-
-						/// <summary>
-						/// As noted above, this rule allows to partially match the beginning of a
-						/// request to a specific string. Such a rule is not terminated by a closing
-						/// pipe, and as such, it's possible to add additional parameters to the
-						/// request. In the event that the pipe is missing, EOF or another special
-						/// character may denote the end of the substring/partial match. For
-						/// example, "|https://*=*$domain=example.com" would match all requests
-						/// to/from example.com which are requested over HTTPS, and also contain an
-						/// equals sign in between any two portions of the request string.
-						/// 
-						/// For this rule time, we must first so an exact substring match against
-						/// the request, ensuring the first 8 characters equal "https://".
-						/// </summary>
-						RequestLiteralPartialMatch = 5
-					};
+					std::vector<FilterPart> m_filterParts;
 
 					/// <summary>
-					/// This is a container of the different parts of a parsed rule. Rules are split up
-					/// at special tokens such as "*|?". The m_rulePartsInt container and the
-					/// m_ruleParts compliment eachother, in that the m_rulePartsInt container stores
-					/// information about what kind of element m_ruleParts[n] is. Depending on the value
-					/// of m_rulePartsInt[n], we can tell that m_ruleParts[n] is a string literal, an
-					/// anchored domain, a wildcard character, separator, etc. We use this information
-					/// in matching to quickly determine what the next step of matching is.
-					/// 
-					/// For example, if m_rulePartsInt[0] is a string literal, m_rulePartsInt[1] is a
-					/// wildcard, and m_rulePartsInt[2] is another string literal, then the matching
-					/// algorithm will do a simple find([0]) -&gt; then -&gt; find([2]) at least one
-					/// char beyond the result of the first find.
+					/// Container of all domains that are an exception to this rule.
 					/// </summary>
-					std::vector<boost::string_ref> m_ruleParts;
+					std::unordered_set<boost::string_ref, util::string::StringRefHash> m_exceptionDomains;
 
 					/// <summary>
-					/// See comments on m_ruleParts. 
+					/// Container of all domains that this rule applies to.
 					/// </summary>
-					std::vector<RulePartType> m_rulePartTypes;
+					std::unordered_set<boost::string_ref, util::string::StringRefHash> m_inclusionDomains;
 
 					/// <summary>
 					/// Every single ABP filter can come with its own unique settings. These can get
@@ -235,7 +250,7 @@ namespace te
 					/// apply to images, but not scripts, or third-party or not, etc. This stores the
 					/// settings for a specific ABP Filter item.
 					/// </summary>
-					HttpAbpFilterSettings m_settings;
+					AbpFilterSettings m_settings;
 
 					/// <summary>
 					/// A copy of the original rule string. This is kept for reference only, as the
@@ -245,27 +260,32 @@ namespace te
 					std::string m_originalRuleString;
 
 					/// <summary>
-					/// The category that this filtering rule applies to. Consider the instance where
-					/// one might subscribe to an ABP formatted list specifically for Ads, then another
-					/// list for Malware, another for Pornography, etc. This is how we keep track of
-					/// what category or list the rule originated from.
+					/// The category that this filtering rule applies to. Consider the instance
+					/// where one might subscribe to an ABP formatted list specifically for Ads,
+					/// then another list for Malware, another for Pornography, etc. This is how we
+					/// keep track of what category or list the rule originated from. This software
+					/// is generally agnostic to the implied meaning of each category, except for a
+					/// value of zero, which is a reserved category ID meant to indicate that no
+					/// filtering should be done on a transaction.
 					/// </summary>
-					uint8_t m_category = 0;
+					uint8_t m_category = 1;
 
 					/// <summary>
-					/// A single-char pattern that can match to any character, one or more times. 
+					/// Indicates whether or not the constructed AbpFilter object has response type
+					/// information as part of its criteria. This is important for optimization, as
+					/// it is completely unnecessary to run type bound filters against initial
+					/// requests, as they necessarily must be run only against requests that have
+					/// already successfully generated at the very least response headers from a
+					/// successful request.
 					/// </summary>
-					static const boost::string_ref WildcardStrRef;
+					bool m_isTypeBound = false;
 
 					/// <summary>
-					/// A single-char pattern that can match / & ? etc.
+					/// Indicates whether or not the constructed AbpFilter object's matching
+					/// mechnism is intended to indicate that the request/response in question is to
+					/// be whitelisted upon a successful match or not.
 					/// </summary>
-					static const boost::string_ref SeparatorStrRef;
-
-					/// <summary>
-					/// All special characters of the ABP filtering syntax, including single anchors.
-					/// </summary>
-					static const boost::string_ref SpecialCharStrRef;
+					bool m_isException = false;
 
 					/// <summary>
 					/// Method for determining if two settings objects are compatible. In order to
@@ -285,7 +305,7 @@ namespace te
 					/// True of the rule filtering settings are compatible/applicable with the known
 					/// transaction settings, false otherwise.
 					/// </returns>
-					bool SettingsApply(const HttpAbpFilterSettings transactionSettings, const HttpAbpFilterSettings ruleSettings) const;				
+					bool SettingsApply(const AbpFilterSettings transactionSettings, const AbpFilterSettings ruleSettings) const;				
 
 				};
 

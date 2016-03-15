@@ -78,14 +78,8 @@ namespace te
 							(lhs[lhssize - 1] == rhs[lhssize - 1]) &&
 							(lhs[lhssize - 2] == rhs[lhssize - 2]))
 						{
-							auto compSize = (lhssize - 4);
-
-							if (compSize == 0)
-							{
-								return true;
-							}
-
-							return std::memcmp(lhs.begin() + 4, rhs.begin() + 4, compSize) == 0;
+							
+							return std::memcmp(lhs.begin(), rhs.begin(), lhssize) == 0;
 						}
 					}
 					else

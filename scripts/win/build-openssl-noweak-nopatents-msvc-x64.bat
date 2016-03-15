@@ -47,7 +47,7 @@ if [%OPENSSL_VERSION%] == [] GOTO RequiresSetup
 :: bit build tool stuff to be setup. If you have installed VS 2015 to a 
 :: non-standard place, or have an older version of VS, you will need to 
 :: change this line.
-call "C:\Program Files (x64)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
+call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
 
 :: Change the current directory to the x64 OpenSSL release source directory.
 cd ..\..\deps\openssl\%OPENSSL_VERSION%\src-msvc-x64-release

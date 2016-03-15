@@ -538,11 +538,10 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\te\httpengine\filtering\http\AbpFilterParser.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\filtering\http\CategorizedCssSelector.hpp" />
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpBaseFilter.hpp" />
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpExceptionFilter.hpp" />
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpFilterOptions.hpp" />
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpAbpInclusionFilter.hpp" />
+    <ClInclude Include="..\..\src\te\httpengine\filtering\http\AbpFilter.hpp" />
+    <ClInclude Include="..\..\src\te\httpengine\filtering\http\AbpFilterOptions.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpFilteringEngine.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\filtering\options\HttpFilteringOptions.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\filtering\options\ProgramWideOptions.hpp" />
@@ -567,10 +566,9 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\te\httpengine\filtering\http\AbpFilterParser.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\filtering\http\CategorizedCssSelector.cpp" />
-    <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpAbpBaseFilter.cpp" />
-    <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpAbpExceptionFilter.cpp" />
-    <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpAbpInclusionFilter.cpp" />
+    <ClCompile Include="..\..\src\te\httpengine\filtering\http\AbpFilter.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpFilteringEngine.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\filtering\options\ProgramWideOptions.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineControl.cpp" />

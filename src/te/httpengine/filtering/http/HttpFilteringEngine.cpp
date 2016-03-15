@@ -40,8 +40,7 @@
 #include "../../../util/http/KnownHttpHeaders.hpp"
 #include "CategorizedCssSelector.hpp"
 
-#include "HttpAbpInclusionFilter.hpp"
-#include "HttpAbpExceptionFilter.hpp"
+#include "AbpFilterParser.hpp"
 
 #include <gq/Document.hpp>
 #include <gq/NodeMutationCollection.hpp>
@@ -54,31 +53,7 @@ namespace te
 		namespace filtering
 		{
 			namespace http
-			{
-
-				const std::unordered_map<boost::string_ref, HttpAbpFilterOption, util::string::StringRefHash> HttpFilteringEngine::ValidFilterOptions
-				{
-					{ u8"script" , script },
-					{ u8"~script" , notscript },
-					{ u8"image" , image },
-					{ u8"~image" , notimage },
-					{ u8"stylesheet" , stylesheet },
-					{ u8"~stylesheet" , notstylesheet },
-					{ u8"object" , object },
-					{ u8"~object" , notobject },
-					{ u8"object-subrequest" , object_subrequest },
-					{ u8"~object-subrequest" , notobject_subrequest },
-					{ u8"subdocument" , subdocument },
-					{ u8"~subdocument" , notsubdocument },
-					{ u8"document" , document },
-					{ u8"~document" , notdocument },
-					{ u8"elemhide" , elemhide },
-					{ u8"~elemhide" , notelemhide },
-					{ u8"third-party" , third_party },
-					{ u8"~third-party" , notthird_party },
-					{ u8"xmlhttprequest" , xmlhttprequest },
-					{ u8"~xmlhttprequest" , notxmlhttprequest }
-				};
+			{				
 				
 				HttpFilteringEngine::HttpFilteringEngine(
 					const options::ProgramWideOptions* programOptions,
@@ -88,10 +63,21 @@ namespace te
 					util::cb::RequestBlockFunction onRequestBlocked,
 					util::cb::ElementBlockFunction onElementsBlocked
 					) :
-					util::cb::EventReporter(onInfo, onWarn, onError),
+					util::cb::EventReporter(
+						onInfo, 
+						onWarn, 
+						onError
+						),
 					m_programOptions(programOptions),
 					m_onRequestBlocked(onRequestBlocked),
-					m_onElementsBlocked(onElementsBlocked)
+					m_onElementsBlocked(onElementsBlocked),
+					m_filterParser(
+						new AbpFilterParser(
+							onInfo,
+							onWarn,
+							onError
+							)
+						)
 				{					
 					#ifndef NDEBUG
 						assert(programOptions != nullptr && u8"In HttpFilteringEngine::HttpFilteringEngine(const options::ProgramWideOptions*, TextClassificationCallback) - ProgramWideOptions pointer must not be null. Options must exist and be available for the lifetime of the program for the software to function correctly.");
@@ -280,7 +266,7 @@ namespace te
 						return blockCategory;
 					}
 
-					HttpAbpFilterSettings transactionSettings;
+					AbpFilterSettings transactionSettings;
 					
 					// XXX TODO - Check if the specified host is just an IP address and if so, reverse resolve the domain name.
 					boost::string_ref hostStringRef;
@@ -294,10 +280,10 @@ namespace te
 
 					if (hostHeaders.first != hostHeaders.second)
 					{
-						hostStringRef = boost::string_ref(hostHeaders.first->first);
+						hostStringRef = boost::string_ref(hostHeaders.first->second);
 					}
 
-					hostStringRef = RemoveUriMethodAndService(hostStringRef);
+					hostStringRef = ExtractHostNameFromUrl(hostStringRef);
 
 					// Before going any further, we must verify that the extractedHost is not empty. If it is, then
 					// we can't do a whole lot with this because the http request is fundamentally broken.
@@ -319,22 +305,23 @@ namespace te
 						extractedRefererStrRef = boost::string_ref(refererHeaders.first->second);
 					}
 
-					extractedRefererStrRef = RemoveUriMethodAndService(extractedRefererStrRef);
+					extractedRefererStrRef = ExtractHostNameFromUrl(extractedRefererStrRef);
 
 					if (extractedRefererStrRef.size() == 0)
 					{
 						// If the referer is empty, it's almost 100% guaranteed that the request
 						// is a direct navigation, meaning that the user manually requested this domain.
 						// If that's the case, then the request definitely isn't third party.
-						transactionSettings[HttpAbpFilterOption::notthird_party] = true;
+						transactionSettings[AbpFilterOption::notthird_party] = true;
 					}
-					else {
-						if (extractedRefererStrRef.compare(extractedRefererStrRef) == 0)
+					else 
+					{
+						if (extractedRefererStrRef.compare(hostStringRef) == 0)
 						{
-							transactionSettings[HttpAbpFilterOption::notthird_party] = true;
+							transactionSettings[AbpFilterOption::notthird_party] = true;
 						}
 						else {
-							transactionSettings[HttpAbpFilterOption::third_party] = true;
+							transactionSettings[AbpFilterOption::third_party] = true;
 						}
 					}
 
@@ -348,23 +335,23 @@ namespace te
 					{						
 						if (xmlHttpRequestStrRef.size() == requestedWithHeaders.first->second.size() && boost::iequals(requestedWithHeaders.first->second, xmlHttpRequestStrRef))
 						{
-							transactionSettings[HttpAbpFilterOption::xmlhttprequest] = true;
+							transactionSettings[AbpFilterOption::xmlhttprequest] = true;
 							break;
 						}
 
 						requestedWithHeaders.first++;
 					}
 
-					transactionSettings[HttpAbpFilterOption::notxmlhttprequest] = !transactionSettings[HttpAbpFilterOption::xmlhttprequest];
+					transactionSettings[AbpFilterOption::notxmlhttprequest] = !transactionSettings[AbpFilterOption::xmlhttprequest];
 
 					// Until we know better, this request is not for any of the following types.
 					// We're recycling the abp filter options to build a description of the
 					// transaction here, rather than an abp formatted rule. So we're going to assume
 					// explicitly, unless content-type tells us otherwise, that this transaction
 					// isn't CSS, script or image content.
-					transactionSettings[HttpAbpFilterOption::notscript] = true;
-					transactionSettings[HttpAbpFilterOption::notimage] = true;
-					transactionSettings[HttpAbpFilterOption::notstylesheet] = true;
+					transactionSettings[AbpFilterOption::notscript] = true;
+					transactionSettings[AbpFilterOption::notimage] = true;
+					transactionSettings[AbpFilterOption::notstylesheet] = true;
 
 					// This bool is basically used to indicate later that the response is present
 					// and content-type data was extracted from it. If this is the case, then typed
@@ -375,20 +362,20 @@ namespace te
 					{
 						if (response->IsPayloadImage())
 						{
-							transactionSettings[HttpAbpFilterOption::notimage] = false;
-							transactionSettings[HttpAbpFilterOption::image] = true;
+							transactionSettings[AbpFilterOption::notimage] = false;
+							transactionSettings[AbpFilterOption::image] = true;
 							hasTypeData = true;
 						}
 						else if (response->IsPayloadCss())
 						{
-							transactionSettings[HttpAbpFilterOption::notstylesheet] = false;
-							transactionSettings[HttpAbpFilterOption::stylesheet] = true;
+							transactionSettings[AbpFilterOption::notstylesheet] = false;
+							transactionSettings[AbpFilterOption::stylesheet] = true;
 							hasTypeData = true;
 						}
 						else if (response->IsPayloadJavascript())
 						{
-							transactionSettings[HttpAbpFilterOption::notscript] = false;
-							transactionSettings[HttpAbpFilterOption::script] = true;
+							transactionSettings[AbpFilterOption::notscript] = false;
+							transactionSettings[AbpFilterOption::script] = true;
 							hasTypeData = true;
 						}						
 					}
@@ -822,22 +809,26 @@ namespace te
 							// This is a filtering rule.
 
 							// Check if there are attached options to the rule. These begin with "$".
-							size_t ruleOptionsStart = rule.find_last_of(u8"$");
+							//size_t ruleOptionsStart = rule.find_last_of(u8"$");
+							//
+							//std::string ruleOptions;
+							//std::string extractedRule;
+							//
+							//if (ruleOptionsStart != std::string::npos)
+							//{
+							//	extractedRule = rule.substr(0, ruleOptionsStart);
+							//	ruleOptions = rule.substr(ruleOptionsStart + 1);
+							//
+							//	boost::trim(ruleOptions);
+							//}
+							//else
+							//{
+							//	extractedRule = rule;
+							//}
+							//
+							//boost::trim(extractedRule);
 
-							std::string ruleOptions;
-							std::string extractedRule;
-
-							if (ruleOptionsStart != std::string::npos)
-							{
-								extractedRule = rule.substr(0, ruleOptionsStart);
-								ruleOptions = rule.substr(ruleOptionsStart + 1);
-
-								boost::trim(ruleOptions);
-							}
-							else
-							{
-								extractedRule = rule;
-							}
+							std::string extractedRule = rule;
 
 							boost::trim(extractedRule);
 
@@ -850,82 +841,38 @@ namespace te
 									return false;
 								}
 
-								boost::string_ref ruleDomains;
-								HttpAbpFilterSettings filterRuleOptions;
-								std::vector<std::string> allRuleOptions;
+								try
+								{
+									auto filter = m_filterParser->Parse(extractedRule, category);
 
-								// Options are comma separated, so we attempt to split by commas.
-								if (ruleOptions.find(",") != std::string::npos)
-								{
-									boost::split(allRuleOptions, ruleOptions, boost::is_any_of(","));
-								}
-								else
-								{
-									// If no commas, we'll just push the rule to the vector as to not
-									// add unnecessary complexity.
-									if (ruleOptions.size() > 0)
+									auto filterIncDomains = filter->GetInclusionDomains();									
+
+									auto addFunc = filter->IsException() ?
+										std::bind(&HttpFilteringEngine::AddExceptionFilter, this, std::placeholders::_1, std::placeholders::_2) :
+										std::bind(&HttpFilteringEngine::AddInclusionFilter, this, std::placeholders::_1, std::placeholders::_2);
+
+									bool hadOne = false;
+									for (const auto& dmn : filterIncDomains)
 									{
-										allRuleOptions.push_back(ruleOptions);
-									}									
-								}
-
-								auto len = allRuleOptions.size();
-								size_t totalIgnored = 0;
-
-								for (size_t i = 0; i < len; ++i)
-								{
-									boost::string_ref str(allRuleOptions[i]);
-									boost::string_ref domainsOpt(u8"domain=");
-									if (str.size() > domainsOpt.size() && str.substr(0, domainsOpt.size()).compare(domainsOpt) == 0)
-									{
-										str = str.substr(7);
-										ruleDomains = str;
-										continue;
+										hadOne = true;
+										addFunc(dmn, filter);
 									}
-									else
+
+									if (!hadOne)
 									{
-										const auto optionEnumResult = ValidFilterOptions.find(str);
-
-										if (optionEnumResult == ValidFilterOptions.end())
-										{
-											// Invalid rule.
-											std::string errMsg(u8"In HttpFilteringEngine::ProcessAbpFormattedRule(const std::string&, const uint8_t) - Invalid filtering rule option ");
-											errMsg.append(str.to_string()).append(u8". Option ignored.");
-											ReportError(errMsg);
-											++totalIgnored;
-											continue;
-										}
-
-										// We have found a valid option, so we just set it to true.
-										filterRuleOptions.set(optionEnumResult->second, true);
+										// If there wasn't a single inclusion domain, it's a global rule.
+										addFunc(m_globalRuleKey, filter);
 									}
-								}
 
-								// If we ignored all options on a rule, we need to discard it because we'd be using it
-								// improperly.
-								if (totalIgnored > 0 && totalIgnored == allRuleOptions.size())
+									return true;
+								}
+								catch (std::runtime_error& pErr)
 								{
-									ReportWarning(u8"In HttpFilteringEngine::ProcessAbpFormattedRule(const std::string&, const uint8_t) - Ignoring rule because all configured options are unsupported.");
+									std::string unhandledErrMsg(u8"In HttpFilteringEngine::ProcessAbpFormattedRule(const std::string&, const uint8_t) - Got error: ");
+									unhandledErrMsg.append(pErr.what());
+									ReportError(unhandledErrMsg);
 									return false;
-								}
-
-								bool isException = false;
-
-								if (extractedRule.size() >= 2 && extractedRule[0] == '@' && extractedRule[1] == '@')
-								{
-									//Exception filter
-									isException = true;
-									extractedRule.erase(0, 2);
-								}
-
-								if (isException)
-								{
-									AddExceptionFilterMultiDomain(ruleDomains, extractedRule, filterRuleOptions, category);
-								}
-								else
-								{
-									AddInclusionFilterMultiDomain(ruleDomains, extractedRule, filterRuleOptions, category);
-								}
+								}								
 
 								return true;
 							}
@@ -1052,246 +999,6 @@ namespace te
 					}
 				}
 
-				void HttpFilteringEngine::AddInclusionFilterMultiDomain(
-					boost::string_ref domains, 
-					const std::string& rule, 
-					HttpAbpFilterSettings options, 
-					const uint8_t category
-					)
-				{
-
-					// Note the key difference between handling exceptions in Inclusion filters and
-					// Exception filters. In Inclusion filters, exceptions can simply be copied to
-					// the Exclusion filters storage lists, because exceptions are always checked
-					// first when running filters.
-					// 
-					// However, with exceptions, because of this ordering, we cannot do this. We
-					// need have the Exception filter class(es) absord their exception information
-					// and put it to use in their ::IsMatch override so that they can correctly
-					// detect their own exceptions and return "false" if/when one is found.
-					// 
-					// We see a lot of code duplication between AddInclusionFilterMultiDomain and
-					// AddExceptionFilterMultiDomain, but I've kept them as separate methods because
-					// I believe the tradeoff is very messy and over-complicated logic when trying
-					// to merge both methods into a single method with a "const bool isException" 
-					// parameter.
-
-					SharedInclusionFilter filter = nullptr;
-
-					try
-					{
-						filter = std::make_shared<HttpAbpInclusionFilter>(rule, options, category);
-					}
-					catch (std::runtime_error& e)
-					{
-						std::string errMsg(u8"In HttpFilteringEngine::AddInclusionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) Error:\t");
-						errMsg.append(e.what());
-						ReportError(errMsg);
-						return;
-					}
-
-					#ifndef NEDEBUG
-						assert(filter != nullptr && u8"In HttpFilteringEngine::AddInclusionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) - Failed to allocate shared filter.");
-					#else // !NEDEBUG
-						if (sSelector == nullptr)
-						{
-							throw std::runtime_error(u8"In HttpFilteringEngine::AddInclusionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) - Failed to allocate shared filter.");
-						}
-					#endif	
-
-					char delim = 0;
-
-					if (domains.find(',') != boost::string_ref::npos)
-					{
-						// Multiple domains supplied, separated by commas
-						delim = ',';
-					}
-					else if (domains.find('|') != boost::string_ref::npos)
-					{
-						// Multiple domains supplied, separated by pipes
-						delim = '|';
-					}
-
-					if (delim == 0)
-					{
-						// Single domain supplied. We need to check if the single domain specified
-						// in the rule is an exception domain. If it is, we'll push a copy of this
-						// shared rule to the exception filter storage for just that domain, then
-						// push a copy of this shared rule to the inclusion filter storage with the
-						// wildcard aka any domain key.
-						if (domains.size() > 1)
-						{
-							if (domains[0] == '~')
-							{
-								domains = domains.substr(1);
-								AddExceptionFilter(domains, filter);
-								AddInclusionFilter(m_globalRuleKey, filter);
-							}
-							else
-							{
-								AddInclusionFilter(domains, filter);
-							}							
-						}
-						else
-						{
-							// XXX TODO report error.
-						}						
-					}
-					else
-					{
-						// Multi domain
-						auto domainsVector = util::string::Split(domains, delim);
-
-						// If there wasn't a single inclusion domain (without '~' preceeding it),
-						// then we need to add the rule as a global inclusion.
-						bool hadOneNonExceptionDomain = false;
-
-						for (auto domain : domainsVector)
-						{
-							if (domain.size() > 1)
-							{
-								if (domain[0] == '~')
-								{
-									domain = domain.substr(1);
-
-									// Since this is an exception to an inclusion filter, we'll just
-									// push a copy of this shared rule to the exceptions storage for
-									// this domain alone.
-
-									AddExceptionFilter(domain, filter);
-								}
-								else
-								{
-									hadOneNonExceptionDomain = true;
-									AddInclusionFilter(domain, filter);
-								}
-							}
-							else
-							{
-								// XXX TODO report error
-							}
-						}
-
-						if (!hadOneNonExceptionDomain)
-						{
-							AddInclusionFilter(m_globalRuleKey, filter);
-						}
-					}
-				}
-
-				void HttpFilteringEngine::AddExceptionFilterMultiDomain(
-					boost::string_ref domains, 
-					const std::string& rule, 
-					HttpAbpFilterSettings options, 
-					const uint8_t category
-					)
-				{
-					char delim = 0;
-
-					if (domains.find(',') != boost::string_ref::npos)
-					{
-						// Multiple domains supplied, separated by commas
-						delim = ',';
-					}
-					else if (domains.find('|') != boost::string_ref::npos)
-					{
-						// Multiple domains supplied, separated by pipes
-						delim = '|';
-					}
-
-					std::vector<std::string> exceptionDomains;
-					std::vector<boost::string_ref> inclusionDomains;
-
-					if (delim == 0)
-					{
-						// Single domain supplied. We need to check if the single domain specified
-						// in the rule is an exception domain. If it is, we'll push a copy of this
-						// shared rule to the exception filter storage for just that domain, then
-						// push a copy of this shared rule to the inclusion filter storage with the
-						// wildcard aka any domain key.
-						if (domains.size() > 1)
-						{
-							if (domains[0] == '~')
-							{
-								domains = domains.substr(1);
-								exceptionDomains.push_back(domains.to_string());
-							}
-							else
-							{
-								inclusionDomains.push_back(domains);
-							}
-						}
-						else
-						{
-							// XXX TODO report error.
-						}
-					}
-					else
-					{
-						// Multi domain
-						auto domainsVector = util::string::Split(domains, delim);
-
-						// If there wasn't a single inclusion domain (without '~' preceeding it),
-						// then we need to add the rule as a global exception.
-						bool hadOneNonExceptionDomain = false;
-
-						for (auto domain : domainsVector)
-						{
-							if (domain.size() > 1)
-							{
-								if (domain[0] == '~')
-								{
-									domain = domain.substr(1);
-									
-									exceptionDomains.push_back(domains.to_string());
-								}
-								else
-								{
-									hadOneNonExceptionDomain = true;
-									inclusionDomains.push_back(domains);
-								}
-							}
-							else
-							{
-								// XXX TODO report error
-							}
-						}
-
-						if (!hadOneNonExceptionDomain)
-						{
-							inclusionDomains.push_back(m_globalRuleKey);
-						}
-					}
-
-					SharedExceptionFilter filter = nullptr;
-
-					try
-					{
-						filter = std::make_shared<HttpAbpExceptionFilter>(rule, options, exceptionDomains, category);
-					}
-					catch (std::runtime_error& e)
-					{
-						std::string errMsg(u8"In HttpFilteringEngine::AddExceptionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) Error:\t");
-						errMsg.append(e.what());
-						ReportError(errMsg);
-						return;
-					}
-
-					#ifndef NEDEBUG
-						assert(filter != nullptr && u8"In HttpFilteringEngine::AddExceptionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) - Failed to allocate shared filter.");
-					#else // !NEDEBUG
-					if (sSelector == nullptr)
-						{
-							throw std::runtime_error(u8"In HttpFilteringEngine::AddExceptionFilterMultiDomain(boost::string_ref, const std::string&, const HttpAbpFilterSettings, const uint8_t) - Failed to allocate shared filter.");
-						}
-					#endif	
-
-					for (auto domainStrRef : inclusionDomains)
-					{
-						AddExceptionFilter(domainStrRef, filter);
-					}
-				}
-
 				void HttpFilteringEngine::AddInclusionFilter(boost::string_ref domain, const SharedFilter& filter)
 				{
 					// Nullchecks and asserts are already done on filter before reaching here, as this method
@@ -1302,7 +1009,7 @@ namespace te
 					// the "domain" argument wraps will survive the lifetime of this object, which may
 					// destroy the universe.
 					auto domainStored = GetPreservedDomainStringRef(domain);
-					
+
 					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefHash>* container = nullptr;
 
 					if (filter->IsTypeBound())
@@ -1360,7 +1067,7 @@ namespace te
 					}
 				}
 
-				boost::string_ref HttpFilteringEngine::RemoveUriMethodAndService(boost::string_ref url) const
+				boost::string_ref HttpFilteringEngine::ExtractHostNameFromUrl(boost::string_ref url) const
 				{
 					// This is much, much faster than using built-in methods like ::compare().
 
@@ -1383,13 +1090,13 @@ namespace te
 						auto subtwo = url.substr(0, sHttpsSize);
 
 						if (util::string::Equal(subone, m_uriMethodHttp))
-						{
+						{							
 							url = url.substr(sHttpSize);
 						}
 						else if(util::string::Equal(subone, m_uriMethodHttps))
-						{
+						{							
 							url = url.substr(sHttpsSize);
-						}
+						}						
 					}
 
 					auto sub = url.substr(0, sSize);
@@ -1397,6 +1104,12 @@ namespace te
 					if (util::string::Equal(sub, m_uriService))
 					{
 						url = url.substr(sSize);
+					}
+
+					auto slashPos = url.find('/');
+					if (slashPos != boost::string_ref::npos)
+					{
+						url = url.substr(slashPos);
 					}
 
 					return url;

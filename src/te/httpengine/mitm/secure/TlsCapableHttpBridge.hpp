@@ -1699,10 +1699,13 @@ namespace te
 									// may assist in the future.
 									if (position >= arr->size() || position > validDataLength)
 									{
-										//std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - ");
-										//errMessage.append(u8"Index in buffer is out of bounds at position ").append(std::to_string(position)).append(u8".\n\n");
-										//errMessage.append(u8"Went out of bounds at check ").append(std::to_string(crumb)).append(u8".");
-										//ReportError(errMessage);
+										#ifndef NDEBUG
+											std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - ");
+											errMessage.append(u8"Index in buffer is out of bounds at position ").append(std::to_string(position)).append(u8".\n\n");
+											errMessage.append(u8"Went out of bounds at check ").append(std::to_string(crumb)).append(u8".");
+											ReportError(errMessage);
+										#endif
+										
 										return false;
 									}
 

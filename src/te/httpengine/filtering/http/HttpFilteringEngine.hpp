@@ -42,7 +42,7 @@
 #include <boost/thread/shared_mutex.hpp>
 #include "../../../util/string/StringRefUtil.hpp"
 #include "../../util/cb/EventReporter.hpp"
-#include "HttpAbpFilterOptions.hpp"
+#include "AbpFilterOptions.hpp"
 
 /// <summary>
 /// Forward decl for gq structures.
@@ -90,9 +90,8 @@ namespace te
 				/// <summary>
 				/// Forward decl selector/filter structures.
 				/// </summary>
-				class HttpAbpBaseFilter;
-				class HttpAbpInclusionFilter;
-				class HttpAbpExceptionFilter;
+				class AbpFilter;
+				class AbpFilterParser;
 				class CategorizedCssSelector;
 
 				namespace 
@@ -112,11 +111,7 @@ namespace te
 				private:
 										
 					using Reader = boost::shared_lock<boost::shared_mutex>;
-					using Writer = boost::unique_lock<boost::shared_mutex>;					
-
-					using SharedInclusionFilter = std::shared_ptr<HttpAbpInclusionFilter>;
-					using SharedExceptionFilter = std::shared_ptr<HttpAbpExceptionFilter>;
-					using SharedFilter = std::shared_ptr<HttpAbpBaseFilter>;
+					using Writer = boost::unique_lock<boost::shared_mutex>;
 
 					using SharedCategorizedCssSelector = std::shared_ptr<CategorizedCssSelector>;
 
@@ -307,6 +302,8 @@ namespace te
 
 				private:
 
+					using SharedFilter = std::shared_ptr<AbpFilter>;
+
 					/// <summary>
 					/// Pointer to the provided ProgramWideOptions object governing the functionality
 					/// of this filtering engine.
@@ -328,6 +325,11 @@ namespace te
 					/// this callback, if the callback was supplied during construction.
 					/// </summary>
 					util::cb::ElementBlockFunction m_onElementsBlocked = nullptr;
+
+					/// <summary>
+					/// Filtering rule parser.
+					/// </summary>
+					std::unique_ptr<AbpFilterParser> m_filterParser;
 
 					/// <summary>
 					/// Currently, this program buries its head in the sand and pretends that
@@ -363,7 +365,7 @@ namespace te
 					/// cheaper to store this here as a const string rather than doing unnecessary
 					/// allocations in check methods.
 					/// </summary>
-					const boost::string_ref m_globalRuleKey = u8"*";
+					const boost::string_ref m_globalRuleKey = u8"*";					
 
 					/// <summary>
 					/// Shared mutex used for handling single writer, multiple reader scenario where
@@ -395,12 +397,6 @@ namespace te
 					/// string_ref hashtable keys to be equal to their containing parents.
 					/// </summary>
 					std::unordered_set<std::string> m_allKnownListDomains;
-
-					/// <summary>
-					/// Contains all valid filter options. Used when parsing string options to
-					/// quickly retrieve the correct corresponding HttpAbpFilterOption value.
-					/// </summary>
-					static const std::unordered_map<boost::string_ref, HttpAbpFilterOption, util::string::StringRefHash> ValidFilterOptions;
 
 					/// <summary>
 					/// When we block a response that uses chunked encoding, it's impossible to
@@ -576,64 +572,6 @@ namespace te
 					void AddExceptionSelector(boost::string_ref domain, const SharedCategorizedCssSelector& selector);
 
 					/// <summary>
-					/// Filters which were determined to be Inclusion Filters (filters designed to
-					/// specify a request which should be blocked) are passed on to this method for
-					/// further processing from the ProcessAbpFormattedRule(...) method.
-					/// 
-					/// This method will further analyze the structure of the rule, if it is domain
-					/// bound or global, what types the rule is bound to, etc, and from there will
-					/// construct and store the filter appropriately. In situations where some
-					/// exception and some inclusion domains are found to exist within the rule
-					/// options, exception rules may or may not be constructed from the original
-					/// inclusion filter.
-					/// </summary>
-					/// <param name="domains">
-					/// The contents of the $domains= option, if specified in the original filter
-					/// string.
-					/// </param>
-					/// <param name="rule">
-					/// The filtering rule, in Adblock Plus Filtering syntax. 
-					/// </param>
-					/// <param name="options">
-					/// The options specified for the rule, which have been stored in the more
-					/// efficient HttpAbpFilterSettings object.
-					/// </param>
-					/// <param name="category">
-					/// The category that the rule is deemed to belong to (ads, malware, etc). 
-					/// </param>
-					void AddInclusionFilterMultiDomain(boost::string_ref domains, const std::string& rule, HttpAbpFilterSettings options, const uint8_t category);
-
-					/// <summary>
-					/// Filters which were determined to be Exclusion Filters (filters designed to
-					/// specify a request which should not be blocked) are passed on to this method
-					/// for further processing from the ProcessAbpFormattedRule(...) method.
-					/// 
-					/// This method will further analyze the structure of the rule, if it is domain
-					/// bound or global, what types the rule is bound to, etc, and from there will
-					/// construct and store the filter appropriately. Exception filters are handled
-					/// slightly differently than inclusion filters, because of a more complex
-					/// nature (exceptions to exceptions, which have no logical place being stored
-					/// as either an exception or an inclusion filter alone).
-					/// 
-					/// See the implementation comments if you really want a headache.
-					/// </summary>
-					/// <param name="domains">
-					/// The contents of the $domains= option, if specified in the original filter
-					/// string.
-					/// </param>
-					/// <param name="rule">
-					/// The filtering rule, in Adblock Plus Filtering syntax. 
-					/// </param>
-					/// <param name="options">
-					/// The options specified for the rule, which have been stored in the more
-					/// efficient HttpAbpFilterSettings object.
-					/// </param>
-					/// <param name="category">
-					/// The category that the rule is deemed to belong to (ads, malware, etc). 
-					/// </param>
-					void AddExceptionFilterMultiDomain(boost::string_ref domains, const std::string& rule, HttpAbpFilterSettings options, const uint8_t category);
-
-					/// <summary>
 					/// Store a completed inclusion filter object appropriately, depending on its
 					/// options.
 					/// 
@@ -680,21 +618,13 @@ namespace te
 					void AddExceptionFilter(boost::string_ref domain, const SharedFilter& filter);
 
 					/// <summary>
-					/// There's a fair amount of processing that involes stripping characters out of
-					/// various header fields that we don't need and thus don't care to store, such
-					/// as preceeding "http://" on referers and hosts. The real problem this solves
-					/// however is maintaining consistency to properly match. A filter may be
-					/// supplied containing "http://www.example.com^somestuff*^", but all we really
-					/// need for storing and matching/looking up the rule is to match "example.com".
-					/// We want to make sure that this lookup applies to "https://www.example.com",
-					/// "http://example.com", etc, so any protocol or service identifiers are
-					/// removed from certain copies of such strings.
+					/// Gets just the host name from a complete HTTP request URL.
 					/// </summary>
 					/// <param name="url">
 					/// The url which may or may not contain additional preceeding characters not
 					/// necessary for rule lookups.
 					/// </param>
-					boost::string_ref RemoveUriMethodAndService(boost::string_ref url) const;
+					boost::string_ref ExtractHostNameFromUrl(boost::string_ref url) const;
 
 					/// <summary>
 					/// Fetch the text content of the supplied, parsed HTML document.
