@@ -409,23 +409,23 @@ namespace te
 					}
 				}
 
-				AbpFilterSettings AbpFilterParser::ParseSettings(boost::string_ref filterStr) const
+				AbpFilterSettings AbpFilterParser::ParseSettings(boost::string_ref optionsString) const
 				{
 					AbpFilterSettings ret;
 
-					if (filterStr.size() == 0)
+					if (optionsString.size() == 0)
 					{
 						return ret;
 					}
 
-					if (filterStr[0] == '$')
+					if (optionsString[0] == '$')
 					{
-						filterStr = filterStr.substr(1);
+						optionsString = optionsString.substr(1);
 					}
 
 					// Copy the stringref, as the ParseSingleOption method will consume whatever
 					// we give it. Just in case, we can keep the param as an unmodified version.
-					auto cpy = filterStr;
+					auto cpy = optionsString;
 
 					size_t totalIgnored = 0;
 					size_t totalParsed = 0;
@@ -459,19 +459,19 @@ namespace te
 					return ret;
 				}
 
-				std::unordered_set<boost::string_ref, util::string::StringRefHash> AbpFilterParser::ParseDomains(boost::string_ref filterStr, const bool exceptions) const
+				std::unordered_set<boost::string_ref, util::string::StringRefHash> AbpFilterParser::ParseDomains(boost::string_ref optionsString, const bool exceptions) const
 				{
 					std::unordered_set<boost::string_ref, util::string::StringRefHash> ret;
 
-					if (filterStr.size() == 0)
+					if (optionsString.size() == 0)
 					{
 						// We default to no exception domains.
 						return ret;
 					}
 
-					if (filterStr[0] == '$')
+					if (optionsString[0] == '$')
 					{
-						filterStr = filterStr.substr(1);
+						optionsString = optionsString.substr(1);
 					}
 
 					boost::string_ref domainsOpt(u8"domain=");
@@ -479,7 +479,7 @@ namespace te
 
 					// Copy the stringref, as the ParseSingleOption method will consume whatever
 					// we give it. Just in case, we can keep the param as an unmodified version.
-					auto cpy = filterStr;
+					auto cpy = optionsString;
 
 					boost::string_ref domainsPart;
 

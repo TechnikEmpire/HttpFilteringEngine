@@ -606,6 +606,12 @@ namespace te
 					// We deliberately never permanently free the table on purpose. Eventually, this table will
 					// reach a size where reallocations don't happen anymore, and we can recycle it.
 
+					if (!table)
+					{
+						ReportError(u8"In WinDiverter::GetPacketProcess(uint16_t, uint32_t[4], PMIB_TCP6TABLE2, DWORD&) - Expected pointer to TABLE structure, got nullptr!");
+						return 0;
+					}
+
 					if (localV6Address == nullptr)
 					{
 						ReportError(u8"In WinDiverter::GetPacketProcess(uint16_t, uint32_t[4], PMIB_TCP6TABLE2, DWORD&) - Expected uint32_t array with length of four for localV6Address, got nullptr!");

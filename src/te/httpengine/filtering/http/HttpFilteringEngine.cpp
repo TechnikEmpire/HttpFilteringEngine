@@ -214,7 +214,7 @@ namespace te
 					return noErrors;
 				}
 
-				uint8_t HttpFilteringEngine::ShouldBlock(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response)
+				uint8_t HttpFilteringEngine::ShouldBlock(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response, const bool isSecure)
 				{
 					#ifndef NEDEBUG
 						assert(request != nullptr && u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - The HttpRequest parameter was supplied with a nullptr. The request is absolutely required to do accurate HTTP filtering.");
@@ -381,7 +381,8 @@ namespace te
 					}
 
 					// boost::string_ref, I'd love you even more if you had ::append()
-					std::string fullRequest = extractedRefererStrRef.to_string() + u8"/" + request->RequestURI();
+					std::string fullRequest{ isSecure ? u8"https://" : u8"http://" };
+					fullRequest.append(hostStringRef.to_string()).append(u8"/").append(request->RequestURI());
 
 					// All of the filtering objects internally use boost::string_ref for parsing and
 					// storage, so they expect boost::string_ref objects for matching. Rather than
@@ -807,26 +808,6 @@ namespace te
 							}
 
 							// This is a filtering rule.
-
-							// Check if there are attached options to the rule. These begin with "$".
-							//size_t ruleOptionsStart = rule.find_last_of(u8"$");
-							//
-							//std::string ruleOptions;
-							//std::string extractedRule;
-							//
-							//if (ruleOptionsStart != std::string::npos)
-							//{
-							//	extractedRule = rule.substr(0, ruleOptionsStart);
-							//	ruleOptions = rule.substr(ruleOptionsStart + 1);
-							//
-							//	boost::trim(ruleOptions);
-							//}
-							//else
-							//{
-							//	extractedRule = rule;
-							//}
-							//
-							//boost::trim(extractedRule);
 
 							std::string extractedRule = rule;
 

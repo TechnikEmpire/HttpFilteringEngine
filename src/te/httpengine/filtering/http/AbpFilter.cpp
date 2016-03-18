@@ -65,8 +65,7 @@ namespace te
 				bool AbpFilter::IsMatch(boost::string_ref data, const AbpFilterSettings dataSettings, boost::string_ref dataHost) const
 				{
 					if (!SettingsApply(dataSettings, m_settings))
-					{
-						
+					{						
 						return false;
 					}
 
@@ -98,8 +97,7 @@ namespace te
 					{
 						switch (std::get<1>(m_filterParts[i]))
 						{
-							// Anchored address matching is basically a confusing way to say that we
-							// must match against the host of the request, AFAIK.
+							// Anchored address matching.
 							case RulePartType::AnchoredAddress:
 							{
 								auto part = std::get<0>(m_filterParts[i]);
@@ -107,27 +105,31 @@ namespace te
 								auto plen = part.size();
 								if (plen <= hostLen)
 								{
-									auto res = dataHost.find(part);
+									auto hostInReqPos = data.find(part);
 
-									if (res != boost::string_ref::npos)
+									if (hostInReqPos != boost::string_ref::npos)
 									{
-										if (res > 0 && (dataHost[res - 1] != '.' || dataHost[res - 1] != '/'))
-										{											
-											// Must either be the top level domain or a subdomain
-											// match. So if not, this isn't a match.
-											return false;
-										}
-
-										auto hostInReqPos = data.find(dataHost);
-
-										if (hostInReqPos != boost::string_ref::npos)
+										if (hostInReqPos > 0)
 										{
-											lastMatch = hostInReqPos + res + plen;
-											continue;
+											switch (data[hostInReqPos - 1])
+											{
+												case '.':
+												case '/':
+												{
+													// OK
+												}
+												break;
+
+												default:
+													return false;
+											}
 										}
+
+										lastMatch = hostInReqPos + plen;
+										continue;
 									}
 								}
-
+								
 								return false;
 							}
 							break;

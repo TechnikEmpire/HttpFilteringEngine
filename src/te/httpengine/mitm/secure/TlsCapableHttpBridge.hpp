@@ -679,7 +679,7 @@ namespace te
 						{
 							if (m_response->Parse(bytesTransferred))
 							{
-								auto blockResult = m_filteringEngine->ShouldBlock(m_request.get(), m_response.get());								
+								auto blockResult = m_filteringEngine->ShouldBlock(m_request.get(), m_response.get(), std::is_same<BridgeSocketType, network::TlsSocket>::value);
 
 								if (blockResult != 0)
 								{
@@ -1079,7 +1079,7 @@ namespace te
 						{
 							if (m_request->Parse(bytesTransferred))
 							{								
-								auto requestBlockResult = m_filteringEngine->ShouldBlock(m_request.get());
+								auto requestBlockResult = m_filteringEngine->ShouldBlock(m_request.get(), nullptr, std::is_same<BridgeSocketType, network::TlsSocket>::value);
 								m_request->SetShouldBlock(requestBlockResult);
 
 								// This little business is for dealing with browsers like Chrome, who just have

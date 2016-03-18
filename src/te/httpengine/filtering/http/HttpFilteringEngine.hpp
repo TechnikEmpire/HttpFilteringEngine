@@ -262,6 +262,10 @@ namespace te
 					/// Pointer to the response side of the HTTP transaction to consider for
 					/// blocking. Optional, defaulting to nullptr.
 					/// </param>
+					/// <param name="isSecure">
+					/// Indicates whether or not the transaction is HTTP or HTTPS. Required to
+					/// accurately rebuild the full request string for proper filter matching.
+					/// </param>
 					/// <returns>
 					/// Anything other than ContentFilteringCategory::None if it has been determined
 					/// that the transaction should be blocked. The return value represents the
@@ -270,7 +274,7 @@ namespace te
 					/// could be found, or that the category for a matched filter was disabled, and
 					/// thus the request should not be blocked.
 					/// </returns>
-					uint8_t ShouldBlock(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response = nullptr);
+					uint8_t ShouldBlock(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response = nullptr, const bool isSecure = false);
 
 					/// <summary>
 					/// Attempts to load and parse the response portion of the supplied transaction,
