@@ -480,12 +480,14 @@ void fe_ctl_set_category(PHttpFilteringEngineCtl ptr, const uint8_t categoryId, 
 	assert(callSuccess == true && u8"In fe_ctl_set_category(PHttpFilteringEngineCtl) - Caught exception and failed to set category.");
 }
 
-const bool fe_ctl_load_list_from_file(
+void fe_ctl_load_list_from_file(
 	PHttpFilteringEngineCtl ptr,
 	const char* filePath,
 	const size_t filePathLength,
 	const uint8_t listCategory,
-	const bool flushExisting
+	const bool flushExisting,
+	uint32_t* rulesLoaded,
+	uint32_t* rulesFailed
 	)
 {
 	#ifndef NDEBUG
@@ -502,7 +504,6 @@ const bool fe_ctl_load_list_from_file(
 		//}
 	#endif
 
-	bool success = false;
 	bool callSuccess = false;
 
 	try
@@ -510,7 +511,7 @@ const bool fe_ctl_load_list_from_file(
 		if (ptr != nullptr && filePath != nullptr)
 		{
 			std::string filePathStr(filePath, filePathLength);			
-			success = reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->LoadFilteringListFromFile(filePathStr, listCategory, flushExisting);
+			reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->LoadFilteringListFromFile(filePathStr, listCategory, flushExisting, rulesLoaded, rulesFailed);
 			callSuccess = true;
 		}
 	}
@@ -520,16 +521,16 @@ const bool fe_ctl_load_list_from_file(
 	}
 
 	assert(callSuccess == true && u8"In fe_ctl_load_list_from_file(...) - Caught exception and failed to set category.");
-
-	return success;
 }
 
-const bool fe_ctl_load_list_from_string(
+void fe_ctl_load_list_from_string(
 	PHttpFilteringEngineCtl ptr,
 	const char* listString,
 	const size_t listStringLength,
 	const uint8_t listCategory,
-	const bool flushExisting
+	const bool flushExisting,
+	uint32_t* rulesLoaded,
+	uint32_t* rulesFailed
 	)
 {
 	#ifndef NDEBUG
@@ -546,7 +547,6 @@ const bool fe_ctl_load_list_from_string(
 		//}
 	#endif
 
-	bool success = false;
 	bool callSuccess = false;
 
 	try
@@ -554,7 +554,8 @@ const bool fe_ctl_load_list_from_string(
 		if (ptr != nullptr && listString != nullptr)
 		{
 			std::string fileString(listString, listStringLength);
-			success = reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->LoadFilteringListFromString(fileString, listCategory, flushExisting);
+			reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->LoadFilteringListFromString(fileString, listCategory, flushExisting, rulesLoaded, rulesFailed);
+			callSuccess = true;
 		}
 	}
 	catch (std::exception& e)
@@ -563,6 +564,4 @@ const bool fe_ctl_load_list_from_string(
 	}
 
 	assert(callSuccess == true && u8"In fe_ctl_load_list_from_string(...) - Caught exception and failed to set category.");
-
-	return success;
 }

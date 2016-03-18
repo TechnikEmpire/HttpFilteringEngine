@@ -314,24 +314,52 @@ namespace te
 			return false;
 		}
 
-		const bool HttpFilteringEngineControl::LoadFilteringListFromFile(const std::string& filePath, const uint8_t listCategory, const bool flushExistingInCategory)
+		void HttpFilteringEngineControl::LoadFilteringListFromFile(
+			const std::string& filePath, 
+			const uint8_t listCategory, 
+			const bool flushExistingInCategory,
+			uint32_t* rulesLoaded,
+			uint32_t* rulesFailed
+			)
 		{
 			if (m_httpFilteringEngine != nullptr)
 			{
-				return m_httpFilteringEngine->LoadAbpFormattedListFromFile(filePath, listCategory, flushExistingInCategory);
-			}
+				auto result = m_httpFilteringEngine->LoadAbpFormattedListFromFile(filePath, listCategory, flushExistingInCategory);
 
-			return false;
+				if (rulesLoaded)
+				{
+					*rulesLoaded = result.first;
+				}
+
+				if (rulesFailed)
+				{
+					*rulesFailed = result.second;
+				}
+			}
 		}
 
-		const bool HttpFilteringEngineControl::LoadFilteringListFromString(const std::string& listString, const uint8_t listCategory, const bool flushExistingInCategory)
+		void HttpFilteringEngineControl::LoadFilteringListFromString(
+			const std::string& listString, 
+			const uint8_t listCategory, 
+			const bool flushExistingInCategory,
+			uint32_t* rulesLoaded,
+			uint32_t* rulesFailed
+			)
 		{
 			if (m_httpFilteringEngine != nullptr)
 			{
-				return m_httpFilteringEngine->LoadAbpFormattedListFromString(listString, listCategory, flushExistingInCategory);
-			}
+				auto result = m_httpFilteringEngine->LoadAbpFormattedListFromString(listString, listCategory, flushExistingInCategory);
 
-			return false;
+				if (rulesLoaded)
+				{
+					*rulesLoaded = result.first;
+				}
+
+				if (rulesFailed)
+				{
+					*rulesFailed = result.second;
+				}
+			}
 		}
 
 	} /* namespace httpengine */

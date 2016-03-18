@@ -130,8 +130,17 @@ namespace Te {
 			}
 		}
 
-		bool Engine::LoadAbpFormattedFile(System::String^ listFilePath, uint8_t listCategory, bool flushExistingInCategory)
+		void Engine::LoadAbpFormattedFile(
+			System::String^ listFilePath, 
+			uint8_t listCategory,
+			bool flushExistingInCategory,
+			[Out] uint32_t% rulesLoaded,
+			[Out] uint32_t% rulesFailed
+			)
 		{
+			uint32_t succeeded = 0;
+			uint32_t failed = 0;
+
 			if (System::String::IsNullOrEmpty(listFilePath) || System::String::IsNullOrWhiteSpace(listFilePath))
 			{
 				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadAbpFormattedFile(System::String^, uint8_t, bool) - Provided list file path is either null or whitespace.");
@@ -148,14 +157,24 @@ namespace Te {
 			{				
 				auto listPathStr = msclr::interop::marshal_as<std::string>(listFilePath);
 
-				return fe_ctl_load_list_from_file(m_handle, listPathStr.c_str(), listPathStr.size(), listCategory, flushExistingInCategory);
+				fe_ctl_load_list_from_file(m_handle, listPathStr.c_str(), listPathStr.size(), listCategory, flushExistingInCategory, &succeeded, &failed);
 			}
 
-			return false;
+			rulesLoaded = succeeded;
+			rulesFailed = failed;
 		}
 
-		bool Engine::LoadAbpFormattedString(System::String^ list, uint8_t listCategory, bool flushExistingInCategory)
+		void Engine::LoadAbpFormattedString(
+			System::String^ list, 
+			uint8_t listCategory, 
+			bool flushExistingInCategory,
+			[Out] uint32_t% rulesLoaded,
+			[Out] uint32_t% rulesFailed
+			)
 		{
+			uint32_t succeeded = 0;
+			uint32_t failed = 0;
+
 			if (System::String::IsNullOrEmpty(list) || System::String::IsNullOrWhiteSpace(list))
 			{
 				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadAbpFormattedFile(System::String^, uint8_t, bool) - Provided list is either null or whitespace.");
@@ -172,10 +191,11 @@ namespace Te {
 			{
 				auto listStr = msclr::interop::marshal_as<std::string>(list);
 
-				return fe_ctl_load_list_from_file(m_handle, listStr.c_str(), listStr.size(), listCategory, flushExistingInCategory);
+				fe_ctl_load_list_from_file(m_handle, listStr.c_str(), listStr.size(), listCategory, flushExistingInCategory, &succeeded, &failed);
 			}
 
-			return false;
+			rulesLoaded = succeeded;
+			rulesFailed = failed;
 		}
 
 		bool Engine::IsOptionEnabled(uint32_t option)

@@ -314,20 +314,20 @@ extern "C" {
 	/// values. The value zero is reserved to represent the "unfiltered" category. Aside from this,
 	/// whatever other value these categories are are has no bearing on internal functionality.
 	/// </param>
-	/// <returns>
-	/// True if the file was successfully loaded and processed without error, false otherwise. Note
-	/// that a false return value does not necessarily mean that none of the rules were loaded and
-	/// processed correctly. The Engine will return false if there is an issue with even a single
-	/// entry within the file, but will continue processing all non-error-throwing rules. The false
-	/// return type is to notify the user that there was still an issue. The user can use other
-	/// provided interfaces to programmatically investigate the true reason for the false return value.
-	/// </returns>
-	HTTP_FILTERING_ENGINE_API const bool fe_ctl_load_list_from_file(
+	/// <param name="rulesLoaded">
+	/// The total number of rules successfully loaded and parsed from the source.
+	/// </param>
+	/// <param name="rulesFailed">
+	/// The total number of rules that failed to load and or be parsed from the source.
+	/// </param>
+	HTTP_FILTERING_ENGINE_API void fe_ctl_load_list_from_file(
 		PHttpFilteringEngineCtl ptr, 
 		const char* filePath, 
 		const size_t filePathLength, 
 		const uint8_t listCategory,
-		const bool flushExisting
+		const bool flushExisting,
+		uint32_t* rulesLoaded,
+		uint32_t* rulesFailed
 		);
 
 	/// <summary>
@@ -349,20 +349,20 @@ extern "C" {
 	/// values. The value zero is reserved to represent the "unfiltered" category. Aside from this,
 	/// whatever other value these categories are are has no bearing on internal functionality.
 	/// </param>
-	/// <returns>
-	/// True if the supplied string was processed without error, false otherwise. Note that a false
-	/// return value does not necessarily mean that none of the rules were loaded and processed
-	/// correctly. The Engine will return false if there is an issue with even a single entry within
-	/// the file, but will continue processing all non-error-throwing rules. The false return type
-	/// is to notify the user that there was still an issue. The user can use other provided
-	/// interfaces to programmatically investigate the true reason for the false return value.
-	/// </returns>
-	HTTP_FILTERING_ENGINE_API const bool fe_ctl_load_list_from_string(
+	/// <param name="rulesLoaded">
+	/// The total number of rules successfully loaded and parsed from the source.
+	/// </param>
+	/// <param name="rulesFailed">
+	/// The total number of rules that failed to load and or be parsed from the source.
+	/// </param>
+	HTTP_FILTERING_ENGINE_API void fe_ctl_load_list_from_string(
 		PHttpFilteringEngineCtl ptr, 
 		const char* listString, 
 		const size_t listStringLength, 
 		const uint8_t listCategory,
-		const bool flushExisting
+		const bool flushExisting,
+		uint32_t* rulesLoaded,
+		uint32_t* rulesFailed
 		);
 
 

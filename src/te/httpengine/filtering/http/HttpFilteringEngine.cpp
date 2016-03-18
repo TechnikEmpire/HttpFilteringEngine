@@ -91,7 +91,7 @@ namespace te
 
 				}
 
-				bool HttpFilteringEngine::LoadAbpFormattedListFromFile(
+				std::pair<uint32_t, uint32_t> HttpFilteringEngine::LoadAbpFormattedListFromFile(
 					const std::string& listFilePath, 
 					const uint8_t listCategory, 
 					const bool flushExistingRules
@@ -103,7 +103,7 @@ namespace te
 					{					
 						std::string errMessage(u8"In HttpFilteringEngine::LoadAbpFormattedListFromFile(const std::string&, const uint8_t, const bool) - Unable to read supplied filter list file: " + listFilePath);
 						ReportError(errMessage);
-						return false;
+						return { 0, 0 };
 					}
 
 					std::string listContents;
@@ -114,7 +114,7 @@ namespace te
 					if (fsize < 0 || static_cast<unsigned long long>(fsize) > static_cast<unsigned long long>(std::numeric_limits<size_t>::max()))
 					{
 						ReportError(u8"In HttpFilteringEngine::LoadAbpFormattedListFromFile(const std::string&, const uint8_t, const bool) - When loading file, ifstream::tellg() returned either less than zero or a number greater than this program can correctly handle.");
-						return false;
+						return { 0, 0 };
 					}
 
 					listContents.resize(static_cast<size_t>(fsize));
@@ -125,12 +125,15 @@ namespace te
 					return LoadAbpFormattedListFromString(listContents, listCategory, flushExistingRules);
 				}
 
-				bool HttpFilteringEngine::LoadAbpFormattedListFromString(
+				std::pair<uint32_t, uint32_t> HttpFilteringEngine::LoadAbpFormattedListFromString(
 					const std::string& list, 
 					const uint8_t listCategory, 
 					const bool flushExistingRules
 					)
 				{
+					uint32_t succeeded = 0;
+					uint32_t failed = 0;
+
 					Writer w(m_filterLock);
 
 					if (flushExistingRules)
@@ -193,7 +196,6 @@ namespace te
 						}
 					}
 
-					bool noErrors = true;
 
 					std::istringstream f(list);
 					std::string line;
@@ -207,11 +209,14 @@ namespace te
 							// carry on if possible. The user should be subscribed to the various
 							// events provided through the EventReporter interface to get more
 							// meaningful information about exactly what went wrong.
-							noErrors = false;
+							++failed;
+							continue;
 						}
+
+						++succeeded;
 					}
 
-					return noErrors;
+					return { succeeded, failed };
 				}
 
 				uint8_t HttpFilteringEngine::ShouldBlock(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response, const bool isSecure)

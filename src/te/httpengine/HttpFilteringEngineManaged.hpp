@@ -235,14 +235,19 @@ namespace Te {
 			/// Whether or not to flush rules that have the same category set the one supplied
 			/// before loading the new rules from the supplied filter list.
 			/// </param>
-			/// <returns>
-			/// True if all rules were loaded and parsed without error, false otherwise. Note that a
-			/// return value of "false" does not necessarily indicate that no rules were loaded.
-			/// Rather, it indicates that there was at least one rule with which there were errors.
-			/// Presently there is not a robust API for errors so users must consult the OnError
-			/// data supplied for more detailed information on internally handled errors.
-			/// </returns>
-			bool LoadAbpFormattedFile(System::String^ listFilePath, uint8_t listCategory, bool flushExistingInCategory);
+			/// <param name="rulesLoaded">
+			/// The total number of rules successfully loaded and parsed from the source.
+			/// </param>
+			/// <param name="rulesFailed">
+			/// The total number of rules that failed to load and or be parsed from the source.
+			/// </param>
+			void LoadAbpFormattedFile(
+				System::String^ listFilePath, 
+				uint8_t listCategory, 
+				bool flushExistingInCategory,
+				[Out] uint32_t% rulesLoaded,
+				[Out] uint32_t% rulesFailed
+				);
 
 			/// <summary>
 			/// Attempts to load Adblock Plus formatted filters and CSS selectors from the supplied
@@ -259,14 +264,19 @@ namespace Te {
 			/// Whether or not to flush rules that have the same category set the one supplied
 			/// before loading the new rules from the supplied filter list.
 			/// </param>
-			/// <returns>
-			/// True if all rules were loaded and parsed without error, false otherwise. Note that a
-			/// return value of "false" does not necessarily indicate that no rules were loaded.
-			/// Rather, it indicates that there was at least one rule with which there were errors.
-			/// Presently there is not a robust API for errors so users must consult the OnError
-			/// data supplied for more detailed information on internally handled errors.
-			/// </returns>
-			bool LoadAbpFormattedString(System::String^ list, uint8_t listCategory, bool flushExistingInCategory);
+			/// <param name="rulesLoaded">
+			/// The total number of rules successfully loaded and parsed from the source.
+			/// </param>
+			/// <param name="rulesFailed">
+			/// The total number of rules that failed to load and or be parsed from the source.
+			/// </param>
+			void LoadAbpFormattedString(
+				System::String^ list, 
+				uint8_t listCategory, 
+				bool flushExistingInCategory,
+				[Out] uint32_t% rulesLoaded,
+				[Out] uint32_t% rulesFailed
+				);
 
 			/// <summary>
 			/// Checks if the specified option is enabled.

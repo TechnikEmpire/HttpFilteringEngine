@@ -262,14 +262,13 @@ namespace te
 
 				bool AbpFilter::SettingsApply(const AbpFilterSettings transactionSettings, const AbpFilterSettings ruleSettings) const
 				{					
-					//auto f = transactionSettings.to_ulong();
-					//auto l = ruleSettings.to_ulong();
-					//
-					//auto r = f & l;
-					//
-					//return r != 0;
+					auto f = transactionSettings.to_ulong();
+					auto l = ruleSettings.to_ulong();
+					
+					return (f & l) != 0;
 					
 					
+					/*
 					// Check to see if any opposite options are specified first. If the rule specifies explicitly that it does not apply
 					// to third party requests, yet the transaction is specified to be a third-party request, then the rule doesn't apply.
 
@@ -342,7 +341,8 @@ namespace te
 						}
 					}
 
-					return true;						
+					return true;
+					*/
 				}
 
 			} /* namespace http */

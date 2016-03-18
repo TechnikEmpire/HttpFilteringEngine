@@ -284,15 +284,19 @@ namespace te
 			/// contain unique rules, consecutively. Take care when suppling the value "false", as
 			/// no measure is taken to detect/prevent duplicate rule entries.
 			/// </param>
-			/// <returns>
-			/// True if the list loaded without errors, false otherwise. Note that a return value of
-			/// "false" does not necessarily mean that loading the rules failed entirely. Rather, it
-			/// indicates that one or more handled errors arose while attempting to load and parse
-			/// the rules. Detailed information about what went wrong in this case is presently only
-			/// available through the Info/Warning/Error callbacks. A robust error reporting API is
-			/// a XXX TODO.
-			/// </returns>
-			const bool LoadFilteringListFromFile(const std::string& filePath, const uint8_t listCategory, const bool flushExistingInCategory = true);
+			/// <param name="rulesLoaded">
+			/// The total number of rules successfully loaded and parsed from the source.
+			/// </param>
+			/// <param name="rulesFailed">
+			/// The total number of rules that failed to load and or be parsed from the source.
+			/// </param>
+			void LoadFilteringListFromFile(
+				const std::string& filePath, 
+				const uint8_t listCategory, 
+				const bool flushExistingInCategory = true,
+				uint32_t* rulesLoaded = nullptr,
+				uint32_t* rulesFailed = nullptr
+				);
 
 			/// <summary>
 			/// Attempts to parse the supplied string, which should be populated with Adblock Plus
@@ -315,15 +319,19 @@ namespace te
 			/// contain unique rules, consecutively. Take care when suppling the value "false", as
 			/// no measure is taken to detect/prevent duplicate rule entries.
 			/// </param>
-			/// <returns>
-			/// True if the list was parsed without errors, false otherwise. Note that a return
-			/// value of "false" does not necessarily mean that parsing the rules failed entirely.
-			/// Rather, it indicates that one or more handled errors arose while attempting to parse
-			/// the rules. Detailed information about what went wrong in this case is presently only
-			/// available through the Info/Warning/Error callbacks. A robust error reporting API is
-			/// a XXX TODO.
-			/// </returns>
-			const bool LoadFilteringListFromString(const std::string& listString, const uint8_t listCategory, const bool flushExistingInCategory = true);
+			/// <param name="rulesLoaded">
+			/// The total number of rules successfully loaded and parsed from the source.
+			/// </param>
+			/// <param name="rulesFailed">
+			/// The total number of rules that failed to load and or be parsed from the source.
+			/// </param>
+			void LoadFilteringListFromString(
+				const std::string& listString, 
+				const uint8_t listCategory, 
+				const bool flushExistingInCategory = true, 
+				uint32_t* rulesLoaded = nullptr,
+				uint32_t* rulesFailed = nullptr
+				);
 
 		private:
 

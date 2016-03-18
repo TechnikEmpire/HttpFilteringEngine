@@ -157,35 +157,35 @@ namespace te
 					/// Load and parse a list of selectors and filters, written in Adblock Plus
 					/// Filter syntax. Ensure that you specify the absolute path to the resource on
 					/// disk and ensure that read permissions are set appropriately.
-					/// 
+					///
 					/// Note that mutex based synchronization occurs when calling this method, and
 					/// that collections of lists can be quite long, so this can be an expensive
-					/// blocking operation. The need for synchronization is because these filters
-					/// are both simultaneously available for reading to multiple concurrent
-					/// readers, while also available for flushing and reloading or appending
-					/// without requiring a restart, say from the UI thread.
-					/// 
+					/// blocking operation. The need for synchronization is because these filters are
+					/// both simultaneously available for reading to multiple concurrent readers,
+					/// while also available for flushing and reloading or appending without
+					/// requiring a restart, say from the UI thread.
+					///
 					/// Note that this function is designed to return true if there were no errors
 					/// detected while processing the rules, false otherwise. We strike a balance
 					/// here between properly handling issues and allowing the program to continue
-					/// when non critical errors occur. The type of error in mind here is when a
-					/// rule that is not formatted correctly is encountered and cannot be processed.
-					/// We want to alert the user that something did happen that should be
-					/// investigated, but we don't want to explode the program because one or two
-					/// rules out of thousands was broken.
-					/// 
+					/// when non critical errors occur. The type of error in mind here is when a rule
+					/// that is not formatted correctly is encountered and cannot be processed. We
+					/// want to alert the user that something did happen that should be investigated,
+					/// but we don't want to explode the program because one or two rules out of
+					/// thousands was broken.
+					///
 					/// Even in the event that the supplied file is not found or is unreadable, this
 					/// function will not throw, but rather through the inherited EventReporter
 					/// interface will provide specific information about the issues encountered.
 					/// This library is meant to be integrated into a products for general users
 					/// where it will encounter a myriad of unpredictable input both from the user
-					/// and from network traffic. Crashing because a user failed to properly point
-					/// to a file is not acceptable. As such, throws are reserved for extraordinary
+					/// and from network traffic. Crashing because a user failed to properly point to
+					/// a file is not acceptable. As such, throws are reserved for extraordinary
 					/// circumstances and asserts are used to control proper usage.
 					/// </summary>
 					/// <param name="listFilePath">
-					/// The absolute path to a list of selectors and filters, written in Adblock
-					/// Plus Filter syntax
+					/// The absolute path to a list of selectors and filters, written in Adblock Plus
+					/// Filter syntax
 					/// </param>
 					/// <param name="listCategory">
 					/// The category that the parsed selectors and filters are deemed to belong to.
@@ -197,12 +197,13 @@ namespace te
 					/// from the collection before the newly loaded and parsed entries are stores.
 					/// </param>
 					/// <returns>
-					/// True if the operation succeeded without incident, false otherwise. Via the
-					/// EventReporter interface, meaningful information about any the issue (in the
-					/// event of false being returned) should be generated, so ensure that
-					/// interacting objects are subscribed to those events.
+					/// A pair containing a count of the rules successfully loaded on the left hand
+					/// side, and a count of the rules that failed to load on the right hand side.
+					/// Via the EventReporter interface, meaningful information about any the issue
+					/// (in the event of a count of failed rules greater than zero) should be
+					/// generated, so ensure that interacting objects are subscribed to those events.
 					/// </returns>
-					bool LoadAbpFormattedListFromFile(const std::string& listFilePath, const uint8_t listCategory, const bool flushExistingRules);
+					std::pair<uint32_t, uint32_t> LoadAbpFormattedListFromFile(const std::string& listFilePath, const uint8_t listCategory, const bool flushExistingRules);
 
 					/// <summary>
 					/// Parse a list of selectors and filters, written in Adblock Plus Filter
@@ -238,12 +239,13 @@ namespace te
 					/// from the collection before the newly loaded and parsed entries are stores.
 					/// </param>
 					/// <returns>
-					/// True if the operation succeeded without incident, false otherwise. Via the
-					/// EventReporter interface, meaningful information about any the issue (in the
-					/// event of false being returned) should be generated, so ensure that
-					/// interacting objects are subscribed to those events.
+					/// A pair containing a count of the rules successfully loaded on the left hand
+					/// side, and a count of the rules that failed to load on the right hand side.
+					/// Via the EventReporter interface, meaningful information about any the issue
+					/// (in the event of a count of failed rules greater than zero) should be
+					/// generated, so ensure that interacting objects are subscribed to those events.
 					/// </returns>
-					bool LoadAbpFormattedListFromString(const std::string& list, const uint8_t listCategory, const bool flushExistingRules);
+					std::pair<uint32_t, uint32_t> LoadAbpFormattedListFromString(const std::string& list, const uint8_t listCategory, const bool flushExistingRules);
 
 					/// <summary>
 					/// Determine if a transaction should be blocked from completing. If the
