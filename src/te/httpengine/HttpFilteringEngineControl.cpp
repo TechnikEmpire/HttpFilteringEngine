@@ -362,5 +362,15 @@ namespace te
 			}
 		}
 
+		std::vector<char> HttpFilteringEngineControl::GetRootCertificatePEM() const
+		{
+			if (m_store)
+			{
+				return m_store->GetRootCertificatePEM();
+			}
+
+			return{};
+		}
+
 	} /* namespace httpengine */
 } /* namespace te */

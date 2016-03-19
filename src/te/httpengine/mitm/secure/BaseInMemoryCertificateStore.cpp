@@ -356,20 +356,20 @@ namespace te
 					}
 				}
 
-				bool BaseInMemoryCertificateStore::WriteCertificateToFile(X509* cert, const std::string& outputFilePath)
+				std::vector<char> BaseInMemoryCertificateStore::GetRootCertificatePEM() const
 				{
-					if (cert != nullptr)
+					if (m_thisCa != nullptr)
 					{
 						BIO* bio = BIO_new(BIO_s_mem());
 
 						if (bio != nullptr)
 						{
-							auto ret = PEM_write_bio_X509(bio, cert);
+							auto ret = PEM_write_bio_X509(bio, m_thisCa);
 
 							if (ret != 1)
 							{
 								BIO_free(bio);
-								return false;
+								return {};
 							}
 
 							BUF_MEM* mem = nullptr;
@@ -378,27 +378,18 @@ namespace te
 							if (mem == nullptr || mem->data == nullptr || mem->length == 0)
 							{
 								BIO_free(bio);
-								return false;
-							}
+								return {};
+							}														
 
-							std::string pem(mem->data, mem->length);
+							std::vector<char> retVal {mem->data, mem->data + mem->length};
 
-							std::ofstream outfile(outputFilePath, std::ios::out | std::ios::trunc || std::ios::binary);
+							BIO_free(bio);
 
-							BIO_free(bio);							
-
-							if (!outfile.fail() && outfile.is_open())
-							{
-								outfile << pem;
-							}
-
-							outfile.close();
-
-							return true;
+							return retVal;
 						}
 					}
 
-					return false;
+					return {};
 				}
 
 				EVP_PKEY* BaseInMemoryCertificateStore::GenerateEcKey(const int namedCurveId) const

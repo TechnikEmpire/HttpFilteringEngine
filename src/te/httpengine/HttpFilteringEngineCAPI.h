@@ -365,6 +365,24 @@ extern "C" {
 		uint32_t* rulesFailed
 		);
 
+	
+	/// <summary>
+	/// Gets the current root CA being used by the Engine, if any, in PEM format. Memory is allocated
+	/// inside the function and the corresponding pointer is assigned to the bufferPP parameter. The
+	/// user must call free() on the buffer in the event that the bufferSize parameter has a value
+	/// greater than zero after the call.
+	/// </summary>
+	/// <param name="ptr">
+	/// A valid pointer to an existing Engine instance.
+	/// </param>
+	/// <param name="bufferPP">
+	/// A pointer to a char pointer to be populated by the operation.
+	/// </param>
+	/// <param name="bufferSize">
+	/// A pointer to a size_t object that will hold the total number of elements in the populated
+	/// array.
+	/// </param>
+	HTTP_FILTERING_ENGINE_API void fe_ctl_get_rootca_pem(PHttpFilteringEngineCtl ptr, char** bufferPP, size_t* bufferSize);
 
 #ifdef __cplusplus
 };

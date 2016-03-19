@@ -190,21 +190,14 @@ namespace te
 					virtual void RevokeOsTrust() = 0;
 
 					/// <summary>
-					/// Attempts to write the given X509 structure to the given file path. Note that
-					/// if the supplied path points to an existing file, this method will overwrite
-					/// it. Use with caution.
+					/// Gets a copy of the root certificate, if any, in PEM format.
 					/// </summary>
-					/// <param name="cert">
-					/// A valid ptr to the X509 structure to write to file storage.
-					/// </param>
-					/// <param name="outputFilePath">
-					/// The path to the file to write the output to.
-					/// </param>
 					/// <returns>
-					/// True if the contents of the supplied X509 structure were written to file
-					/// storage, false otherwise.
+					/// On success, a vector populated with the bytes for the current root CA in PEM
+					/// format. In the event that an error occurred or there is no current root CA,
+					/// an empty vector.
 					/// </returns>
-					virtual bool WriteCertificateToFile(X509* cert, const std::string& outputFilePath);
+					std::vector<char> GetRootCertificatePEM() const;
 
 				protected:
 

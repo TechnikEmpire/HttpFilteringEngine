@@ -239,6 +239,31 @@ namespace Te {
 			}
 		}
 
+		array<System::Byte>^ Engine::GetRootCaPEM()
+		{
+			if (m_handle != nullptr)
+			{
+				char* buff;
+				size_t bsize;
+				fe_ctl_get_rootca_pem(m_handle, &buff, &bsize);
+
+				if (bsize > 0)
+				{
+					array<System::Byte>^ ret = gcnew array<System::Byte>(bsize);
+
+					pin_ptr<System::Byte> retpinned = &ret[0];
+
+					memcpy(retpinned, buff, bsize);
+
+					free(buff);
+
+					return ret;
+				}
+			}
+
+			return gcnew array<System::Byte>(0);
+		}
+
 		void Engine::Init()
 		{
 

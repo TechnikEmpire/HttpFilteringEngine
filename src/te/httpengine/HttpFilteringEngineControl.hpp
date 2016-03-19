@@ -333,6 +333,16 @@ namespace te
 				uint32_t* rulesFailed = nullptr
 				);
 
+			/// <summary>
+			/// Gets a copy of the root certificate, if any, in PEM format.
+			/// </summary>
+			/// <returns>
+			/// On success, a vector populated with the bytes for the current root CA in PEM
+			/// format. In the event that an error occurred or there is no current root CA,
+			/// an empty vector.
+			/// </returns>
+			std::vector<char> GetRootCertificatePEM() const;
+
 		private:
 
 			/// <summary>

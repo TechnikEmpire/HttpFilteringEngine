@@ -337,8 +337,18 @@ namespace Te {
 			/// <param name="enabled">
 			/// A bool which sets the enabled state of the supplied filtering category.
 			/// </param>
-			void SetCategoryEnabled(uint8_t category, bool enabled);
-			
+			void SetCategoryEnabled(uint8_t category, bool enabled);			
+
+			/// <summary>
+			/// Gets the bytes for the current root CA, if any, in PEM format.
+			/// </summary>
+			/// <returns>
+			/// An array containing the bytes for the current root CA in PEM format. If there is no
+			/// current root CA in use, or an error occurred in the underlying engine, the array will
+			/// be empty.
+			/// </returns>
+			array<System::Byte>^ GetRootCaPEM();
+
 		private:
 
 			/// <summary>
