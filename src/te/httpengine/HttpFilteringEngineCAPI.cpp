@@ -201,7 +201,7 @@ void fe_ctl_stop(PHttpFilteringEngineCtl ptr)
 		}		
 	}
 	catch (std::exception& e)
-	{
+	{		
 		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
 	}
 

@@ -158,49 +158,37 @@ namespace te
 					}
 				}
 
-				// We purposely don't try/catch here, to allow callers to do this. From this class, we're at
-				// the top of the chain. Caller is the big boss, let them take care here.
+				m_httpAcceptor.reset(
+					new mitm::secure::TcpAcceptor(
+						m_service.get(),
+						m_httpFilteringEngine.get(),
+						m_httpListenerPort,
+						m_caBundleAbsolutePath,
+						nullptr,
+						m_onInfo,
+						m_onWarning,
+						m_onError
+						)
+					);
 
-				if (m_httpAcceptor == nullptr)
-				{
-					m_httpAcceptor.reset(
-						new mitm::secure::TcpAcceptor(
-							m_service.get(), 
-							m_httpFilteringEngine.get(), 
-							m_httpListenerPort,
-							m_caBundleAbsolutePath,
-							nullptr,
-							m_onInfo,
-							m_onWarning,
-							m_onError
-							)
-						);
-				}
-
-				if (m_httpsAcceptor == nullptr)
-				{
-					m_httpsAcceptor.reset(
-						new mitm::secure::TlsAcceptor(
-							m_service.get(), 
-							m_httpFilteringEngine.get(), 
-							m_httpsListenerPort, 
-							m_caBundleAbsolutePath,
-							m_store.get(), 
-							m_onInfo, 
-							m_onWarning, 
-							m_onError
-							)
-						);
-				}				
+				m_httpsAcceptor.reset(
+					new mitm::secure::TlsAcceptor(
+						m_service.get(),
+						m_httpFilteringEngine.get(),
+						m_httpsListenerPort,
+						m_caBundleAbsolutePath,
+						m_store.get(),
+						m_onInfo,
+						m_onWarning,
+						m_onError
+						)
+					);
 
 				m_httpAcceptor->AcceptConnections();
 
 				m_httpsAcceptor->AcceptConnections();
 
-				if (m_diversionControl == nullptr)
-				{
-					m_diversionControl.reset(new mitm::diversion::DiversionControl(m_firewallCheckCb, m_onInfo, m_onWarning, m_onError));
-				}
+				m_diversionControl.reset(new mitm::diversion::DiversionControl(m_firewallCheckCb, m_onInfo, m_onWarning, m_onError));
 
 				m_diversionControl->SetHttpListenerPort(m_httpAcceptor->GetListenerPort());
 

@@ -147,13 +147,14 @@ namespace te
 						for (auto& t : m_diversionThreads)
 						{
 							t.join();
-						}						
-					}
+						}
 
-					if (m_diversionHandle != nullptr && m_diversionHandle != INVALID_HANDLE_VALUE)
-					{
-						WinDivertClose(m_diversionHandle);
-					}
+						if (m_diversionHandle != nullptr && m_diversionHandle != INVALID_HANDLE_VALUE)
+						{
+							WinDivertClose(m_diversionHandle);
+							m_diversionHandle = INVALID_HANDLE_VALUE;
+						}
+					}					
 				}
 
 				const bool WinDiverter::IsRunning() const
