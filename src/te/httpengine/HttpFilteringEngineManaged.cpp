@@ -198,6 +198,14 @@ namespace Te {
 			rulesFailed = failed;
 		}
 
+		void Engine::UnloadAllRulesForCategory(const uint8_t category)
+		{
+			if (m_handle != nullptr)
+			{
+				fe_ctl_unload_rules_for_category(m_handle, category);
+			}
+		}
+
 		bool Engine::IsOptionEnabled(uint32_t option)
 		{
 			if (m_handle != nullptr)

@@ -360,5 +360,13 @@ namespace te
 			return{};
 		}
 
+		void HttpFilteringEngineControl::UnloadRulesForCategory(const uint8_t category)
+		{
+			if (m_httpFilteringEngine != nullptr)
+			{
+
+			}
+		}
+
 	} /* namespace httpengine */
 } /* namespace te */

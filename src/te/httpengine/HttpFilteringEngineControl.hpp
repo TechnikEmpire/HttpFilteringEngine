@@ -343,6 +343,14 @@ namespace te
 			/// </returns>
 			std::vector<char> GetRootCertificatePEM() const;
 
+			/// <summary>
+			/// Unloads and and all rules created for the given category.
+			/// </summary>
+			/// <param name="category">
+			/// The category for which to unload any and all rules.
+			/// </param>
+			void UnloadRulesForCategory(const uint8_t category);
+
 		private:
 
 			/// <summary>

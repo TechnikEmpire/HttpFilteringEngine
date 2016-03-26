@@ -279,6 +279,14 @@ namespace Te {
 				);
 
 			/// <summary>
+			/// Unloads any and all rules assigned to the given category.
+			/// </summary>
+			/// <param name="category">
+			/// The category for which to unload all rules.
+			/// </param>
+			void UnloadAllRulesForCategory(const uint8_t category);
+
+			/// <summary>
 			/// Checks if the specified option is enabled.
 			/// </summary>
 			/// <param name="option">

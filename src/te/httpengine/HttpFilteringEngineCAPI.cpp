@@ -486,4 +486,30 @@ void fe_ctl_get_rootca_pem(PHttpFilteringEngineCtl ptr, char** bufferPP, size_t*
 			reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
 		}
 	}
+
+	assert(callSuccess == true && u8"In fe_ctl_get_rootca_pem(...) - Caught exception and failed to fetch root CA certificate.");
+}
+
+void fe_ctl_unload_rules_for_category(PHttpFilteringEngineCtl ptr, const uint8_t category)
+{
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_unload_rules_for_category(char**, size_t*) - Supplied PHttpFilteringEngineCtl ptr is nullptr!");
+	#endif
+
+	bool callSuccess = false;
+
+	try
+	{
+		if (ptr != nullptr)
+		{
+			reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->UnloadRulesForCategory(category);
+			callSuccess = true;
+		}
+	}
+	catch (std::exception& e)
+	{
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
+	}
+
+	assert(callSuccess == true && u8"In fe_ctl_get_rootca_pem(...) - Caught exception and failed to unload rules for category.");
 }

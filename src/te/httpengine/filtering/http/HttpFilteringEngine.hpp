@@ -248,6 +248,14 @@ namespace te
 					std::pair<uint32_t, uint32_t> LoadAbpFormattedListFromString(const std::string& list, const uint8_t listCategory, const bool flushExistingRules);
 
 					/// <summary>
+					/// Unloads any and all rules assigned to the given category.
+					/// </summary>
+					/// <param name="category">
+					/// The category for which to unload all rules.
+					/// </param>
+					void UnloadAllRulesForCategory(const uint8_t category);
+
+					/// <summary>
 					/// Determine if a transaction should be blocked from completing. If the
 					/// HttpResponse is supplied, full return payload composition will be analyzed,
 					/// meaning that filters which specify that they are exclusively bound to

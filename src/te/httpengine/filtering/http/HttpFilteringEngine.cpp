@@ -132,70 +132,18 @@ namespace te
 					)
 				{
 					uint32_t succeeded = 0;
-					uint32_t failed = 0;
-
-					Writer w(m_filterLock);
+					uint32_t failed = 0;					
 
 					if (flushExistingRules)
 					{
 						// If flushExistingRules is true, remove all existing filters from all containers that match the specified
-						// category for the list.
-
-						for (auto& rulePair : m_typelessIncludeRules)
-						{
-							rulePair.second.erase(std::remove_if(rulePair.second.begin(), rulePair.second.end(),
-								[listCategory](const SharedFilter& s) -> bool
-							{
-								return s->GetCategory() == listCategory;
-							}), rulePair.second.end());
-						}
-
-						for (auto& rulePair : m_typelessExcludeRules)
-						{
-							rulePair.second.erase(std::remove_if(rulePair.second.begin(), rulePair.second.end(),
-								[listCategory](const SharedFilter& s) -> bool
-							{
-								return s->GetCategory() == listCategory;
-							}), rulePair.second.end());
-						}
-
-						for (auto& rulePair : m_typedIncludeRules)
-						{
-							rulePair.second.erase(std::remove_if(rulePair.second.begin(), rulePair.second.end(),
-								[listCategory](const SharedFilter& s) -> bool
-							{
-								return s->GetCategory() == listCategory;
-							}), rulePair.second.end());
-						}
-
-						for (auto& rulePair : m_typedExcludeRules)
-						{
-							rulePair.second.erase(std::remove_if(rulePair.second.begin(), rulePair.second.end(),
-								[listCategory](const SharedFilter& s) -> bool
-							{
-								return s->GetCategory() == listCategory;
-							}), rulePair.second.end());
-						}
-
-						for (auto& selectorPair : m_inclusionSelectors)
-						{
-							selectorPair.second.erase(std::remove_if(selectorPair.second.begin(), selectorPair.second.end(),
-								[listCategory](const SharedCategorizedCssSelector& s) -> bool
-							{
-								return s->GetCategory() == listCategory;
-							}), selectorPair.second.end());
-						}
-
-						for (auto& selectorPair : m_exceptionSelectors)
-						{
-							selectorPair.second.erase(std::remove_if(selectorPair.second.begin(), selectorPair.second.end(),
-								[listCategory](const SharedCategorizedCssSelector& s) -> bool
-							{
-								return s->GetCategory() == listCategory;
-							}), selectorPair.second.end());
-						}
+						// category for the list. Make sure to respect this ordering, because UnloadAllRulesForCategory acquires a
+						// writer lock.
+						UnloadAllRulesForCategory(listCategory);
 					}
 
+					// Must come after unloading all rules, since UnloadAllRulesForCategory acquires write lock as well.
+					Writer w(m_filterLock);
 
 					std::istringstream f(list);
 					std::string line;
@@ -217,6 +165,65 @@ namespace te
 					}
 
 					return { succeeded, failed };
+				}
+
+				void HttpFilteringEngine::UnloadAllRulesForCategory(const uint8_t category)
+				{
+					Writer w(m_filterLock);
+
+					for (auto& rulePair : m_typelessIncludeRules)
+					{
+						rulePair.second.erase(std::remove_if(rulePair.second.begin(), rulePair.second.end(),
+							[category](const SharedFilter& s) -> bool
+						{
+							return s->GetCategory() == category;
+						}), rulePair.second.end());
+					}
+
+					for (auto& rulePair : m_typelessExcludeRules)
+					{
+						rulePair.second.erase(std::remove_if(rulePair.second.begin(), rulePair.second.end(),
+							[category](const SharedFilter& s) -> bool
+						{
+							return s->GetCategory() == category;
+						}), rulePair.second.end());
+					}
+
+					for (auto& rulePair : m_typedIncludeRules)
+					{
+						rulePair.second.erase(std::remove_if(rulePair.second.begin(), rulePair.second.end(),
+							[category](const SharedFilter& s) -> bool
+						{
+							return s->GetCategory() == category;
+						}), rulePair.second.end());
+					}
+
+					for (auto& rulePair : m_typedExcludeRules)
+					{
+						rulePair.second.erase(std::remove_if(rulePair.second.begin(), rulePair.second.end(),
+							[category](const SharedFilter& s) -> bool
+						{
+							return s->GetCategory() == category;
+						}), rulePair.second.end());
+					}
+
+					for (auto& selectorPair : m_inclusionSelectors)
+					{
+						selectorPair.second.erase(std::remove_if(selectorPair.second.begin(), selectorPair.second.end(),
+							[category](const SharedCategorizedCssSelector& s) -> bool
+						{
+							return s->GetCategory() == category;
+						}), selectorPair.second.end());
+					}
+
+					for (auto& selectorPair : m_exceptionSelectors)
+					{
+						selectorPair.second.erase(std::remove_if(selectorPair.second.begin(), selectorPair.second.end(),
+							[category](const SharedCategorizedCssSelector& s) -> bool
+						{
+							return s->GetCategory() == category;
+						}), selectorPair.second.end());
+					}
 				}
 
 				uint8_t HttpFilteringEngine::ShouldBlock(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response, const bool isSecure)

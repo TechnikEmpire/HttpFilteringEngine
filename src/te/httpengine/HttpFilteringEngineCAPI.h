@@ -384,6 +384,17 @@ extern "C" {
 	/// </param>
 	HTTP_FILTERING_ENGINE_API void fe_ctl_get_rootca_pem(PHttpFilteringEngineCtl ptr, char** bufferPP, size_t* bufferSize);
 
+	/// <summary>
+	/// Unloads any and all rules for the given category.
+	/// </summary>
+	/// <param name="ptr">
+	/// A valid pointer to an existing Engine instance.
+	/// </param>
+	/// <param name="category">
+	/// The category for which to unload any and all rules.
+	/// </param>
+	HTTP_FILTERING_ENGINE_API void fe_ctl_unload_rules_for_category(PHttpFilteringEngineCtl ptr, const uint8_t category);
+
 #ifdef __cplusplus
 };
 #endif // __cplusplus

@@ -261,14 +261,25 @@ namespace te
 				}
 
 				bool AbpFilter::SettingsApply(const AbpFilterSettings transactionSettings, const AbpFilterSettings ruleSettings) const
-				{					
+				{			
+					// So, the reasoning for the condition of the transactions settings having nothing set and this filtering being
+					// not type bound is that we do not want filters that require a specific return type to be active on transactions
+					// that have not had a return type encountered (from response headers). We actually take care of this inside
+					// the main filtering Engine by splitting type bound and non type bound filters into two containers and checking
+					// them separately, but I'm not comfortable with the idea of this object only functioning correctly at the
+					// intervention of an external influence.
+					if ((!transactionSettings.any() && (m_isTypeBound == false)) || !ruleSettings.any())
+					{
+						return true;
+					}
+
+					/* This won't work correctly but we could make it work. XXX TODO.
 					auto f = transactionSettings.to_ulong();
 					auto l = ruleSettings.to_ulong();
-					
+
 					return (f & l) != 0;
-					
-					
-					/*
+					*/
+
 					// Check to see if any opposite options are specified first. If the rule specifies explicitly that it does not apply
 					// to third party requests, yet the transaction is specified to be a third-party request, then the rule doesn't apply.
 
@@ -342,7 +353,6 @@ namespace te
 					}
 
 					return true;
-					*/
 				}
 
 			} /* namespace http */
