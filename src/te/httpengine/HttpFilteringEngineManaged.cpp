@@ -191,7 +191,7 @@ namespace Te {
 			{
 				auto listStr = msclr::interop::marshal_as<std::string>(list);
 
-				fe_ctl_load_list_from_file(m_handle, listStr.c_str(), listStr.size(), listCategory, flushExistingInCategory, &succeeded, &failed);
+				fe_ctl_load_list_from_string(m_handle, listStr.c_str(), listStr.size(), listCategory, flushExistingInCategory, &succeeded, &failed);
 			}
 
 			rulesLoaded = succeeded;

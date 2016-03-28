@@ -219,11 +219,13 @@ namespace te
 
 					filter->m_settings = filterSettings;
 
-					filter->m_filterParts = parts;
+					filter->m_filterParts = std::move(parts);
 
-					filter->m_inclusionDomains = inclusionDomains;
+					filter->m_inclusionDomains = std::move(inclusionDomains);
 					
-					filter->m_exceptionDomains = exceptionDomains;
+					filter->m_exceptionDomains = std::move(exceptionDomains);
+
+					filter->m_category = category;
 
 					return filter;
 				}
@@ -501,36 +503,37 @@ namespace te
 						// Multiple domains in the option are split with a single pipe char.
 						auto pipePos = domainsPart.find('|');
 
-						if (pipePos != boost::string_ref::npos)
+						while (pipePos != boost::string_ref::npos)
 						{
-							while (pipePos != boost::string_ref::npos)
+							auto domain = domainsPart.substr(0, pipePos);
+							domainsPart = domainsPart.substr(pipePos + 1);
+							pipePos = domainsPart.find('|');
+
+							if (domain.size() == 0)
 							{
-								auto domain = domainsPart.substr(0, pipePos);
-								domainsPart = domainsPart.substr(pipePos + 1);
-								pipePos = domainsPart.find('|');
+								throw std::runtime_error(u8"In AbpFilterParser::ParseDomains(boost::string_ref&, const bool) const - Incorrectly formatted domain option entry. Zero length.");
+							}
 
-								if (domain.size() == 0)
+							// If its an exception and user asked for exception, if its not exception and user asked
+							// for non-exceptins, etc. Only insert what the user is asking for.
+							bool shouldInsert = (exceptions == (domain[0] == '~'));
+
+							if (shouldInsert)
+							{
+								// Remove the exception indicator character if applicable.
+								if (exceptions)
 								{
-									throw std::runtime_error(u8"In AbpFilterParser::ParseDomains(boost::string_ref&, const bool) const - Incorrectly formatted domain option entry. Zero length.");
+									domain = domain.substr(1);
 								}
-
-								// If its an exception and user asked for exception, if its not exception and user asked
-								// for non-exceptins, etc. Only insert what the user is asking for.
-								bool shouldInsert = (exceptions == (domain[0] == '~'));
-
-								if (shouldInsert)
-								{
-									// Remove the exception indicator character if applicable.
-									if (exceptions)
-									{		
-										domain = domain.substr(1);
-									}
-
-									ret.insert(domain);
-								}							
+								
+								ret.insert(domain);
 							}
 						}
-						else
+
+						// The previous loop will have consumed domain list if one was found, and left the final
+						// entry. Or, if no list was found, we'll still have a single entry and this condition
+						// will be true.
+						if (domainsPart.size() > 0)
 						{
 							// Single domain entry. 
 
@@ -540,6 +543,12 @@ namespace te
 
 							if (shouldInsert)
 							{
+								// Remove the exception indicator character if applicable.
+								if (exceptions)
+								{
+									domainsPart = domainsPart.substr(1);
+								}
+
 								ret.insert(domainsPart);
 							}
 						}

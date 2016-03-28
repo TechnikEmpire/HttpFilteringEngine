@@ -312,7 +312,7 @@ namespace te
 					/// successfully parsed, a string containing the filtered HTML. Otherwise, an
 					/// empty string.
 					/// </returns>
-					std::string ProcessHtmlResponse(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response) const;
+					std::string ProcessHtmlResponse(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response);
 
 				private:
 
@@ -412,6 +412,7 @@ namespace te
 					/// </summary>
 					std::unordered_set<std::string> m_allKnownListDomains;
 
+					/* Not used. Allow users to estimate.
 					/// <summary>
 					/// When we block a response that uses chunked encoding, it's impossible to
 					/// known the entire size of the content without downloading and parsing the
@@ -423,6 +424,7 @@ namespace te
 					/// more content, such as videos and images, very heavy stuff.
 					/// </summary>
 					static constexpr uint32_t AverageWebPageInBytes = 1935000;
+					*/
 
 					/// <summary>
 					/// Used for storing inclusion filters that do not specify any constraints in

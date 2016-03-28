@@ -236,7 +236,7 @@ namespace te
 							throw std::runtime_error(u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - The HttpRequest parameter was supplied with a nullptr. The request is absolutely required to do accurate HTTP filtering.");
 						}
 					#endif					
-					
+
 					// If the request is already set to be blocked, and the repsonse is supplied,
 					// then we simply want to report the size of the blocked request based on the
 					// response headers. We'll then return the existing ShouldBlock value from
@@ -247,7 +247,7 @@ namespace te
 
 						auto contentLenHeader = response->GetHeader(util::http::headers::ContentLength);
 
-						uint32_t blockedContentSize = AverageWebPageInBytes;
+						uint32_t blockedContentSize = 0;
 
 						if (contentLenHeader.first != contentLenHeader.second)
 						{
@@ -258,7 +258,7 @@ namespace te
 							catch (...)
 							{
 								// This isn't critical. We don't really care for the specifics of the exception. Maybe
-								// it's a malicious web server, a broken on, or a troll putting "trololol" as the content
+								// it's a malicious web server, a broken one, or a troll putting "trololol" as the content
 								// length. Who cares.
 
 								ReportWarning(u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) -  \
@@ -439,7 +439,7 @@ namespace te
 							if ((m_programOptions->GetIsHttpCategoryFiltered(domainTypelessExcludesPair->second[he]->GetCategory())) &&
 								domainTypelessExcludesPair->second[he]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
 							{
-								// Exclusion found, don't filter or block.
+								// Exclusion found, don't filter or block.								
 								return 0;
 							}
 						}
@@ -466,7 +466,7 @@ namespace te
 
 						// Check host specific rules first, since that collection is bound to be much smaller.
 						for (size_t dte = 0; dte < domainTypedExcludeSize; ++dte)
-						{
+						{							
 							if ((m_programOptions->GetIsHttpCategoryFiltered(domainTypedExcludesPair->second[dte]->GetCategory())) &&
 								domainTypedExcludesPair->second[dte]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
 							{
@@ -550,7 +550,7 @@ namespace te
 					return 0;
 				}				
 
-				std::string HttpFilteringEngine::ProcessHtmlResponse(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response) const
+				std::string HttpFilteringEngine::ProcessHtmlResponse(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response)
 				{
 					#ifndef NEDEBUG
 						assert(request != nullptr && response != nullptr && u8"In HttpFilteringEngine::ProcessHtmlResponse(const mhttp::HttpRequest*, const mhttp::HttpResponse*) const - The HttpRequest or HttpResponse parameter was supplied with a nullptr. Both are absolutely required to be valid to accurately filter html payloads.");
@@ -611,6 +611,9 @@ namespace te
 
 					// Where we're going to collect all matched nodes.
 					gq::NodeMutationCollection collection;		
+
+					// Reader lock.
+					Reader r(m_filterLock);
 
 					// We'll start out getting global selectors and running them against the
 					// document, collecting all results into the NodeMutationCollection structure.
@@ -838,7 +841,7 @@ namespace te
 								{
 									auto filter = m_filterParser->Parse(extractedRule, category);
 
-									auto filterIncDomains = filter->GetInclusionDomains();									
+									const auto& filterIncDomains = filter->GetInclusionDomains();									
 
 									auto addFunc = filter->IsException() ?
 										std::bind(&HttpFilteringEngine::AddExceptionFilter, this, std::placeholders::_1, std::placeholders::_2) :
@@ -1001,6 +1004,7 @@ namespace te
 					// This absolutely must be done, otherwise we can't guarantee that the string which
 					// the "domain" argument wraps will survive the lifetime of this object, which may
 					// destroy the universe.
+
 					auto domainStored = GetPreservedDomainStringRef(domain);
 
 					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefHash>* container = nullptr;
