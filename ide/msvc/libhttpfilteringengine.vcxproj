@@ -218,7 +218,12 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\certutil.exe" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\nspr4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plc4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plds4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug x64|Win32'">
@@ -263,7 +268,12 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\certutil.exe" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\nspr4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plc4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plds4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug x86|x64'">
@@ -308,7 +318,12 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\certutil.exe" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\nspr4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plc4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plds4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug x64|x64'">
@@ -353,7 +368,12 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\certutil.exe" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\nspr4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plc4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plds4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x86|Win32'">
@@ -397,7 +417,12 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\certutil.exe" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\nspr4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plc4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plds4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x64|Win32'">
@@ -441,7 +466,12 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\certutil.exe" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\nspr4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plc4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plds4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x86|x64'">
@@ -485,7 +515,12 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\certutil.exe" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\nspr4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plc4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plds4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x64|x64'">
@@ -529,7 +564,12 @@ xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\libeay32.dll
 xcopy /Y "$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\bin\ssleay32.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\$(PlatformTarget)\*.sys" "$(OutDir)"
-xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\certutil.exe" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\nspr4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plc4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\bin\plds4.dll" "$(OutDir)"
+xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
