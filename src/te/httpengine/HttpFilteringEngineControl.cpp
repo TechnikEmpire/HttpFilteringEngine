@@ -107,7 +107,22 @@ namespace te
 			m_httpFilteringEngine(new filtering::http::HttpFilteringEngine(m_programWideOptions.get(), onInfo, onWarn, onError, m_onRequestBlockedCb, m_onElementsBlockedCb)),
 			m_isRunning(false)
 		{
-			
+			if (m_store == nullptr)
+			{
+				// XXX TODO - Make a factory for cert store so we don't have this horrible mess everywhere.
+				#if BOOST_OS_WINDOWS
+					m_store.reset(new mitm::secure::WindowsInMemoryCertificateStore(u8"CA", u8"Http Filtering Engine", u8"Http Filtering Engine"));
+				#elif BOOST_OS_ANDROID
+					You poor guy.You didn't write a cert store for Android. Are you new?
+				#else
+					You poor guy.You didn't write a cert store for this OS. Are you new ?
+				#endif
+
+				if (!m_store->EstablishOsTrust())
+				{
+					throw std::runtime_error(u8"In HttpFilteringEngineControl::Start() - Failed to establish certificate trust with OS.");
+				}
+			}
 		}
 
 		HttpFilteringEngineControl::~HttpFilteringEngineControl()
@@ -141,23 +156,6 @@ namespace te
 					m_service->reset();
 				}				
 
-				if (m_store == nullptr)
-				{
-					// XXX TODO - Make a factory for cert store so we don't have this horrible mess everywhere.
-					#if BOOST_OS_WINDOWS
-						m_store.reset(new mitm::secure::WindowsInMemoryCertificateStore(u8"CA", u8"Http Filtering Engine", u8"Http Filtering Engine"));
-					#elif BOOST_OS_ANDROID
-						You poor guy. You didn't write a cert store for Android, and you didn't use a factory. Are you new?
-					#else
-						You poor guy.You didn't write a cert store for this OS, and you didn't use a factory. Are you new ?
-					#endif
-
-					if (!m_store->EstablishOsTrust())
-					{
-						throw std::runtime_error(u8"In HttpFilteringEngineControl::Start() - Failed to establish certificate trust with OS.");
-					}
-				}
-
 				m_httpAcceptor.reset(
 					new mitm::secure::TcpAcceptor(
 						m_service.get(),
@@ -170,6 +168,10 @@ namespace te
 						m_onError
 						)
 					);
+
+				#ifdef NDEBUG
+					assert(m_store != nullptr && "In HttpFilteringEngineControl::Start() - Cert store is nullptr!");
+				#endif
 
 				m_httpsAcceptor.reset(
 					new mitm::secure::TlsAcceptor(
