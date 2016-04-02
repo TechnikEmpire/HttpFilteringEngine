@@ -62,7 +62,7 @@ namespace Te {
 			/// <summary>
 			/// Callback that is designed to verify if the binary at the supplied absolute path has
 			/// firewall permission to access the internet.
-			/// </summary>
+			/// </summary>			
 			delegate bool OnFirewallCheckCallback(System::String^ binaryAbsolutePath);
 
 			/// <summary>
@@ -367,24 +367,28 @@ namespace Te {
 			/// 
 			/// This is the unmanaged callback delegate for checking firewall permissions.
 			/// </summary>			
+			[UnmanagedFunctionPointer(CallingConvention::Cdecl)]
 			delegate bool UnmanagedFirewallCheckCallback(const char* binaryAbsolutePath, const size_t binaryAbsolutePathLength);
 
 			/// <summary>
 			/// See notes on UnmanagedFirewallCheckCallback. This is the managed, unmanaged callback
 			/// delegate for onInfo, onWarn and onError.
 			/// </summary>
+			[UnmanagedFunctionPointer(CallingConvention::Cdecl)]
 			delegate void UnmanagedMessageCallback(const char* message, const size_t messageLength);
 
 			/// <summary>
 			/// See notes on UnmanagedFirewallCheckCallback. This is the managed, unmanaged callback
 			/// for information about blocked requests.
 			/// </summary>
+			[UnmanagedFunctionPointer(CallingConvention::Cdecl)]
 			delegate void UnmanagedReportRequestBlockedCallback(const uint8_t category, const uint32_t payloadSizeBlocked, const char* host, const size_t hostLength);
 
 			/// <summary>
 			/// See notes on UnmanagedFirewallCheckCallback. This is the managed, unmanaged callback
 			/// for information about HTML elements removed from HTML payloads.
 			/// </summary>
+			[UnmanagedFunctionPointer(CallingConvention::Cdecl)]
 			delegate void UnmanagedReportElementsBlockedCallback(const uint32_t numElementsRemoved, const char* fullRequest, const size_t requestLength);					
 
 			/// <summary>
