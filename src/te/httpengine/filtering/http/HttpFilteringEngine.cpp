@@ -261,7 +261,7 @@ namespace te
 								// it's a malicious web server, a broken one, or a troll putting "trololol" as the content
 								// length. Who cares.
 
-								ReportWarning(u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) -  \
+								ReportWarning(u8"In HttpFilteringEnginethi(mhttp::HttpRequest*, mhttp::HttpResponse*) -  \
 												Failed to parse content-length of blocked response. Using default average.");
 							}
 						}
@@ -332,8 +332,9 @@ namespace te
 						{
 							transactionSettings[AbpFilterOption::notthird_party] = true;
 						}
-						else {
-							transactionSettings[AbpFilterOption::third_party] = true;
+						else 
+						{
+							transactionSettings[AbpFilterOption::third_party] = true;							
 						}
 					}
 
