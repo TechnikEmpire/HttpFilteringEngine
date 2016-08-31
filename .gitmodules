@@ -1,2 +1,0 @@
-[submodule ".\\deps\\zlib\\"]
-	url = https://github.com/madler/zlib.git
