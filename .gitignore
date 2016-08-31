@@ -1,4 +1,4 @@
-## Ignore bin directories, deps directories, etc
+## Ignore bin directories, etc.
 build/
 [Ii]ntermediates/
 
