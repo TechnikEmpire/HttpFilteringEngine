@@ -1,6 +1,5 @@
 ## Ignore bin directories, deps directories, etc
 build/
-deps/*/*/**
 [Ii]ntermediates/
 
 ## Ignore Visual Studio temporary files, build results, and
