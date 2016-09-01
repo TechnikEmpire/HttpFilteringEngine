@@ -10,3 +10,6 @@
 [submodule "deps\\gq"]
 	path = deps\\gq
 	url = https://github.com/TechnikEmpire/GQ.git
+[submodule "deps\\boost"]
+	path = deps\\boost
+	url = https://github.com/boostorg/boost.git
