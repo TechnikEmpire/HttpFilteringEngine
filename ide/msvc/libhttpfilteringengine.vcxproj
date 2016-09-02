@@ -183,7 +183,7 @@
       <PreprocessorDefinitions>_WIN32_WINNT=0x0600;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser\msvc\include;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\deps\gumbo-parser\msvc\include;$(ProjectDir)..\..\deps\gq\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
@@ -233,7 +233,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(
       <PreprocessorDefinitions>_WIN32_WINNT=0x0600;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser\msvc\include;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\deps\gumbo-parser\msvc\include;$(ProjectDir)..\..\deps\gq\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
@@ -283,7 +283,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(
       <PreprocessorDefinitions>_WIN32_WINNT=0x0600;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser\msvc\include;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\deps\gumbo-parser\msvc\include;$(ProjectDir)..\..\deps\gq\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
@@ -333,7 +333,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(
       <PreprocessorDefinitions>_WIN32_WINNT=0x0600;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser\msvc\include;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\deps\gumbo-parser\msvc\include;$(ProjectDir)..\..\deps\gq\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
@@ -382,7 +382,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(
       <PreprocessorDefinitions>_WIN32_WINNT=0x0600;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser\msvc\include;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\deps\gumbo-parser\msvc\include;$(ProjectDir)..\..\deps\gq\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
@@ -431,7 +431,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(
       <PreprocessorDefinitions>_WIN32_WINNT=0x0600;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser\msvc\include;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\deps\gumbo-parser\msvc\include;$(ProjectDir)..\..\deps\gq\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
@@ -480,7 +480,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(
       <PreprocessorDefinitions>_WIN32_WINNT=0x0600;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser\msvc\include;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\deps\gumbo-parser\msvc\include;$(ProjectDir)..\..\deps\gq\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
@@ -529,7 +529,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(
       <PreprocessorDefinitions>_WIN32_WINNT=0x0600;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser\msvc\include;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\deps\gumbo-parser\msvc\include;$(ProjectDir)..\..\deps\gq\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
@@ -606,6 +606,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\nss\msvc\$(PlatformTarget)\dist\lib\*.dll" "$(
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\deps\http-parser\http_parser.c" />
     <ClCompile Include="..\..\src\te\httpengine\filtering\http\AbpFilterParser.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\filtering\http\CategorizedCssSelector.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\filtering\http\AbpFilter.cpp" />

@@ -30,7 +30,7 @@
 */
 
 #include "CategorizedCssSelector.hpp"
-#include <gq/Parser.hpp>
+#include <Parser.hpp>
 namespace te
 {
 	namespace httpengine

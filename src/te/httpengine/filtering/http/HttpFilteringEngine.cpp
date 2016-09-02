@@ -42,9 +42,9 @@
 
 #include "AbpFilterParser.hpp"
 
-#include <gq/Document.hpp>
-#include <gq/NodeMutationCollection.hpp>
-#include <gq/Serializer.hpp>
+#include <Document.hpp>
+#include <NodeMutationCollection.hpp>
+#include <Serializer.hpp>
 
 namespace te
 {

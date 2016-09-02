@@ -32,8 +32,8 @@
 #pragma once
 
 #include <boost/utility/string_ref.hpp>
-#include <gq/Selector.hpp>
-#include <gq/Parser.hpp>
+#include <Selector.hpp>
+#include <Parser.hpp>
 #include <memory>
 
 namespace te

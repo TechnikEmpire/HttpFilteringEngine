@@ -142,6 +142,9 @@
     <Filter Include="Header Files\te\httpengine\network">
       <UniqueIdentifier>{3059cba7-bbc2-40ca-8180-740d0013d21b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\http_parser">
+      <UniqueIdentifier>{c7db9451-5965-4e46-b88a-50eb518bf694}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -277,6 +280,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\filtering\http\AbpFilter.cpp">
       <Filter>Source Files\te\httpengine\filtering\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\deps\http-parser\http_parser.c">
+      <Filter>Source Files\http_parser</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
