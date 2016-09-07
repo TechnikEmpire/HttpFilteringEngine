@@ -1,18 +1,18 @@
 [submodule "deps/zlib"]
 	path = deps/zlib
-	url = https:/github.com/madler/zlib.git
+	url = https://github.com/madler/zlib.git
 [submodule "deps/http-parser"]
 	path = deps/http-parser
-	url = https:/github.com/nodejs/http-parser.git
+	url = https://github.com/nodejs/http-parser.git
 [submodule "deps/openssl"]
 	path = deps/openssl
-	url = https:/github.com/openssl/openssl.git
+	url = https://github.com/openssl/openssl.git
 [submodule "deps/gq"]
 	path = deps/gq
-	url = https:/github.com/TechnikEmpire/GQ.git
+	url = https://github.com/TechnikEmpire/GQ.git
 [submodule "deps/boost"]
 	path = deps/boost
-	url = https:/github.com/boostorg/boost.git
+	url = https://github.com/boostorg/boost.git
 [submodule "deps/bzip2"]
 	path = deps/bzip2
 	url = https://github.com/TechnikEmpire/bzip2.git
