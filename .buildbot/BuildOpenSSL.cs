@@ -347,7 +347,19 @@ namespace HttpFilteringEngine
                         }
 
                         // Move aka rename the directory to have a space.
-                        Directory.Move(openSslInstallDir, destReleaseDir);
+                        try
+						{
+							Directory.Move(openSslInstallDir, destReleaseDir);
+						}
+						catch 
+						{
+							// Sometimes getting access denied. Perhaps parts of the build
+							// process are still hanging. Try and give them a few seconds
+							// to wrap up, then try again.
+							Thread.Sleep(3000);
+							
+							Directory.Move(openSslInstallDir, destReleaseDir);
+						}
                         
                         // Simply copy the release folder for arch to a debug folder.
                         CopyDirectory(destReleaseDir, destDebugDir, true);
