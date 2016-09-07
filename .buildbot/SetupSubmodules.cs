@@ -141,7 +141,7 @@ namespace HttpFilteringEngine
 
             var fullGitPath = m_gitDir + Path.DirectorySeparatorChar + "git.exe";
 
-            if (RunProcess(WorkingDirectory, fullGitPath, new List<string>(new[] { "submodule update" })) == 0)
+            if (RunProcess(WorkingDirectory, fullGitPath, new List<string>(new[] { "submodule update --init" })) == 0)
             {
                 return true;
             }
@@ -165,13 +165,22 @@ namespace HttpFilteringEngine
             submoduleBasePath.Append(Path.DirectorySeparatorChar);
             submoduleBasePath.Append("deps");
 
+			var fullGitPath = m_gitDir + Path.DirectorySeparatorChar + "git.exe";
+			
+			WriteLineToConsole("Initializing submodules ...");
+
+            if (RunProcess(WorkingDirectory, fullGitPath, new List<string>(new[] { "submodule update --init"})) != 0)
+            {				
+				WriteLineToConsole("Failed to initialize submodules."); 
+				return false;
+            }
+			
             var submoduleDirs = Directory.GetDirectories(submoduleBasePath.ToString(), "*.*", SearchOption.TopDirectoryOnly);
 
             var checkoutAttempts = 0;
-            var successfulCheckouts = 0;
+            var successfulCheckouts = 0;            
 
-            var fullGitPath = m_gitDir + Path.DirectorySeparatorChar + "git.exe";
-
+			// Now we do recursive init on each submodule, except boost.
             foreach (var submodulePath in submoduleDirs)
             {
                 ++checkoutAttempts;
