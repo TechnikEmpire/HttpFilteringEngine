@@ -714,6 +714,9 @@ namespace te
 								// so we'd have no way to handle content compressed with this method.
 								m_response->RemoveHeader(util::http::headers::GetDictionary);
 
+								// Ensure that nobody is advertising for QUIC support.
+								m_response->RemoveHeader(util::http::headers::AlternateProtocol);
+
 								// Set m_keepAlive to what the server has specified. The client may have requested it, but
 								// ultimately it's up to the server how it's going to serve us.
 								auto connectionHeader = m_response->GetHeader(util::http::headers::Connection);
@@ -734,14 +737,7 @@ namespace te
 									++connectionHeader.first;
 								}
 
-								m_keepAlive = keepAlive;
-
-								if (m_response->IsPayloadHtml())
-								{
-									// We filter with CSS filters, so we want to consume entire HTML responses before
-									// sending them back to the client, so we can filter them first.
-									m_response->SetConsumeAllBeforeSending(true);
-								}
+								m_keepAlive = keepAlive;								
 
 								if (m_response->IsPayloadComplete() == false && m_response->GetConsumeAllBeforeSending() == true)
 								{
@@ -856,21 +852,25 @@ namespace te
 						{
 							if (m_response->Parse(bytesTransferred))
 							{
-								// Let CSS selectors rip through the payload if it's complete and its HTML.
-								if (m_response->IsPayloadComplete() && m_response->GetConsumeAllBeforeSending() && m_response->IsPayloadHtml())
+								
+								if (m_response->IsPayloadComplete() && m_response->GetConsumeAllBeforeSending())
 								{
-									ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamRead - Processing HTML response.");
-									
-									auto processedHtmlString = m_filteringEngine->ProcessHtmlResponse(m_request.get(), m_response.get());
-									
-									if (processedHtmlString.size() > 0)
-									{
-										std::vector<char> processedHtmlVector(processedHtmlString.begin(), processedHtmlString.end());
+									// Response was flagged for further inspection. Supply to ShouldBlock...
+									auto blockResult = m_filteringEngine->ShouldBlock(m_request.get(), m_response.get(), std::is_same<BridgeSocketType, network::TlsSocket>::value);
 
-										m_response->SetPayload(std::move(processedHtmlVector));
-									}									
+									if (blockResult != 0)
+									{
+										// By setting ShouldBlock to a non-zero value, this adjusts the internal
+										// state of the response to be "complete", meaning that as far as this
+										// bridge is concerned, this transaction is finished. Setting shouldblock
+										// **does not** make the response a 204 response. This needs to be done
+										// explicitly.
+										m_response->SetShouldBlock(blockResult);
+										m_response->Make204();
+									}
 								}
-								else if (m_response->IsPayloadComplete() == false && m_response->GetConsumeAllBeforeSending() == true)
+								
+								if (m_response->IsPayloadComplete() == false && m_response->GetConsumeAllBeforeSending() == true)
 								{
 									SetStreamTimeout(5000);
 
@@ -1096,6 +1096,9 @@ namespace te
 								// you're still going to get SDHC encoded data.
 								m_request->RemoveHeader(util::http::headers::XSDHC);
 								m_request->RemoveHeader(util::http::headers::AvailDictionary);
+								
+								// Ensure that nobody is advertising for QUIC support.
+								m_request->RemoveHeader(util::http::headers::AlternateProtocol);
 
 								auto hostHeader = m_request->GetHeader(util::http::headers::Host);
 

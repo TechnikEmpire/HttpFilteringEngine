@@ -60,6 +60,7 @@ namespace te
 					util::cb::MessageFunction onInfo,
 					util::cb::MessageFunction onWarn,
 					util::cb::MessageFunction onError,
+					util::cb::ContentClassificationFunction onClassify,
 					util::cb::RequestBlockFunction onRequestBlocked,
 					util::cb::ElementBlockFunction onElementsBlocked
 					) :
@@ -69,6 +70,7 @@ namespace te
 						onError
 						),
 					m_programOptions(programOptions),
+					m_onClassifyContent(onClassify),
 					m_onRequestBlocked(onRequestBlocked),
 					m_onElementsBlocked(onElementsBlocked),
 					m_filterParser(
@@ -137,12 +139,12 @@ namespace te
 					if (flushExistingRules)
 					{
 						// If flushExistingRules is true, remove all existing filters from all containers that match the specified
-						// category for the list. Make sure to respect this ordering, because UnloadAllRulesForCategory acquires a
+						// category for the list. Make sure to respect this ordering, because UnloadAllFilterRulesForCategory acquires a
 						// writer lock.
-						UnloadAllRulesForCategory(listCategory);
+						UnloadAllFilterRulesForCategory(listCategory);
 					}
 
-					// Must come after unloading all rules, since UnloadAllRulesForCategory acquires write lock as well.
+					// Must come after unloading all rules, since UnloadAllFilterRulesForCategory acquires write lock as well.
 					Writer w(m_filterLock);
 
 					std::istringstream f(list);
@@ -167,7 +169,70 @@ namespace te
 					return { succeeded, failed };
 				}
 
-				void HttpFilteringEngine::UnloadAllRulesForCategory(const uint8_t category)
+				uint32_t HttpFilteringEngine::LoadTextTriggersFromFile(const std::string& triggersFilePath, const uint8_t category, const bool flushExisting)
+				{
+					std::ifstream in(triggersFilePath, std::ios::binary | std::ios::in);
+
+					if (in.fail() || in.is_open() == false)
+					{
+						std::string errMessage(u8"In HttpFilteringEngine::LoadTextTriggersFromFile(const std::string&, const uint8_t, const bool) - Unable to read supplied filter list file: " + triggersFilePath);
+						ReportError(errMessage);
+						return 0;
+					}
+
+					std::string listContents;
+					in.seekg(0, std::ios::end);
+
+					auto fsize = in.tellg();
+
+					if (fsize < 0 || static_cast<unsigned long long>(fsize) > static_cast<unsigned long long>(std::numeric_limits<size_t>::max()))
+					{
+						ReportError(u8"In HttpFilteringEngine::LoadTextTriggersFromFile(const std::string&, const uint8_t, const bool) - When loading file, ifstream::tellg() returned either less than zero or a number greater than this program can correctly handle.");
+						return 0;
+					}
+
+					listContents.resize(static_cast<size_t>(fsize));
+					in.seekg(0, std::ios::beg);
+					in.read(&listContents[0], listContents.size());
+					in.close();
+
+					return LoadTextTriggersFromString(listContents, category, flushExisting);
+				}
+
+				uint32_t HttpFilteringEngine::LoadTextTriggersFromString(const std::string& triggers, const uint8_t category, const bool flushExisting)
+				{
+					if (flushExisting)
+					{
+						UnloadAllTextTriggersForCategory(category);
+					}
+
+					// Claim writer AFTER UnloadAllTextTriggersForCategory because it claims a writer itself.
+					Writer w(m_filterLock);
+
+					uint32_t loadedRulesCount = 0;
+
+					std::istringstream f(triggers);
+					std::string line;
+					while (std::getline(f, line))
+					{
+						// Ensure this isn't just whitespace.
+						boost::trim(line);
+						if (line.size() > 0)
+						{
+							auto preserved = GetPreservedICaseStringRef(boost::string_ref(line));
+
+							// We simply assign or insert. It's up to list maintainers to make sure that
+							// they're not overlapping their own rules.
+							m_textTriggers[preserved] = category;
+							
+							++loadedRulesCount;
+						}
+					}
+
+					return loadedRulesCount;
+				}
+
+				void HttpFilteringEngine::UnloadAllFilterRulesForCategory(const uint8_t category)
 				{
 					Writer w(m_filterLock);
 
@@ -226,11 +291,29 @@ namespace te
 					}
 				}
 
-				uint8_t HttpFilteringEngine::ShouldBlock(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response, const bool isSecure)
+				void HttpFilteringEngine::UnloadAllTextTriggersForCategory(const uint8_t category)
 				{
-					#ifndef NEDEBUG
+					Writer w(m_filterLock);
+
+					// Remove all entries where the category is the same.
+					for (auto it = m_textTriggers.begin(); it != m_textTriggers.end();)
+					{
+						if (it->second == category)
+						{
+							m_textTriggers.erase(it++);
+						}
+						else
+						{
+							++it;
+						}
+					}
+				}
+
+				uint8_t HttpFilteringEngine::ShouldBlock(const mhttp::HttpRequest* request, mhttp::HttpResponse* response, const bool isSecure)
+				{
+					#ifndef NDEBUG
 						assert(request != nullptr && u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - The HttpRequest parameter was supplied with a nullptr. The request is absolutely required to do accurate HTTP filtering.");
-					#else // !NEDEBUG
+					#else // !NDEBUG
 						if (request == nullptr)
 						{
 							throw std::runtime_error(u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - The HttpRequest parameter was supplied with a nullptr. The request is absolutely required to do accurate HTTP filtering.");
@@ -301,7 +384,7 @@ namespace te
 					// we can't do a whole lot with this because the http request is fundamentally broken.
 					if (hostStringRef.size() == 0)
 					{
-						ReportWarning(u8"In HttpFilteringEngine::HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - Host declaration is missing from the HTTP request. As the request is fundamentally broken, aborting any further analysis.");
+						ReportWarning(u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - Host declaration is missing from the HTTP request. As the request is fundamentally broken, aborting any further analysis.");
 						return 0;
 					}
 
@@ -545,6 +628,85 @@ namespace te
 								return globalTypedIncludesPair->second[gti]->GetCategory();
 							}
 						}
+					}					
+
+					// Last thing to do, since we've decided not to block here, is to see if the
+					// response is not complete. If it is not yet complete, and the response headers
+					// declare types of data we are capable of inspecting, we want to go ahead and
+					// flag those responses to have them entirely consumed in-memory (where limits
+					// allow). This way we'll get the responses give back to use here inside of
+					// ShouldBlock to be checked again.
+					if (response != nullptr)
+					{
+
+						if (response->IsPayloadComplete() == false)
+						{
+							// Force the payload to be downloaded.
+							if (response->IsPayloadJson() || response->IsPayloadHtml())
+							{
+								// We want to consume JSON responses. By consuming them to the end, the ShouldBlock
+								// method on the Engine will pass it off to the content classification callback if
+								// it's available. Porn results can be caught this way.
+
+								// We filter with CSS filters, so we want to consume entire HTML responses before
+								// sending them back to the client, so we can filter them first.
+								response->SetConsumeAllBeforeSending(true);
+							}
+						}
+						else
+						{
+							// If true, payload was flagged for analysis and is complete.
+							if (response->GetConsumeAllBeforeSending())
+							{
+								if (response->IsPayloadJson() || response->IsPayloadText())
+								{
+									// This will include JSON, XML, HTML, etc.
+									auto shouldBlockDueToTextTrigger = ShouldBlockBecauseOfTextTrigger(response->GetPayload());
+
+									if (shouldBlockDueToTextTrigger != 0)
+									{
+										return shouldBlockDueToTextTrigger;
+									}
+								}
+
+								// The very last thing we can check if we made it here, is to see if we have content
+								// that we can classify. Check if we have an external classification callback.
+								if (m_onClassifyContent)
+								{
+									auto contentTypeHeader = response->GetHeader(util::http::headers::ContentType);
+
+									// Default to an empty aka unknown string.
+									std::string contentTypeString;
+									if (contentTypeHeader.first != contentTypeHeader.second)
+									{
+										contentTypeString = contentTypeHeader.first->second;
+									}
+
+									const auto& payload = response->GetPayload();
+
+									auto contentClassification = m_onClassifyContent(payload.data(), payload.size(), contentTypeString.c_str(), contentTypeString.size());
+
+									if (m_programOptions->GetIsHttpCategoryFiltered(contentClassification))
+									{
+										return contentClassification;
+									}
+								}
+
+								// We're not blocking, so last thing to do is run selectors if payload is HTML.
+								if (response->IsPayloadHtml())
+								{
+									// Payload is complete, it's HTML, and it was kept for further inspection. Let the CSS selectors
+									// rip through the HTML payload before returning.
+									auto processedHtmlString = this->ProcessHtmlResponse(request, response);
+
+									if (processedHtmlString.size() > 0)
+									{
+										std::vector<char> processedHtmlVector(processedHtmlString.begin(), processedHtmlString.end());
+										response->SetPayload(std::move(processedHtmlVector));
+									}
+								}
+							}
+						}						
 					}
 
 					// No matches of any kind were found, so the transaction should be allowed to complete.
@@ -553,9 +715,9 @@ namespace te
 
 				std::string HttpFilteringEngine::ProcessHtmlResponse(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response)
 				{
-					#ifndef NEDEBUG
+					#ifndef NDEBUG
 						assert(request != nullptr && response != nullptr && u8"In HttpFilteringEngine::ProcessHtmlResponse(const mhttp::HttpRequest*, const mhttp::HttpResponse*) const - The HttpRequest or HttpResponse parameter was supplied with a nullptr. Both are absolutely required to be valid to accurately filter html payloads.");
-					#else // !NEDEBUG
+					#else // !NDEBUG
 						if (request == nullptr || response == nullptr)
 						{
 							throw std::runtime_error(u8"In HttpFilteringEngine::ProcessHtmlResponse(const mhttp::HttpRequest*, const mhttp::HttpResponse*) const - The HttpRequest or HttpResponse parameter was supplied with a nullptr. Both are absolutely required to be valid to accurately filter html payloads.");
@@ -576,8 +738,7 @@ namespace te
 
 					if (!isPayloadText || !isPayloadHtml)
 					{
-						// I would do anything to block, I'd run right in to hell and back. But I
-						// won't do that.
+						// We can't attempt to parse this as HTML when the content type doesn't even come close.
 						return std::string();
 					}
 
@@ -745,6 +906,58 @@ namespace te
 					return finalResult;
 				}
 
+				uint8_t HttpFilteringEngine::ShouldBlockBecauseOfTextTrigger(const std::vector<char>& payload) const
+				{
+					boost::string_ref content = boost::string_ref(payload.data(), payload.size());
+
+					// For now, the alphabet, periods and hyphens are surprisingly sufficient. Catches
+					// words and domains.
+					auto validData = boost::string_ref(u8"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.-");
+
+					auto start = content.find_first_of(validData);
+
+					while (start != boost::string_ref::npos)
+					{
+						content = content.substr(start);
+
+						auto end = content.find_first_not_of(validData);
+
+						if (end != boost::string_ref::npos && end > start)
+						{
+							// Get the current match candidate.
+							auto entry = content.substr(0, end);
+
+							// Try and find the match candidate in the triggers map.
+							auto match = m_textTriggers.find(entry);
+
+							if (match != m_textTriggers.end())
+							{
+								// If the trigger is both found and the match category is enabled, just return that category.
+								if (m_programOptions->GetIsHttpCategoryFiltered(match->second))
+								{
+									return match->second;
+								}
+							}
+
+							// Carry on to next entry if possible.
+							if (end + 1 < content.size())
+							{
+								content = content.substr(end + 1);
+								start = content.find_first_of(validData);
+								continue;
+							}
+
+							break;
+						}
+						else
+						{
+							break;
+						}
+					}
+
+					return 0;
+				}
+
 				bool HttpFilteringEngine::ProcessAbpFormattedRule(const std::string& rule, const uint8_t category)
 				{
 					// Can't do much with an empty line, but this isn't an error.
@@ -905,9 +1118,9 @@ namespace te
 						return;
 					}					
 
-					#ifndef NEDEBUG
+					#ifndef NDEBUG
 						assert(sSelector != nullptr && u8"In HttpFilteringEngine::AddSelectorMultiDomain(boost::string_ref, const std::string&, const uint8_t) - Failed to allocate shared selector.");
-					#else // !NEDEBUG
+					#else // !NDEBUG
 						if (sSelector == nullptr)
 						{
 							throw std::runtime_error(u8"In HttpFilteringEngine::AddSelectorMultiDomain(boost::string_ref, const std::string&, const uint8_t) - Failed to allocate shared selector.");
@@ -963,7 +1176,7 @@ namespace te
 					// This absolutely must be done, otherwise we can't guarantee that the string which
 					// the "domain" argument wraps will survive the lifetime of this object, which may
 					// destroy the universe.
-					auto domainStored = GetPreservedDomainStringRef(domain);
+					auto domainStored = GetPreservedICaseStringRef(domain);
 
 					const auto& i = m_inclusionSelectors.find(domainStored);
 
@@ -982,7 +1195,7 @@ namespace te
 					// This absolutely must be done, otherwise we can't guarantee that the string which
 					// the "domain" argument wraps will survive the lifetime of this object, which may
 					// destroy the universe.
-					auto domainStored = GetPreservedDomainStringRef(domain);
+					auto domainStored = GetPreservedICaseStringRef(domain);
 
 					const auto& i = m_exceptionSelectors.find(domainStored);
 
@@ -1006,9 +1219,9 @@ namespace te
 					// the "domain" argument wraps will survive the lifetime of this object, which may
 					// destroy the universe.
 
-					auto domainStored = GetPreservedDomainStringRef(domain);
+					auto domainStored = GetPreservedICaseStringRef(domain);
 
-					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefHash>* container = nullptr;
+					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefICaseHash, util::string::StringRefIEquals>* container = nullptr;
 
 					if (filter->IsTypeBound())
 					{
@@ -1040,9 +1253,9 @@ namespace te
 					// This absolutely must be done, otherwise we can't guarantee that the string which
 					// the "domain" argument wraps will survive the lifetime of this object, which may
 					// destroy the universe.
-					auto domainStored = GetPreservedDomainStringRef(domain);
+					auto domainStored = GetPreservedICaseStringRef(domain);
 
-					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefHash>* container = nullptr;
+					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefICaseHash, util::string::StringRefIEquals>* container = nullptr;
 
 					if (filter->IsTypeBound())
 					{
@@ -1123,7 +1336,7 @@ namespace te
 					return std::string();
 				}		
 
-				boost::string_ref HttpFilteringEngine::GetPreservedDomainStringRef(boost::string_ref domain)
+				boost::string_ref HttpFilteringEngine::GetPreservedICaseStringRef(boost::string_ref domain)
 				{
 					// Special case of the global key. Already stored safely in static storage
 					// wrapped by member variable.
@@ -1140,6 +1353,9 @@ namespace te
 					// saving in the long run, and get to avoid making copies continnuously on every
 					// single HTTP transaction of host strings and such.
 					std::string domainString = domain.to_string();
+
+					// Convert to upper case to avoid case-caused duplicates.
+					std::transform(domainString.begin(), domainString.end(), domainString.begin(), ::toupper);
 
 					// Simply do an insert. If the item exists, we'll get back the inserted/stored
 					// string. If the value doesn't exist, an insert will happen and we'll still get

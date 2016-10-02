@@ -105,10 +105,17 @@ namespace te
 								auto plen = part.size();
 								if (plen <= hostLen)
 								{
-									auto hostInReqPos = data.find(part);
+									// Here we're going to find the host in a case-insensitive way.
+									// Everything else should be case sensitive.
+									auto hostPos = boost::ifind_first(data, part);
 
-									if (hostInReqPos != boost::string_ref::npos)
+									if (!hostPos.empty())
 									{
+										// We get the index of the start of the match by calculating the distance
+										// between the start of the data string, and the start of the returned
+										// match in the first iterator of our boost::ifind_first search.
+										auto hostInReqPos = std::distance(data.begin(), hostPos.begin());
+
 										if (hostInReqPos > 0)
 										{
 											switch (data[hostInReqPos - 1])
@@ -195,8 +202,8 @@ namespace te
 								if (partSize <= dataSize)
 								{
 									auto ss = dataCpy.substr(0, partSize);
-
-									if (std::memcmp(ss.begin(), part.begin(), partSize) == 0)
+									
+									if (boost::iequals(ss, part))
 									{
 										lastMatch = partSize;
 										continue;
@@ -250,12 +257,12 @@ namespace te
 					return m_isException;
 				}
 
-				const std::unordered_set<boost::string_ref, util::string::StringRefHash>& AbpFilter::GetExceptionDomains() const
+				const std::unordered_set<boost::string_ref, util::string::StringRefICaseHash, util::string::StringRefIEquals>& AbpFilter::GetExceptionDomains() const
 				{
 					return m_exceptionDomains;
 				}
 
-				const std::unordered_set<boost::string_ref, util::string::StringRefHash>& AbpFilter::GetInclusionDomains() const
+				const std::unordered_set<boost::string_ref, util::string::StringRefICaseHash, util::string::StringRefIEquals>& AbpFilter::GetInclusionDomains() const
 				{
 					return m_inclusionDomains;
 				}

@@ -40,7 +40,7 @@ namespace te
 			namespace http
 			{
 
-				const std::unordered_map<boost::string_ref, AbpFilterOption, util::string::StringRefHash> AbpFilterParser::ValidFilterOptions
+				const std::unordered_map<boost::string_ref, AbpFilterOption, util::string::StringRefICaseHash, util::string::StringRefIEquals> AbpFilterParser::ValidFilterOptions
 				{
 					{ u8"script" , script },
 					{ u8"~script" , notscript },
@@ -461,9 +461,9 @@ namespace te
 					return ret;
 				}
 
-				std::unordered_set<boost::string_ref, util::string::StringRefHash> AbpFilterParser::ParseDomains(boost::string_ref optionsString, const bool exceptions) const
+				std::unordered_set<boost::string_ref, util::string::StringRefICaseHash, util::string::StringRefIEquals> AbpFilterParser::ParseDomains(boost::string_ref optionsString, const bool exceptions) const
 				{
-					std::unordered_set<boost::string_ref, util::string::StringRefHash> ret;
+					std::unordered_set<boost::string_ref, util::string::StringRefICaseHash, util::string::StringRefIEquals> ret;
 
 					if (optionsString.size() == 0)
 					{

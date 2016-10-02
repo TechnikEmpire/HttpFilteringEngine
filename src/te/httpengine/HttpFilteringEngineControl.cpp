@@ -88,6 +88,7 @@ namespace te
 			uint16_t httpListenerPort,
 			uint16_t httpsListenerPort,
 			uint32_t proxyNumThreads,
+			util::cb::ContentClassificationFunction onClassify,
 			util::cb::MessageFunction onInfo,
 			util::cb::MessageFunction onWarn,
 			util::cb::MessageFunction onError,
@@ -97,14 +98,12 @@ namespace te
 			:
 			util::cb::EventReporter(onInfo, onWarn, onError),			
 			m_firewallCheckCb(firewallCb),
-			m_onRequestBlockedCb(onRequestBlocked),
-			m_onElementsBlockedCb(onElementsBlocked),
 			m_caBundleAbsolutePath(caBundleAbsolutePath),
 			m_httpListenerPort(httpListenerPort),
 			m_httpsListenerPort(httpsListenerPort),
 			m_proxyNumThreads(proxyNumThreads),
 			m_programWideOptions(new filtering::options::ProgramWideOptions()),
-			m_httpFilteringEngine(new filtering::http::HttpFilteringEngine(m_programWideOptions.get(), onInfo, onWarn, onError, m_onRequestBlockedCb, m_onElementsBlockedCb)),
+			m_httpFilteringEngine(new filtering::http::HttpFilteringEngine(m_programWideOptions.get(), onInfo, onWarn, onError, onClassify, onRequestBlocked, onElementsBlocked)),
 			m_isRunning(false)
 		{
 			if (m_store == nullptr)
@@ -352,6 +351,26 @@ namespace te
 			}
 		}
 
+		uint32_t HttpFilteringEngineControl::LoadTextTriggersFromFile(const std::string& triggersFilePath, const uint8_t category, const bool flushExisting)
+		{
+			if (m_httpFilteringEngine != nullptr)
+			{
+				return m_httpFilteringEngine->LoadTextTriggersFromFile(triggersFilePath, category, flushExisting);
+			}
+
+			return 0;
+		}
+
+		uint32_t HttpFilteringEngineControl::LoadTextTriggersFromString(const std::string& triggers, const uint8_t category, const bool flushExisting)
+		{
+			if (m_httpFilteringEngine != nullptr)
+			{
+				return m_httpFilteringEngine->LoadTextTriggersFromString(triggers, category, flushExisting);
+			}
+
+			return 0;
+		}
+
 		std::vector<char> HttpFilteringEngineControl::GetRootCertificatePEM() const
 		{
 			if (m_store)
@@ -364,9 +383,9 @@ namespace te
 
 		void HttpFilteringEngineControl::UnloadRulesForCategory(const uint8_t category)
 		{
-			if (m_httpFilteringEngine != nullptr)
+			if (m_httpFilteringEngine != nullptr && category != 0)
 			{
-
+				m_httpFilteringEngine->UnloadAllFilterRulesForCategory(category);
 			}
 		}
 

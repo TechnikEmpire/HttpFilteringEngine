@@ -130,6 +130,7 @@ extern "C" {
 		uint16_t httpListenerPort,
 		uint16_t httpsListenerPort,
 		uint32_t numThreads,
+		ClassifyContentCallback onClassify,
 		ReportMessageCallback onInfo,
 		ReportMessageCallback onWarn,
 		ReportMessageCallback onError,
@@ -314,11 +315,16 @@ extern "C" {
 	/// values. The value zero is reserved to represent the "unfiltered" category. Aside from this,
 	/// whatever other value these categories are are has no bearing on internal functionality.
 	/// </param>
+	/// <param name="flushExisting">
+	/// Whether or not to flush the existing entries in the category before loading new entries.
+	/// </param>
 	/// <param name="rulesLoaded">
-	/// The total number of rules successfully loaded and parsed from the source.
+	/// A pointer to set, if non-null, indicating the total number of rules successfully loaded and
+	/// parsed from the source.
 	/// </param>
 	/// <param name="rulesFailed">
-	/// The total number of rules that failed to load and or be parsed from the source.
+	/// A pointer to set, if non-null, indicating the total number of rules that failed to load and
+	/// or be parsed from the source.
 	/// </param>
 	HTTP_FILTERING_ENGINE_API void fe_ctl_load_list_from_file(
 		PHttpFilteringEngineCtl ptr, 
@@ -349,11 +355,16 @@ extern "C" {
 	/// values. The value zero is reserved to represent the "unfiltered" category. Aside from this,
 	/// whatever other value these categories are are has no bearing on internal functionality.
 	/// </param>
+	/// <param name="flushExisting">
+	/// Whether or not to flush the existing entries in the category before loading new entries.
+	/// </param>
 	/// <param name="rulesLoaded">
-	/// The total number of rules successfully loaded and parsed from the source.
+	/// A pointer to set, if non-null, indicating the total number of rules successfully loaded and
+	/// parsed from the source.
 	/// </param>
 	/// <param name="rulesFailed">
-	/// The total number of rules that failed to load and or be parsed from the source.
+	/// A pointer to set, if non-null, indicating the total number of rules that failed to load and
+	/// or be parsed from the source.
 	/// </param>
 	HTTP_FILTERING_ENGINE_API void fe_ctl_load_list_from_string(
 		PHttpFilteringEngineCtl ptr, 
@@ -365,7 +376,76 @@ extern "C" {
 		uint32_t* rulesFailed
 		);
 
-	
+	/// <summary>
+	/// Attempts to have the Engine load text triggers, separated by newline, from the supplied file
+	/// path.
+	/// </summary>
+	/// <param name="ptr">
+	/// A valid pointer to an existing Engine instance.
+	/// </param>
+	/// <param name="listString">
+	/// A pointer to a string containing the path to the text triggers file to load.
+	/// </param>
+	/// <param name="listStringLength">
+	/// The total length of the supplied file path string.
+	/// </param>
+	/// <param name="category">
+	/// The category that the rules loaded from the list should be classified as belonging to. This
+	/// is entirely user specified and the Engine is **mostly** agnostic to the meaning of these
+	/// values. The value zero is reserved to represent the "unfiltered" category. Aside from this,
+	/// whatever other value these categories are are has no bearing on internal functionality.
+	/// </param>
+	/// <param name="flushExisting">
+	/// Whether or not to flush the existing entries in the category before loading new entries.
+	/// </param>
+	/// <param name="rulesLoaded">
+	/// A pointer to set, if non-null, indicating the total number of rules successfully loaded and
+	/// parsed from the source.
+	/// </param>
+	HTTP_FILTERING_ENGINE_API void fe_ctl_load_text_triggers_from_file(
+		PHttpFilteringEngineCtl ptr,
+		const char* filePath,
+		const size_t filePathLength,
+		const uint8_t category,
+		const bool flushExisting,
+		uint32_t* rulesLoaded
+	);
+
+	/// <summary>
+	/// Attempts to have the Engine load text triggers, separated by newline, from the supplied
+	/// string.
+	/// </summary>
+	/// <param name="ptr">
+	/// A valid pointer to an existing Engine instance.
+	/// </param>
+	/// <param name="listString">
+	/// A pointer to a string containing the text triggers to load.
+	/// </param>
+	/// <param name="listStringLength">
+	/// The total length of the supplied text triggers string.
+	/// </param>
+	/// <param name="listCategory">
+	/// The category that the rules loaded from the list should be classified as belonging to. This
+	/// is entirely user specified and the Engine is **mostly** agnostic to the meaning of these
+	/// values. The value zero is reserved to represent the "unfiltered" category. Aside from this,
+	/// whatever other value these categories are are has no bearing on internal functionality.
+	/// </param>
+	/// <param name="flushExisting">
+	/// Whether or not to flush the existing entries in the category before loading new entries.
+	/// </param>
+	/// <param name="rulesLoaded">
+	/// A pointer to set, if non-null, indicating the total number of rules successfully loaded and
+	/// parsed from the source.
+	/// </param>
+	HTTP_FILTERING_ENGINE_API void fe_ctl_load_text_triggers_from_string(
+		PHttpFilteringEngineCtl ptr,
+		const char* triggersString,
+		const size_t triggersStringLength,
+		const uint8_t category,
+		const bool flushExisting,
+		uint32_t* rulesLoaded
+	);
+
 	/// <summary>
 	/// Gets the current root CA being used by the Engine, if any, in PEM format. Memory is allocated
 	/// inside the function and the corresponding pointer is assigned to the bufferPP parameter. The

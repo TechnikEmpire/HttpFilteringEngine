@@ -36,9 +36,10 @@ namespace Te {
 	namespace HttpFilteringEngine
 	{
 
-		Engine::Engine(OnFirewallCheckCallback^ firewallCheckFunc, System::String^ caBundleAbsPath, uint16_t httpListenerPort, uint16_t httpsListenerPort, uint32_t numThreads)
+		Engine::Engine(FirewallCheckHandler^ firewallCheckFunc, ClassifyContentHandler^ classificationFunc, System::String^ caBundleAbsPath, uint16_t httpListenerPort, uint16_t httpsListenerPort, uint32_t numThreads)
 		{
 			m_onFirewallCallback = firewallCheckFunc;
+			m_onClassificationCallback = classificationFunc;
 			CaBundleAbsolutePath = caBundleAbsPath;
 			HttpListenerPort = httpListenerPort;
 			HttpsListenerPort = httpsListenerPort;
@@ -198,7 +199,69 @@ namespace Te {
 			rulesFailed = failed;
 		}
 
-		void Engine::UnloadAllRulesForCategory(const uint8_t category)
+		void Engine::LoadTextTriggersFromFile(
+			System::String^ filePath,
+			uint8_t category,
+			bool flushExistingInCategory,
+			[Out] uint32_t% rulesLoaded
+			)
+		{
+			uint32_t loaded = 0;
+
+			if (System::String::IsNullOrEmpty(filePath) || System::String::IsNullOrWhiteSpace(filePath))
+			{
+				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadTextTriggersFromFile(System::String^, uint8_t, bool, [Out] uint32_t) - Provided list file path is either null or whitespace.");
+				throw err;
+			}
+
+			if (category == 0)
+			{
+				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadTextTriggersFromFile(System::String^, uint8_t, bool, [Out] uint32_t) - Cannot specify zero as the category. Zero is reserved to indicate \"Do not block\".");
+				throw err;
+			}
+
+			if (m_handle != nullptr)
+			{
+				auto listFilePath = msclr::interop::marshal_as<std::string>(filePath);
+
+				fe_ctl_load_text_triggers_from_file(m_handle, listFilePath.c_str(), listFilePath.size(), category, flushExistingInCategory, &loaded);
+			}
+
+			rulesLoaded = loaded;
+		}
+
+		void Engine::LoadTextTriggersFromString(
+			System::String^ triggersString,
+			uint8_t category,
+			bool flushExistingInCategory,
+			[Out] uint32_t% rulesLoaded
+			)
+		{
+			uint32_t loaded = 0;
+
+			if (System::String::IsNullOrEmpty(triggersString) || System::String::IsNullOrWhiteSpace(triggersString))
+			{
+				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadTextTriggersFromString(System::String^, uint8_t, bool, [Out] uint32_t) - Provided list is either null or whitespace.");
+				throw err;
+			}
+
+			if (category == 0)
+			{
+				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadTextTriggersFromString(System::String^, uint8_t, bool, [Out] uint32_t) - Cannot specify zero as the category. Zero is reserved to indicate \"Do not block\".");
+				throw err;
+			}
+
+			if (m_handle != nullptr)
+			{
+				auto listStr = msclr::interop::marshal_as<std::string>(triggersString);
+
+				fe_ctl_load_text_triggers_from_string(m_handle, listStr.c_str(), listStr.size(), category, flushExistingInCategory, &loaded);
+			}
+
+			rulesLoaded = loaded;
+		}
+
+		void Engine::UnloadAllFilterRulesForCategory(const uint8_t category)
 		{
 			if (m_handle != nullptr)
 			{
@@ -282,6 +345,7 @@ namespace Te {
 			}
 
 			m_unmanagedFirewallCheckCallback = gcnew UnmanagedFirewallCheckCallback(this, &Engine::UnmanagedFirewallCheck);
+			m_unmanagedContentClasificationCallback = gcnew UnmanagedClassifyContentCallback(this, &Engine::UnmanagedClassifyContent);
 			m_unmanagedOnInfoCallback = gcnew UnmanagedMessageCallback(this, &Engine::UnmanagedOnInfo);
 			m_unmanagedOnWarningCallback = gcnew UnmanagedMessageCallback(this, &Engine::UnmanagedOnWarning);
 			m_unmanagedOnErrorCallback = gcnew UnmanagedMessageCallback(this, &Engine::UnmanagedOnError);
@@ -289,6 +353,7 @@ namespace Te {
 			m_unmanagedOnElementsBlockedCallback = gcnew UnmanagedReportElementsBlockedCallback(this, &Engine::UnmanagedOnElementsBlocked);
 
 			auto firewallCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedFirewallCheckCallback);
+			auto classifyCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedContentClasificationCallback);
 			auto infoCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnInfoCallback);
 			auto warnCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnWarningCallback);
 			auto errorCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnErrorCallback);
@@ -309,6 +374,7 @@ namespace Te {
 				HttpListenerPort,
 				HttpsListenerPort,
 				m_numThreads,
+				static_cast<ClassifyContentCallback>(classifyCbPtr.ToPointer()),
 				static_cast<ReportMessageCallback>(infoCbPtr.ToPointer()),
 				static_cast<ReportMessageCallback>(warnCbPtr.ToPointer()),
 				static_cast<ReportMessageCallback>(errorCbPtr.ToPointer()),
@@ -332,6 +398,20 @@ namespace Te {
 			}
 
 			return false;
+		}
+
+		uint8_t Engine::UnmanagedClassifyContent(const char* contentBytes, const size_t contentLength, const char* contentType, const size_t contentTypeLength)
+		{
+			if (m_onClassificationCallback != nullptr && contentBytes != nullptr && contentType != nullptr)
+			{
+				System::String^ contentTypeString = gcnew System::String(contentType, 0, static_cast<int>(contentTypeLength));
+				array<System::Byte>^ managedBytes = gcnew array<System::Byte>(contentLength);
+				System::Runtime::InteropServices::Marshal::Copy(IntPtr((void *)contentBytes), managedBytes, 0, contentLength);
+
+				return m_onClassificationCallback(managedBytes, contentTypeString);
+			}
+
+			return 0;
 		}
 
 		void Engine::UnmanagedOnInfo(const char* message, const size_t messageLength)

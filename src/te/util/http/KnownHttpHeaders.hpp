@@ -1721,6 +1721,14 @@ namespace te
 					/// </summary>
 					const std::string AvailDictionary{ u8"Avail-Dictionary" };
 
+					/// <summary>
+					/// Header Name: Alternate-Protocol
+					/// Protocol: HTTP
+					/// Status: Non-Standard
+					/// Defined In: Made up by Google to hint to use QUIC over HTTP.
+					/// </summary>
+					const std::string AlternateProtocol{ u8"Alternate-Protocol" };
+
 				} /* namespace headers */
 			} /* namespace http */
 		} /* namespace util */

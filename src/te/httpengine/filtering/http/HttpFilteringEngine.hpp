@@ -126,6 +126,22 @@ namespace te
 					/// A valid pointer to a ProgramWideOptions object which must have a lifetime at
 					/// least equal to the lifetime of this object.
 					/// </param>
+					/// <param name="onInfo">
+					/// Optional callback where informational messages about internal function can be
+					/// sent. Defaults to nullptr.
+					/// </param>
+					/// <param name="onWarn">
+					/// Optional callback where warning messages about internal function can be sent.
+					/// Defaults to nullptr.
+					/// </param>
+					/// <param name="onError">
+					/// Optional callback where error messages about internal function can be sent.
+					/// Defaults to nullptr.
+					/// </param>
+					/// <param name="onClassify">
+					/// A function where the contents of a payload, along with the declared content
+					/// type can be sent for classification. Defaults to nullptr.
+					/// </param>
 					/// <param name="onRequestBlocked">
 					/// Callback where information about blocked requests can be sent.
 					/// </param>
@@ -137,6 +153,7 @@ namespace te
 						util::cb::MessageFunction onInfo = nullptr,
 						util::cb::MessageFunction onWarn = nullptr,
 						util::cb::MessageFunction onError = nullptr,
+						util::cb::ContentClassificationFunction onClassify = nullptr,
 						util::cb::RequestBlockFunction onRequestBlocked = nullptr,
 						util::cb::ElementBlockFunction onElementsBlocked = nullptr
 						);				
@@ -185,7 +202,7 @@ namespace te
 					/// </summary>
 					/// <param name="listFilePath">
 					/// The absolute path to a list of selectors and filters, written in Adblock Plus
-					/// Filter syntax
+					/// Filter syntax.
 					/// </param>
 					/// <param name="listCategory">
 					/// The category that the parsed selectors and filters are deemed to belong to.
@@ -248,12 +265,64 @@ namespace te
 					std::pair<uint32_t, uint32_t> LoadAbpFormattedListFromString(const std::string& list, const uint8_t listCategory, const bool flushExistingRules);
 
 					/// <summary>
-					/// Unloads any and all rules assigned to the given category.
+					/// Loads text keywords from a file. Each unique keyword must be on a newline
+					/// within the file. Note that text triggers should be used sparingly. You should
+					/// only really use entries highly specific to content that you really don't want
+					/// to get through, such as pornography. Any payload that is text based will be
+					/// subjected to filtering via these triggers, so beware. You want want
+					/// non-specific/common text as a trigger.
+					/// </summary>
+					/// <param name="triggers">
+					/// The string holding the newline-delimited list of trigger words.
+					/// </param>
+					/// <param name="category">
+					/// The category that extracted triggers belong to.
+					/// </param>
+					/// <param name="flushExisting">
+					/// Whether or not to flush existing triggers before loading the new ones.
+					/// </param>
+					/// <returns>
+					/// The total number of triggers loaded from the provided source.
+					/// </returns>
+					uint32_t LoadTextTriggersFromFile(const std::string& triggersFilePath, const uint8_t category, const bool flushExisting);
+
+					/// <summary>
+					/// Loads text keywords from a string. Each unique keyword must be on a newline.
+					/// Note that text triggers should be used sparingly. You should only really use
+					/// entries highly specific to content that you really don't want to get through,
+					/// such as pornography. Any payload that is text based will be subjected to
+					/// filtering via these triggers, so beware. You want want non-specific/common
+					/// text as a trigger.
+					/// </summary>
+					/// <param name="triggers">
+					/// The string holding the newline-delimited list of trigger words.
+					/// </param>
+					/// <param name="category">
+					/// The category that extracted triggers belong to.
+					/// </param>
+					/// <param name="flushExisting">
+					/// Whether or not to flush existing triggers before loading the new ones.
+					/// </param>
+					/// <returns>
+					/// The total number of triggers loaded from the provided source.
+					/// </returns>
+					uint32_t LoadTextTriggersFromString(const std::string& triggers, const uint8_t category, const bool flushExisting);
+
+					/// <summary>
+					/// Unloads any and all filtering rules assigned to the given category.
 					/// </summary>
 					/// <param name="category">
 					/// The category for which to unload all rules.
 					/// </param>
-					void UnloadAllRulesForCategory(const uint8_t category);
+					void UnloadAllFilterRulesForCategory(const uint8_t category);
+
+					/// <summary>
+					/// Unloads any and all text triggers for the given category.
+					/// </summary>
+					/// <param name="category">
+					/// The category for which to unload all text triggers.
+					/// </param>
+					void UnloadAllTextTriggersForCategory(const uint8_t category);
 
 					/// <summary>
 					/// Determine if a transaction should be blocked from completing. If the
@@ -265,12 +334,13 @@ namespace te
 					/// without having at least the response headers.
 					/// </summary>
 					/// <param name="request">
-					/// Pointer to the request side of the HTTP transaction to consider for
-					/// blocking. Absolutely must be a valid pointer.
+					/// Pointer to the request side of the HTTP transaction to consider for blocking.
+					/// Absolutely must be a valid pointer.
 					/// </param>
 					/// <param name="response">
 					/// Pointer to the response side of the HTTP transaction to consider for
-					/// blocking. Optional, defaulting to nullptr.
+					/// blocking. Optional, defaulting to nullptr. Note the parameter is non-const.
+					/// Responses will be modified if necessary for further inspection.
 					/// </param>
 					/// <param name="isSecure">
 					/// Indicates whether or not the transaction is HTTP or HTTPS. Required to
@@ -280,11 +350,11 @@ namespace te
 					/// Anything other than ContentFilteringCategory::None if it has been determined
 					/// that the transaction should be blocked. The return value represents the
 					/// filtering category that the the transaction was found to belong to. A
-					/// ContentFilteringCategory::None return indicates that no matching filter
-					/// could be found, or that the category for a matched filter was disabled, and
-					/// thus the request should not be blocked.
+					/// ContentFilteringCategory::None return indicates that no matching filter could
+					/// be found, or that the category for a matched filter was disabled, and thus
+					/// the request should not be blocked.
 					/// </returns>
-					uint8_t ShouldBlock(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response = nullptr, const bool isSecure = false);
+					uint8_t ShouldBlock(const mhttp::HttpRequest* request, mhttp::HttpResponse* response = nullptr, const bool isSecure = false);					
 
 					/// <summary>
 					/// Attempts to load and parse the response portion of the supplied transaction,
@@ -323,6 +393,13 @@ namespace te
 					/// of this filtering engine.
 					/// </summary>
 					const options::ProgramWideOptions* m_programOptions;
+
+					/// <summary>
+					/// Whenever a request or response with a full payload is submitted to determine
+					/// if it should be blocked or not, if this function is available, it will be
+					/// called to classify the payload content.
+					/// </summary>
+					util::cb::ContentClassificationFunction m_onClassifyContent = nullptr;
 
 					/// <summary>
 					/// Whenever a request is blocked, the filtering engine will attempt to generate
@@ -412,20 +489,6 @@ namespace te
 					/// </summary>
 					std::unordered_set<std::string> m_allKnownListDomains;
 
-					/* Not used. Allow users to estimate.
-					/// <summary>
-					/// When we block a response that uses chunked encoding, it's impossible to
-					/// known the entire size of the content without downloading and parsing the
-					/// entire response. But we did in fact block, and we did in fact stop a bunch
-					/// of stuff from being transferred over the wire. So, we'll go with the average
-					/// size of the average website as our default to report whenever content-length
-					/// is not specified. I believe this is more than a fair representation, since
-					/// especially in the case of ads, blocked content will almost surely download
-					/// more content, such as videos and images, very heavy stuff.
-					/// </summary>
-					static constexpr uint32_t AverageWebPageInBytes = 1935000;
-					*/
-
 					/// <summary>
 					/// Used for storing inclusion filters that do not specify any constraints in
 					/// their options that cannot be immediately known upon first receiving a
@@ -441,7 +504,7 @@ namespace te
 					/// rules use the host domain name, with no protocol or service applied
 					/// (http://, https://, www.) as the key.
 					/// </summary>
-					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefHash> m_typelessIncludeRules;
+					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_typelessIncludeRules;
 
 					/// <summary>
 					/// Used for storing exclusion filters that do not specify any constraints in
@@ -458,7 +521,7 @@ namespace te
 					/// rules use the host domain name, with no protocol or service applied
 					/// (http://, https://, www.) as the key.
 					/// </summary>
-					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefHash> m_typelessExcludeRules;
+					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_typelessExcludeRules;
 
 					/// <summary>
 					/// Used for storing inclusion filters which contain settings that bind the filters
@@ -472,7 +535,7 @@ namespace te
 					/// rules use the host domain name, with no protocol or service applied
 					/// (http://, https://, www.) as the key.
 					/// </summary>
-					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefHash> m_typedIncludeRules;
+					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_typedIncludeRules;
 
 					/// <summary>
 					/// Used for storing exclusion filters which contain settings that bind the filters
@@ -486,7 +549,7 @@ namespace te
 					/// rules use the host domain name, with no protocol or service applied
 					/// (http://, https://, www.) as the key.
 					/// </summary>
-					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefHash> m_typedExcludeRules;
+					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_typedExcludeRules;
 
 					/// <summary>
 					/// Used for storing selectors which are meant to hide/remove specific elements
@@ -496,7 +559,7 @@ namespace te
 					/// specified domain will serve as the key to this hashmap where all selectors
 					/// for the specified domain/key are to be stored.
 					/// </summary>
-					std::unordered_map<boost::string_ref, std::vector<SharedCategorizedCssSelector>, util::string::StringRefHash> m_inclusionSelectors;
+					std::unordered_map<boost::string_ref, std::vector<SharedCategorizedCssSelector>, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_inclusionSelectors;
 
 					/// <summary>
 					/// Used for storing selectors which are meant to whitelist specific elements on
@@ -506,7 +569,28 @@ namespace te
 					/// Whatever the value, the specified domain will serve as the key to this
 					/// hashmap where all selectors for the specified domain/key are to be stored.
 					/// </summary>
-					std::unordered_map<boost::string_ref, std::vector<SharedCategorizedCssSelector>, util::string::StringRefHash> m_exceptionSelectors;
+					std::unordered_map<boost::string_ref, std::vector<SharedCategorizedCssSelector>, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_exceptionSelectors;
+
+					/// <summary>
+					/// Holds all loaded text triggers. Text triggers are highly specific keywords
+					/// meant to cat text of very specific categories, such as pornography. They
+					/// don't just have to be keywords, they would also for example be domains. These
+					/// triggers are searched for inside text payloads, include JSON.
+					/// </summary>
+					std::unordered_map<boost::string_ref, uint8_t, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_textTriggers;
+
+					/// <summary>
+					/// Checks if the given payload has text triggers, and if one is found where the
+					/// category is enabled, then the category for the matched trigger is returned.
+					/// </summary>
+					/// <param name="payload">
+					/// The payload to check.
+					/// </param>
+					/// <returns>
+					/// A non-zero value if the content should be blocked. Zero if the content should
+					/// not be blocked.
+					/// </returns>
+					uint8_t ShouldBlockBecauseOfTextTrigger(const std::vector<char>& payload) const;
 
 					/// <summary>
 					/// Method that accepts a single Adblock Plus formatted filter or selector
@@ -655,28 +739,30 @@ namespace te
 					std::string ExtractHtmlText(const gq::Document* document) const;
 
 					/// <summary>
-					/// Since it's possible for the user load many different filtering rules
-					/// spanning many files, each containing potentially tens of thousands of rules,
-					/// each rule potentially being for the same host, it makes sense to avoid
-					/// copying the same information across this class. Further, to avoid unecessary
-					/// copies of of such data to and from this object from request headers and
-					/// such, we use boost::string_ref for storing such string. However, in order to
-					/// ensure that the string_ref objects stay valid, the original source string
-					/// must be stored once, and only once to preserve its life, then a
-					/// corresponding string_ref object generated around that string around the
-					/// memory space where it's "permanently" stored.
-					/// 
+					/// Since it's possible for the user load many different filtering rules spanning
+					/// many files, each containing potentially tens of thousands of rules, each rule
+					/// potentially being for the same host, it makes sense to avoid copying the same
+					/// information across this class. Further, to avoid unecessary copies of of such
+					/// data to and from this object from request headers and such, we use
+					/// boost::string_ref for storing such strings. However, in order to ensure that
+					/// the string_ref objects stay valid, the original source string must be stored
+					/// once, and only once to preserve its life, then a corresponding string_ref
+					/// object generated around that string around the memory space where it's
+					/// "permanently" stored.
+					///
 					/// This method transparently handles this process, returning a "preserved"
-					/// version of a string_ref supplied to it.
+					/// version of a string_ref supplied to it. The string value however is converted
+					/// to upper case before storage, so all returned values from this method are
+					/// upper-case. These strings should be used in case-insensitive ways.
 					/// </summary>
-					/// <param name="domain">
-					/// The domain string to preserve.
+					/// <param name="original">
+					/// The string_ref to preserve.
 					/// </param>
 					/// <returns>
 					/// A boost::string_ref where the underlying string data is guaranteed to be
 					/// preserved during the lifetime of this object.
 					/// </returns>
-					boost::string_ref GetPreservedDomainStringRef(boost::string_ref domain);
+					boost::string_ref GetPreservedICaseStringRef(boost::string_ref original);
 
 					/// <summary>
 					/// If an appropriate callback was supplied at construction, reports information

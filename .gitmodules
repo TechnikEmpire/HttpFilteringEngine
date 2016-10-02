@@ -1,18 +1,24 @@
 [submodule "deps/zlib"]
 	path = deps/zlib
 	url = https://github.com/madler/zlib.git
+	ignore = dirty
 [submodule "deps/http-parser"]
 	path = deps/http-parser
 	url = https://github.com/nodejs/http-parser.git
+	ignore = dirty
 [submodule "deps/openssl"]
 	path = deps/openssl
 	url = https://github.com/openssl/openssl.git
+	ignore = dirty
 [submodule "deps/gq"]
 	path = deps/gq
 	url = https://github.com/TechnikEmpire/GQ.git
+	ignore = dirty
 [submodule "deps/boost"]
 	path = deps/boost
 	url = https://github.com/boostorg/boost.git
+	ignore = dirty
 [submodule "deps/bzip2"]
 	path = deps/bzip2
 	url = https://github.com/TechnikEmpire/bzip2.git
+	ignore = dirty

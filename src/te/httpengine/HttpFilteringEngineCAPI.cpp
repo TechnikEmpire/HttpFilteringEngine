@@ -46,6 +46,7 @@ PHttpFilteringEngineCtl fe_ctl_create(
 	uint16_t httpListenerPort,
 	uint16_t httpsListenerPort,
 	uint32_t numThread,
+	ClassifyContentCallback onClassify,
 	ReportMessageCallback onInfo,
 	ReportMessageCallback onWarn,
 	ReportMessageCallback onError,
@@ -56,9 +57,7 @@ PHttpFilteringEngineCtl fe_ctl_create(
 
 	#if BOOST_OS_WINDOWS
 		#ifndef NDEBUG
-			assert(firewallCb != nullptr && u8"In fe_ctl_create(FirewallCheckCallback, ReportMessageCallback, \
-						ReportMessageCallback, ReportMessageCallback, ReportBlockedRequestCallback, \
-						ReportBlockedElementsCallback) - On Windows, a valid firewall callback is required!");
+			assert(firewallCb != nullptr && u8"On Windows, a valid firewall callback is required!");
 		#endif
 
 		
@@ -96,6 +95,7 @@ PHttpFilteringEngineCtl fe_ctl_create(
 			httpListenerPort,
 			httpsListenerPort,
 			numThread,
+			onClassify,
 			onInfo,
 			onWarn,
 			onError,
@@ -431,8 +431,8 @@ void fe_ctl_load_list_from_string(
 	)
 {
 	#ifndef NDEBUG
-		assert(ptr != nullptr && u8"In fe_ctl_load_list_from_file(PHttpFilteringEngineCtl, const char*, const size_t, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
-		assert(listString != nullptr && u8"In fe_ctl_load_list_from_file(PHttpFilteringEngineCtl, const char*, const size_t, const uint8_t) - Supplied list string ptr is nullptr!");
+		assert(ptr != nullptr && u8"In fe_ctl_load_list_from_file(...) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		assert(listString != nullptr && u8"In fe_ctl_load_list_from_file(...) - Supplied list string ptr is nullptr!");
 	#endif
 
 	bool callSuccess = false;
@@ -452,6 +452,84 @@ void fe_ctl_load_list_from_string(
 	}
 
 	assert(callSuccess == true && u8"In fe_ctl_load_list_from_string(...) - Caught exception and failed to set category.");
+}
+
+void fe_ctl_load_text_triggers_from_file(
+	PHttpFilteringEngineCtl ptr,
+	const char* filePath,
+	const size_t filePathLength,
+	const uint8_t category,
+	const bool flushExisting,
+	uint32_t* rulesLoaded
+	)
+{
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_load_text_triggers_from_file(...) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		assert(filePath != nullptr && u8"In fe_ctl_load_text_triggers_from_file(...) - Supplied file path string ptr is nullptr!");
+	#endif
+
+	bool callSuccess = false;
+
+	try
+	{
+		if (ptr != nullptr && filePath != nullptr)
+		{
+			std::string filePath(filePath, filePathLength);
+			auto totalLoaded = reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->LoadTextTriggersFromFile(filePath, category, flushExisting);			
+
+			if (rulesLoaded)
+			{
+				*rulesLoaded = totalLoaded;
+			}
+
+			callSuccess = true;
+		}
+	}
+	catch (std::exception& e)
+	{
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
+	}
+
+	assert(callSuccess == true && u8"In fe_ctl_load_text_triggers_from_file(...) - Caught exception and failed to set category.");
+}
+
+void fe_ctl_load_text_triggers_from_string(
+	PHttpFilteringEngineCtl ptr,
+	const char* triggersString,
+	const size_t triggersStringLength,
+	const uint8_t category,
+	const bool flushExisting,
+	uint32_t* rulesLoaded
+	)
+{
+	#ifndef NDEBUG
+		assert(ptr != nullptr && u8"In fe_ctl_load_text_triggers_from_string(...) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
+		assert(triggersString != nullptr && u8"In fe_ctl_load_text_triggers_from_string(...) - Supplied list string ptr is nullptr!");
+	#endif
+
+	bool callSuccess = false;
+
+	try
+	{
+		if (ptr != nullptr && triggersString != nullptr)
+		{
+			std::string filePath(triggersString, triggersStringLength);
+			auto totalLoaded = reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->LoadTextTriggersFromString(filePath, category, flushExisting);
+
+			if (rulesLoaded)
+			{
+				*rulesLoaded = totalLoaded;
+			}
+
+			callSuccess = true;
+		}
+}
+	catch (std::exception& e)
+	{
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
+	}
+
+	assert(callSuccess == true && u8"In fe_ctl_load_text_triggers_from_string(...) - Caught exception and failed to set category.");
 }
 
 void fe_ctl_get_rootca_pem(PHttpFilteringEngineCtl ptr, char** bufferPP, size_t* bufferSize)

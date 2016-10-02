@@ -39,17 +39,25 @@
 #endif //#ifdef __cplusplus
 
 /// <summary>
-/// On Windows, at the very least, internet access is controlled by the default firewall
-/// (Windows Firewall) on a per-application basis. We need to be able to query this firewall
-/// whenever we consider intercepting and diverting a new flow through the proxy, to ensure that
-/// we are not just handing out free candy, and by free candy I mean free access to the
-/// internet. I know, free candy made it perfectly clear and I didn't need to explain.
-/// 
-/// This callback must be supplied to a valid function which can give us this information when
-/// creating new instances of the Engine. The burden of correctly implementing this
+/// On Windows, at the very least, internet access is controlled by the default firewall (Windows
+/// Firewall) on a per-application basis. We need to be able to query this firewall whenever we
+/// consider intercepting and diverting a new flow through the proxy, to ensure that we are not just
+/// handing out free candy, and by free candy I mean free access to the internet. I know, free candy
+/// made it perfectly clear and I didn't need to explain.
+///
+/// This callback must be supplied and point to to a valid function which can give us this
+/// information when creating new instances of the Engine. The burden of correctly implementing this
 /// functionality is on the end-user of this library.
 /// </summary>
 typedef bool(*FirewallCheckCallback)(const char* binaryAbsolutePath, const size_t binaryAbsolutePathLength);
+
+/// <summary>
+/// A callback that, if supplied, will be called for the purpose of classifying intercepted content.
+/// This may be text, an image, etc. The bytes and the total number of bytes for the data make up the
+/// first two parameters, the content type declaration, as a UTF8 (hopefully) string of chars and the
+/// total number of bytes in that string make up the latter two parameters.
+/// </summary>
+typedef uint8_t(*ClassifyContentCallback)(const char* contentBytes, const size_t contentLength, const char* contentType, const size_t contentTypeLength);
 
 /// <summary>
 /// The Engine handles any error that occurs in situations related to external input. This is
@@ -98,6 +106,7 @@ namespace te
 				using MessageFunction = std::function<void(const char* message, const size_t messageLength)>;
 				using RequestBlockFunction = std::function<void(const uint8_t category, const uint32_t payloadSizeBlocked, const char* fullRequest, const size_t requestLength)>;
 				using ElementBlockFunction = std::function<void(const uint32_t numElementsRemoved, const char* fullRequest, const size_t requestLength)>;
+				using ContentClassificationFunction = std::function<uint8_t(const char* contentBytes, const size_t contentLength, const char* contentType, const size_t contentTypeLength)>;
 			
 			} /* namespace cb */
 		} /* namespace util */

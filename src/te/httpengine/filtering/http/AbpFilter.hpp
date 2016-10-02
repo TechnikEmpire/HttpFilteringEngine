@@ -220,9 +220,9 @@ namespace te
 					/// </returns>
 					bool IsException() const;
 
-					const std::unordered_set<boost::string_ref, util::string::StringRefHash>& GetExceptionDomains() const;
+					const std::unordered_set<boost::string_ref, util::string::StringRefICaseHash, util::string::StringRefIEquals>& GetExceptionDomains() const;
 
-					const std::unordered_set<boost::string_ref, util::string::StringRefHash>& GetInclusionDomains() const;
+					const std::unordered_set<boost::string_ref, util::string::StringRefICaseHash, util::string::StringRefIEquals>& GetInclusionDomains() const;
 
 				protected:					
 
@@ -236,12 +236,12 @@ namespace te
 					/// <summary>
 					/// Container of all domains that are an exception to this rule.
 					/// </summary>
-					std::unordered_set<boost::string_ref, util::string::StringRefHash> m_exceptionDomains;
+					std::unordered_set<boost::string_ref, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_exceptionDomains;
 
 					/// <summary>
 					/// Container of all domains that this rule applies to.
 					/// </summary>
-					std::unordered_set<boost::string_ref, util::string::StringRefHash> m_inclusionDomains;
+					std::unordered_set<boost::string_ref, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_inclusionDomains;
 
 					/// <summary>
 					/// Every single ABP filter can come with its own unique settings. These can get
