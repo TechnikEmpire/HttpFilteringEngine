@@ -60,6 +60,7 @@ namespace te
 
 				AbpFilter::~AbpFilter()
 				{
+
 				}
 
 				bool AbpFilter::IsMatch(boost::string_ref data, const AbpFilterSettings dataSettings, boost::string_ref dataHost) const
