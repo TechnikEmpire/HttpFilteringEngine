@@ -134,11 +134,16 @@ namespace te
 				/// </summary>
 				struct StringRefHash
 				{
-					size_t operator()(const boost::string_ref& strRef) const
+					size_t operator()(const boost::string_ref strRef) const
 					{
 						return boost::hash_range(strRef.begin(), strRef.end());
 					}
 				};
+			
+				inline size_t Hash(boost::string_ref ref)
+				{
+					return boost::hash_range(ref.begin(), ref.end());
+				}
 
 				/// <summary>
 				/// Case-insensitive hash implementation for string_ref. Taken from boost docs here:
@@ -146,14 +151,14 @@ namespace te
 				/// </summary>
 				struct StringRefICaseHash : std::unary_function<boost::string_ref, std::size_t>
 				{
-					size_t operator()(const boost::string_ref& strRef) const
+					size_t operator()(const boost::string_ref strRef) const
 					{
 						std::size_t seed = 0;
 						std::locale locale;
 
 						for (boost::string_ref::const_iterator it = strRef.begin(); it != strRef.end(); ++it)
-						{
-							boost::hash_combine(seed, std::toupper(*it, locale));
+						{	
+							boost::hash_combine(seed, std::toupper((*it), locale)); //locale
 						}
 
 						return seed;
@@ -166,9 +171,9 @@ namespace te
 				/// </summary>
 				struct StringRefIEquals : std::binary_function<boost::string_ref, boost::string_ref, bool>
 				{
-					bool operator()(const boost::string_ref& lhs, const boost::string_ref& rhs) const
+					bool operator()(const boost::string_ref lhs, const boost::string_ref rhs) const
 					{
-						return boost::algorithm::iequals(lhs, rhs, std::locale());
+						return boost::algorithm::iequals(lhs, rhs); //std::locale()
 					}
 				};
 

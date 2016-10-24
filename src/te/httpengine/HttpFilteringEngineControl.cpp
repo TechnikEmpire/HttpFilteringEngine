@@ -85,6 +85,7 @@ namespace te
 		HttpFilteringEngineControl::HttpFilteringEngineControl(
 			util::cb::FirewallCheckFunction firewallCb,
 			std::string caBundleAbsolutePath,
+			std::string blockedHtmlPage,
 			uint16_t httpListenerPort,
 			uint16_t httpsListenerPort,
 			uint32_t proxyNumThreads,
@@ -102,7 +103,7 @@ namespace te
 			m_httpListenerPort(httpListenerPort),
 			m_httpsListenerPort(httpsListenerPort),
 			m_proxyNumThreads(proxyNumThreads),
-			m_programWideOptions(new filtering::options::ProgramWideOptions()),
+			m_programWideOptions(new filtering::options::ProgramWideOptions(blockedHtmlPage)),
 			m_httpFilteringEngine(new filtering::http::HttpFilteringEngine(m_programWideOptions.get(), onInfo, onWarn, onError, onClassify, onRequestBlocked, onElementsBlocked)),
 			m_isRunning(false)
 		{
@@ -388,6 +389,14 @@ namespace te
 				m_httpFilteringEngine->UnloadAllFilterRulesForCategory(category);
 			}
 		}
+
+		void HttpFilteringEngineControl::UnloadTextTriggersForCategory(const uint8_t category)
+		{
+			if (m_httpFilteringEngine != nullptr && category != 0)
+			{
+				m_httpFilteringEngine->UnloadAllTextTriggersForCategory(category);
+			}
+		}		
 
 	} /* namespace httpengine */
 } /* namespace te */

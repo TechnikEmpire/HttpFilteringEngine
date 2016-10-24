@@ -60,7 +60,7 @@ namespace te
 					/// Contains all valid filter options. Used when parsing string options to
 					/// quickly retrieve the correct corresponding AbpFilterOption value.
 					/// </summary>
-					static const std::unordered_map<boost::string_ref, AbpFilterOption, util::string::StringRefICaseHash, util::string::StringRefIEquals> ValidFilterOptions;
+					static const std::unordered_map<boost::string_ref, AbpFilterOption,  util::string::StringRefHash> ValidFilterOptions;
 
 				public:
 
@@ -109,7 +109,6 @@ namespace te
 				private:					
 
 					using FilterPart = AbpFilter::FilterPart;
-					using SharedFilter = std::shared_ptr<AbpFilter>;				
 
 					/// <summary>
 					/// Attempt to extract the next unique filtering block from the supplied filter
@@ -214,7 +213,7 @@ namespace te
 					/// single entry of "*". Rules are globally inclusive if one or more inclusion
 					/// domains are not specified in the rule options.
 					/// </returns>
-					std::unordered_set<boost::string_ref, util::string::StringRefICaseHash, util::string::StringRefIEquals> ParseDomains(boost::string_ref optionsString, const bool exceptions) const;
+					std::unordered_set<size_t> ParseDomains(boost::string_ref optionsString, const bool exceptions) const;
 
 					/// <summary>
 					/// Extracts the next comma separated string part from the front of the supplied

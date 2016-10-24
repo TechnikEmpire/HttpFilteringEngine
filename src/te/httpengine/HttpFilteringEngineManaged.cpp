@@ -36,11 +36,12 @@ namespace Te {
 	namespace HttpFilteringEngine
 	{
 
-		Engine::Engine(FirewallCheckHandler^ firewallCheckFunc, ClassifyContentHandler^ classificationFunc, System::String^ caBundleAbsPath, uint16_t httpListenerPort, uint16_t httpsListenerPort, uint32_t numThreads)
+		Engine::Engine(FirewallCheckHandler^ firewallCheckFunc, ClassifyContentHandler^ classificationFunc, System::String^ caBundleAbsPath, System::String^ blockedHtmlPage, uint16_t httpListenerPort, uint16_t httpsListenerPort, uint32_t numThreads)
 		{
 			m_onFirewallCallback = firewallCheckFunc;
 			m_onClassificationCallback = classificationFunc;
 			CaBundleAbsolutePath = caBundleAbsPath;
+			BlockedHtmlPage = blockedHtmlPage;
 			HttpListenerPort = httpListenerPort;
 			HttpsListenerPort = httpsListenerPort;
 			m_numThreads = numThreads;
@@ -69,6 +70,16 @@ namespace Te {
 		void Engine::CaBundleAbsolutePath::set(System::String^ value)
 		{
 			m_caBundleAbsPath = value;
+		}
+
+		System::String^ Engine::BlockedHtmlPage::get()
+		{
+			return m_blockedHtmlPage;
+		}
+
+		void Engine::BlockedHtmlPage::set(System::String^ value)
+		{
+			m_blockedHtmlPage = value;
 		}
 
 		uint16_t Engine::HttpListenerPort::get()
@@ -158,7 +169,7 @@ namespace Te {
 			{				
 				auto listPathStr = msclr::interop::marshal_as<std::string>(listFilePath);
 
-				fe_ctl_load_list_from_file(m_handle, listPathStr.c_str(), listPathStr.size(), listCategory, flushExistingInCategory, &succeeded, &failed);
+				fe_ctl_load_list_from_file(m_handle, listPathStr.c_str(), listPathStr.size(), listCategory, flushExistingInCategory, &succeeded, &failed);				
 			}
 
 			rulesLoaded = succeeded;
@@ -190,9 +201,16 @@ namespace Te {
 
 			if (m_handle != nullptr)
 			{
-				auto listStr = msclr::interop::marshal_as<std::string>(list);
-
+				auto listStr = msclr::interop::marshal_as<std::string>(list);				
 				fe_ctl_load_list_from_string(m_handle, listStr.c_str(), listStr.size(), listCategory, flushExistingInCategory, &succeeded, &failed);
+
+				System::GC::AddMemoryPressure(listStr.size());
+
+				listStr.clear();
+				listStr = std::string();
+				
+				//System::GC::RemoveMemoryPressure(listStr.size());
+				//System::GC::Collect();
 			}
 
 			rulesLoaded = succeeded;
@@ -256,16 +274,31 @@ namespace Te {
 				auto listStr = msclr::interop::marshal_as<std::string>(triggersString);
 
 				fe_ctl_load_text_triggers_from_string(m_handle, listStr.c_str(), listStr.size(), category, flushExistingInCategory, &loaded);
+
+				System::GC::AddMemoryPressure(listStr.size());
+
+				listStr.clear();
+				listStr = std::string();
+				//System::GC::RemoveMemoryPressure(listStr.size());
+				//System::GC::Collect();
 			}
 
 			rulesLoaded = loaded;
 		}
-
+		
 		void Engine::UnloadAllFilterRulesForCategory(const uint8_t category)
 		{
 			if (m_handle != nullptr)
 			{
 				fe_ctl_unload_rules_for_category(m_handle, category);
+			}
+		}
+
+		void Engine::UnloadAllTextTriggersForCategory(const uint8_t category)
+		{
+			if (m_handle != nullptr)
+			{
+				fe_ctl_unload_text_triggers_for_category(m_handle, category);
 			}
 		}
 
@@ -362,15 +395,24 @@ namespace Te {
 
 			std::string caBundlePathStr(u8"none");
 
+			std::string htmlBlockedPageStr;
+
 			if (!System::String::IsNullOrEmpty(CaBundleAbsolutePath) && !System::String::IsNullOrWhiteSpace(CaBundleAbsolutePath))
 			{
 				caBundlePathStr = msclr::interop::marshal_as<std::string>(CaBundleAbsolutePath);
+			}
+
+			if (!System::String::IsNullOrEmpty(m_blockedHtmlPage) && !System::String::IsNullOrWhiteSpace(m_blockedHtmlPage))
+			{
+				htmlBlockedPageStr = msclr::interop::marshal_as<std::string>(BlockedHtmlPage);
 			}
 
 			m_handle = fe_ctl_create(
 				static_cast<FirewallCheckCallback>(firewallCbPtr.ToPointer()),
 				caBundlePathStr.c_str(),
 				caBundlePathStr.size(),
+				htmlBlockedPageStr.c_str(),
+				htmlBlockedPageStr.size(),
 				HttpListenerPort,
 				HttpsListenerPort,
 				m_numThreads,

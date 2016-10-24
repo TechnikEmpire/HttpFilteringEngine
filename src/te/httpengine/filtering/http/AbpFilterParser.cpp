@@ -40,7 +40,7 @@ namespace te
 			namespace http
 			{
 
-				const std::unordered_map<boost::string_ref, AbpFilterOption, util::string::StringRefICaseHash, util::string::StringRefIEquals> AbpFilterParser::ValidFilterOptions
+				const std::unordered_map<boost::string_ref, AbpFilterOption,  util::string::StringRefHash> AbpFilterParser::ValidFilterOptions
 				{
 					{ u8"script" , script },
 					{ u8"~script" , notscript },
@@ -219,13 +219,20 @@ namespace te
 
 					filter->m_settings = filterSettings;
 
-					filter->m_filterParts = std::move(parts);
+					//filter->m_filterParts = std::move(parts);
 
-					filter->m_inclusionDomains = std::move(inclusionDomains);
+					//filter->m_inclusionDomains = std::move(inclusionDomains);
 					
-					filter->m_exceptionDomains = std::move(exceptionDomains);
+					//filter->m_exceptionDomains = std::move(exceptionDomains);
 
 					filter->m_category = category;
+
+					if (lastOptionCharPos != boost::string_ref::npos)
+					{
+						// Now that we've parsed the options, don't keep them around 
+						// in memory as a string.
+						filter->m_originalRuleString = filter->m_originalRuleString.substr(0, lastOptionCharPos);
+					}
 
 					return filter;
 				}
@@ -453,17 +460,20 @@ namespace te
 						}
 					}
 
+					/*
+					Do not issue a warning. This is not true, and plus the domains option is not counted here.
 					if (totalIgnored > 0 && totalIgnored == totalParsed)
 					{
 						ReportWarning(u8"In AbpFilterParser::ParseSettings(boost::string_ref) const - All parsed rule options are unsupported. Enabling, but rule may not function correctly.");
 					}
+					*/
 
 					return ret;
 				}
 
-				std::unordered_set<boost::string_ref, util::string::StringRefICaseHash, util::string::StringRefIEquals> AbpFilterParser::ParseDomains(boost::string_ref optionsString, const bool exceptions) const
+				std::unordered_set<size_t> AbpFilterParser::ParseDomains(boost::string_ref optionsString, const bool exceptions) const
 				{
-					std::unordered_set<boost::string_ref, util::string::StringRefICaseHash, util::string::StringRefIEquals> ret;
+					std::unordered_set<size_t> ret;
 
 					if (optionsString.size() == 0)
 					{
@@ -526,7 +536,7 @@ namespace te
 									domain = domain.substr(1);
 								}
 								
-								ret.insert(domain);
+								ret.insert(util::string::Hash(domain));
 							}
 						}
 
@@ -549,7 +559,7 @@ namespace te
 									domainsPart = domainsPart.substr(1);
 								}
 
-								ret.insert(domainsPart);
+								ret.insert(util::string::Hash(domainsPart));
 							}
 						}
 					}

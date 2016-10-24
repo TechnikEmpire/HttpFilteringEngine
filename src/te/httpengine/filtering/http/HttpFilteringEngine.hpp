@@ -42,7 +42,8 @@
 #include <boost/thread/shared_mutex.hpp>
 #include "../../../util/string/StringRefUtil.hpp"
 #include "../../util/cb/EventReporter.hpp"
-#include "AbpFilterOptions.hpp"
+
+//#include "AbpFilterOptions.hpp"
 
 /// <summary>
 /// Forward decl for gq structures.
@@ -90,8 +91,8 @@ namespace te
 				/// <summary>
 				/// Forward decl selector/filter structures.
 				/// </summary>
-				class AbpFilter;
-				class AbpFilterParser;
+				//class AbpFilter;
+				//class AbpFilterParser;
 				class CategorizedCssSelector;
 
 				namespace 
@@ -384,9 +385,17 @@ namespace te
 					/// </returns>
 					std::string ProcessHtmlResponse(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response);
 
-				private:
+					/// <summary>
+					/// Configures the supplied response to deliver a content-type sensitive
+					/// response. Finalizes the state of the response for immediately delivery
+					/// to the client.
+					/// </summary>
+					/// <param name="response">
+					/// The response to finalize.
+					/// </param>
+					void FinalizeBlockedResponse(mhttp::HttpResponse* response) const;
 
-					using SharedFilter = std::shared_ptr<AbpFilter>;
+				private:
 
 					/// <summary>
 					/// Pointer to the provided ProgramWideOptions object governing the functionality
@@ -416,11 +425,6 @@ namespace te
 					/// this callback, if the callback was supplied during construction.
 					/// </summary>
 					util::cb::ElementBlockFunction m_onElementsBlocked = nullptr;
-
-					/// <summary>
-					/// Filtering rule parser.
-					/// </summary>
-					std::unique_ptr<AbpFilterParser> m_filterParser;
 
 					/// <summary>
 					/// Currently, this program buries its head in the sand and pretends that
@@ -456,7 +460,9 @@ namespace te
 					/// cheaper to store this here as a const string rather than doing unnecessary
 					/// allocations in check methods.
 					/// </summary>
-					const boost::string_ref m_globalRuleKey = u8"*";					
+					const boost::string_ref m_globalRuleKey = u8"*";		
+
+					const size_t m_globalRuleKeyHashed = util::string::Hash(u8"*");
 
 					/// <summary>
 					/// Shared mutex used for handling single writer, multiple reader scenario where
@@ -466,90 +472,9 @@ namespace te
 					/// </summary>
 					boost::shared_mutex m_filterLock;
 
-					/// <summary>
-					/// All hashmaps in this object, except this one, use string_ref as their keys.
-					/// There are several benefits to this. First, a great many Adblock Plus
-					/// formatted filters have some form of domain information associated with them.
-					/// Even those that do not, they are filtered against HTTP transactions where
-					/// the domain is known and, without using a string_ref key, every filtering
-					/// attempt would incur unnecessary copies. This way, we can provide fast,
-					/// copy-free lookups and comparisons for every single filter (with only one
-					/// exception, building out the entire request string. No ::append() method in
-					/// boost::string_ref unfortunately).
-					/// 
-					/// Also, we can do very fast inspection of transaction payloads, searching for
-					/// links which can aid greatly in establishing classification by association,
-					/// all without doing a single string copy.
-					/// 
-					/// However, boost::string_ref (and any good string_ref obviously) holds no
-					/// ownership of the underlying data. So, any time a domain is encountered in
-					/// parsing rule lists, it will be stored here, if not already, providing a
-					/// string_ref view of its internal data. This will guarantee the lifetimes of the
-					/// string_ref hashtable keys to be equal to their containing parents.
-					/// </summary>
-					std::unordered_set<std::string> m_allKnownListDomains;
+					std::unordered_map<size_t, uint8_t> m_domainRequestBlacklist;
 
-					/// <summary>
-					/// Used for storing inclusion filters that do not specify any constraints in
-					/// their options that cannot be immediately known upon first receiving a
-					/// request. This means that filters that specify no options or only options
-					/// such as third-party or not-third-party, or xmlhttprequest etc are held in
-					/// this container. This is an optimization, to not waste time checking things
-					/// that cannot possibly be accurately matched, while hoping to find a match or
-					/// exclusion match immediately to prevent any further rule processing against
-					/// the request.
-					/// 
-					/// This container holds both host-specific and global (no domain specified)
-					/// filters. All global filters use the key "*", while all other host-bound
-					/// rules use the host domain name, with no protocol or service applied
-					/// (http://, https://, www.) as the key.
-					/// </summary>
-					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_typelessIncludeRules;
-
-					/// <summary>
-					/// Used for storing exclusion filters that do not specify any constraints in
-					/// their options that cannot be immediately known upon first receiving a
-					/// request. This means that filters that specify no options or only options
-					/// such as third-party or not-third-party, or xmlhttprequest etc are held in
-					/// this container. This is an optimization, to not waste time checking things
-					/// that cannot possibly be accurately matched, while hoping to find a match or
-					/// exclusion match immediately to prevent any further rule processing against
-					/// the request.
-					/// 
-					/// This container holds both host-specific and global (no domain specified)
-					/// filters. All global filters use the key "*", while all other host-bound
-					/// rules use the host domain name, with no protocol or service applied
-					/// (http://, https://, www.) as the key.
-					/// </summary>
-					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_typelessExcludeRules;
-
-					/// <summary>
-					/// Used for storing inclusion filters which contain settings that bind the filters
-					/// in this container to only match specific content types, among other things. Such
-					/// rules cannot possibly be matched reliably when checking the request portion
-					/// of a transaction only, so the rules are separated as to not be accessed when
-					/// only a request is supplied to any ::ShouldBlock* methods.
-					/// 
-					/// This container holds both host-specific and global (no domain specified)
-					/// filters. All global filters use the key "*", while all other host-bound
-					/// rules use the host domain name, with no protocol or service applied
-					/// (http://, https://, www.) as the key.
-					/// </summary>
-					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_typedIncludeRules;
-
-					/// <summary>
-					/// Used for storing exclusion filters which contain settings that bind the filters
-					/// in this container to only match specific content types, among other things. Such
-					/// rules cannot possibly be matched reliably when checking the request portion
-					/// of a transaction only, so the rules are separated as to not be accessed when
-					/// only a request is supplied to any ::ShouldBlock* methods.
-					/// 
-					/// This container holds both host-specific and global (no domain specified)
-					/// filters. All global filters use the key "*", while all other host-bound
-					/// rules use the host domain name, with no protocol or service applied
-					/// (http://, https://, www.) as the key.
-					/// </summary>
-					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_typedExcludeRules;
+					std::unordered_map<size_t, uint8_t> m_domainRequestWhitelist;					
 
 					/// <summary>
 					/// Used for storing selectors which are meant to hide/remove specific elements
@@ -559,7 +484,7 @@ namespace te
 					/// specified domain will serve as the key to this hashmap where all selectors
 					/// for the specified domain/key are to be stored.
 					/// </summary>
-					std::unordered_map<boost::string_ref, std::vector<SharedCategorizedCssSelector>, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_inclusionSelectors;
+					std::unordered_map<size_t, std::vector<SharedCategorizedCssSelector>> m_inclusionSelectors;
 
 					/// <summary>
 					/// Used for storing selectors which are meant to whitelist specific elements on
@@ -569,15 +494,16 @@ namespace te
 					/// Whatever the value, the specified domain will serve as the key to this
 					/// hashmap where all selectors for the specified domain/key are to be stored.
 					/// </summary>
-					std::unordered_map<boost::string_ref, std::vector<SharedCategorizedCssSelector>, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_exceptionSelectors;
+					std::unordered_map<size_t, std::vector<SharedCategorizedCssSelector>> m_exceptionSelectors;
 
 					/// <summary>
 					/// Holds all loaded text triggers. Text triggers are highly specific keywords
 					/// meant to cat text of very specific categories, such as pornography. They
 					/// don't just have to be keywords, they would also for example be domains. These
-					/// triggers are searched for inside text payloads, include JSON.
+					/// triggers are searched for inside text payloads, include JSON. The triggers
+					/// are hashed, and the resulting hash is used as a key.
 					/// </summary>
-					std::unordered_map<boost::string_ref, uint8_t, util::string::StringRefICaseHash, util::string::StringRefIEquals> m_textTriggers;
+					//std::unordered_map<size_t, uint8_t> m_textTriggers;
 
 					/// <summary>
 					/// Checks if the given payload has text triggers, and if one is found where the
@@ -672,52 +598,6 @@ namespace te
 					void AddExceptionSelector(boost::string_ref domain, const SharedCategorizedCssSelector& selector);
 
 					/// <summary>
-					/// Store a completed inclusion filter object appropriately, depending on its
-					/// options.
-					/// 
-					/// Depending on the filtering rule, AddInclusionFilterMultiDomain(...) may or
-					/// may not delegate the storage of a fully generated rule to this method. Where
-					/// the rule should be stored might change depending on the options. Also, as
-					/// noted in associated method descriptions, earlier stages in the rule parsing
-					/// and building process may have determined that more than one rule needs to be
-					/// generated for a single defined filtering rule string.
-					/// 
-					/// This is the reason for separating storage logic for individual rules from
-					/// the AddXFilterMultiDomain(...) methods.
-					/// </summary>
-					/// <param name="domain">
-					/// The domain that the filtering rule should belong to. This domain is used as
-					/// the key for looking up domain specific rules quickly in a hash table.
-					/// </param>
-					/// <param name="filter">
-					/// A shared_ptr to the completed inclusion filter object to be stored. 
-					/// </param>
-					void AddInclusionFilter(boost::string_ref domain, const SharedFilter& filter);
-
-					/// <summary>
-					/// Store a completed exception filter object appropriately, depending on its
-					/// options.
-					/// 
-					/// Depending on the filtering rule, AddExceptionFilterMultiDomain(...) may or
-					/// may not delegate the storage of a fully generated rule to this method. Where
-					/// the rule should be stored might change depending on the options. Also, as
-					/// noted in associated method descriptions, earlier stages in the rule parsing
-					/// and building process may have determined that more than one rule needs to be
-					/// generated for a single defined filtering rule string.
-					/// 
-					/// This is the reason for separating storage logic for individual rules from
-					/// the AddXFilterMultiDomain(...) methods.
-					/// </summary>
-					/// <param name="domain">
-					/// The domain that the filtering rule should belong to. This domain is used as
-					/// the key for looking up domain specific rules quickly in a hash table.
-					/// </param>
-					/// <param name="filter">
-					/// A shared_ptr to the completed exception filter object to be stored. 
-					/// </param>
-					void AddExceptionFilter(boost::string_ref domain, const SharedFilter& filter);
-
-					/// <summary>
 					/// Gets just the host name from a complete HTTP request URL.
 					/// </summary>
 					/// <param name="url">
@@ -736,48 +616,19 @@ namespace te
 					/// <returns>
 					/// The text data of the supplied document and all of its children text nodes.
 					/// </returns>
-					std::string ExtractHtmlText(const gq::Document* document) const;
-
-					/// <summary>
-					/// Since it's possible for the user load many different filtering rules spanning
-					/// many files, each containing potentially tens of thousands of rules, each rule
-					/// potentially being for the same host, it makes sense to avoid copying the same
-					/// information across this class. Further, to avoid unecessary copies of of such
-					/// data to and from this object from request headers and such, we use
-					/// boost::string_ref for storing such strings. However, in order to ensure that
-					/// the string_ref objects stay valid, the original source string must be stored
-					/// once, and only once to preserve its life, then a corresponding string_ref
-					/// object generated around that string around the memory space where it's
-					/// "permanently" stored.
-					///
-					/// This method transparently handles this process, returning a "preserved"
-					/// version of a string_ref supplied to it. The string value however is converted
-					/// to upper case before storage, so all returned values from this method are
-					/// upper-case. These strings should be used in case-insensitive ways.
-					/// </summary>
-					/// <param name="original">
-					/// The string_ref to preserve.
-					/// </param>
-					/// <returns>
-					/// A boost::string_ref where the underlying string data is guaranteed to be
-					/// preserved during the lifetime of this object.
-					/// </returns>
-					boost::string_ref GetPreservedICaseStringRef(boost::string_ref original);
-
+					std::string ExtractHtmlText(const gq::Document* document) const;					
+					
 					/// <summary>
 					/// If an appropriate callback was supplied at construction, reports information
-					/// about blocked requests to the supplied callback.
+					/// about blocked requests/responses to the supplied callback.
 					/// </summary>
-					/// <param name="category">
-					/// The category to which the blocking rule belongs.
+					/// <param name="request">
+					/// The blocked request.
 					/// </param>
-					/// <param name="payloadSizeBlocked">
-					/// The size of the response payload blocked from being downloaded.
+					/// <param name="response">
+					/// The blocked response.
 					/// </param>
-					/// <param name="host">
-					/// The full request that was blocked.
-					/// </param>
-					void ReportRequestBlocked(const uint8_t category, const uint32_t payloadSizeBlocked, boost::string_ref fullRequest) const;
+					void ReportRequestBlocked(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response) const;
 
 					/// <summary>
 					/// If an appropriate callback was supplied at construction, reports information
@@ -791,6 +642,16 @@ namespace te
 					/// </param>
 					void ReportElementsBlocked(const uint32_t numElementsRemoved, boost::string_ref fullRequest) const;
 
+					/// <summary>
+					/// Attempts to remove any leading scheme from the supplied URI string.
+					/// </summary>
+					/// <param name="uri">
+					/// The URI string to trim the scheme from.
+					/// </param>
+					/// <returns>
+					/// The URI with any discovered leading scheme removed.
+					/// </returns>
+					boost::string_ref RemoveSchemeFromUri(boost::string_ref uri) const;
 				};
 
 			} /* namespace http */

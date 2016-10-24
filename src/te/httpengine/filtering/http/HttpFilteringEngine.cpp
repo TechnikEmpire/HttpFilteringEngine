@@ -39,8 +39,10 @@
 #include "../options/ProgramWideOptions.hpp"
 #include "../../../util/http/KnownHttpHeaders.hpp"
 #include "CategorizedCssSelector.hpp"
+#include <algorithm>
+#include <cctype>
 
-#include "AbpFilterParser.hpp"
+//#include "AbpFilterParser.hpp"
 
 #include <Document.hpp>
 #include <NodeMutationCollection.hpp>
@@ -72,20 +74,13 @@ namespace te
 					m_programOptions(programOptions),
 					m_onClassifyContent(onClassify),
 					m_onRequestBlocked(onRequestBlocked),
-					m_onElementsBlocked(onElementsBlocked),
-					m_filterParser(
-						new AbpFilterParser(
-							onInfo,
-							onWarn,
-							onError
-							)
-						)
+					m_onElementsBlocked(onElementsBlocked)
 				{					
 					#ifndef NDEBUG
 						assert(programOptions != nullptr && u8"In HttpFilteringEngine::HttpFilteringEngine(const options::ProgramWideOptions*, TextClassificationCallback) - ProgramWideOptions pointer must not be null. Options must exist and be available for the lifetime of the program for the software to function correctly.");
 					#else
 						if (programOptions == nullptr) { throw std::runtime_error(u8"In HttpFilteringEngine::HttpFilteringEngine(const options::ProgramWideOptions*, TextClassificationCallback) - ProgramWideOptions pointer must not be null. Options must exist and be available for the lifetime of the program for the software to function correctly."); };
-					#endif
+					#endif					
 				}
 
 				HttpFilteringEngine::~HttpFilteringEngine()
@@ -201,6 +196,7 @@ namespace te
 
 				uint32_t HttpFilteringEngine::LoadTextTriggersFromString(const std::string& triggers, const uint8_t category, const bool flushExisting)
 				{
+					return 0;
 					if (flushExisting)
 					{
 						UnloadAllTextTriggersForCategory(category);
@@ -219,11 +215,12 @@ namespace te
 						boost::trim(line);
 						if (line.size() > 0)
 						{
-							auto preserved = GetPreservedICaseStringRef(boost::string_ref(line));
+							auto preserved = util::string::Hash(boost::string_ref(line));//GetPreservedICaseStringRef(boost::string_ref(line));
 
 							// We simply assign or insert. It's up to list maintainers to make sure that
 							// they're not overlapping their own rules.
-							m_textTriggers[preserved] = category;
+							m_domainRequestBlacklist[preserved] = category;
+							//m_textTriggers[preserved] = category;
 							
 							++loadedRulesCount;
 						}
@@ -234,42 +231,35 @@ namespace te
 
 				void HttpFilteringEngine::UnloadAllFilterRulesForCategory(const uint8_t category)
 				{
+					
 					Writer w(m_filterLock);
 
-					for (auto& rulePair : m_typelessIncludeRules)
+					auto it = m_domainRequestBlacklist.begin();
+
+					while(it != m_domainRequestBlacklist.end())
 					{
-						rulePair.second.erase(std::remove_if(rulePair.second.begin(), rulePair.second.end(),
-							[category](const SharedFilter& s) -> bool
+						if (it->second == category)
 						{
-							return s->GetCategory() == category;
-						}), rulePair.second.end());
+							it = m_domainRequestBlacklist.erase(it);
+						}
+						else
+						{
+							++it;
+						}
 					}
 
-					for (auto& rulePair : m_typelessExcludeRules)
-					{
-						rulePair.second.erase(std::remove_if(rulePair.second.begin(), rulePair.second.end(),
-							[category](const SharedFilter& s) -> bool
-						{
-							return s->GetCategory() == category;
-						}), rulePair.second.end());
-					}
+					it = m_domainRequestWhitelist.begin();
 
-					for (auto& rulePair : m_typedIncludeRules)
+					while (it != m_domainRequestWhitelist.end())
 					{
-						rulePair.second.erase(std::remove_if(rulePair.second.begin(), rulePair.second.end(),
-							[category](const SharedFilter& s) -> bool
+						if (it->second == category)
 						{
-							return s->GetCategory() == category;
-						}), rulePair.second.end());
-					}
-
-					for (auto& rulePair : m_typedExcludeRules)
-					{
-						rulePair.second.erase(std::remove_if(rulePair.second.begin(), rulePair.second.end(),
-							[category](const SharedFilter& s) -> bool
+							it = m_domainRequestWhitelist.erase(it);
+						}
+						else
 						{
-							return s->GetCategory() == category;
-						}), rulePair.second.end());
+							++it;
+						}
 					}
 
 					for (auto& selectorPair : m_inclusionSelectors)
@@ -293,20 +283,23 @@ namespace te
 
 				void HttpFilteringEngine::UnloadAllTextTriggersForCategory(const uint8_t category)
 				{
+					/*
 					Writer w(m_filterLock);
 
 					// Remove all entries where the category is the same.
-					for (auto it = m_textTriggers.begin(); it != m_textTriggers.end();)
+					auto it = m_textTriggers.begin();
+					while (it != m_textTriggers.end())
 					{
 						if (it->second == category)
 						{
-							m_textTriggers.erase(it++);
+							it = m_textTriggers.erase(it);
 						}
 						else
 						{
 							++it;
 						}
 					}
+					*/
 				}
 
 				uint8_t HttpFilteringEngine::ShouldBlock(const mhttp::HttpRequest* request, mhttp::HttpResponse* response, const bool isSecure)
@@ -320,351 +313,148 @@ namespace te
 						}
 					#endif					
 
-					// If the request is already set to be blocked, and the repsonse is supplied,
-					// then we simply want to report the size of the blocked request based on the
-					// response headers. We'll then return the existing ShouldBlock value from
-					// the request's settings.
-					if (response != nullptr && request->GetShouldBlock() != 0)
+					try
 					{
-						auto blockCategory = request->GetShouldBlock();
-
-						auto contentLenHeader = response->GetHeader(util::http::headers::ContentLength);
-
-						uint32_t blockedContentSize = 0;
-
-						if (contentLenHeader.first != contentLenHeader.second)
+						// If the request is already set to be blocked, and the repsonse is supplied,
+						// then we simply want to report the size of the blocked content from the 
+						// response headers before actually downloading all of the response.
+						if (response != nullptr && request->GetShouldBlock() != 0)
 						{
-							try
+							auto blockCategory = request->GetShouldBlock();
+
+							ReportRequestBlocked(request, response);
+							return blockCategory;
+						}
+
+						// XXX TODO - Check if the specified host is just an IP address and if so, reverse resolve the domain name.
+						boost::string_ref hostStringRef;
+
+						// The simplest form of blocking is domain blacklisting, so if the request has
+						// been supplied here, then extract the host and check to see if it is a
+						// blacklisted host. Of course before doing so, check to see if the host is
+						// whitelisted, meaning no processing by this engine should be done against
+						// content to or from the specified host.
+						auto hostHeaders = request->GetHeader(util::http::headers::Host);
+
+						if (hostHeaders.first != hostHeaders.second)
+						{
+							hostStringRef = boost::string_ref(hostHeaders.first->second);
+						}
+
+						hostStringRef = ExtractHostNameFromUrl(hostStringRef);
+
+						// Before going any further, we must verify that the extractedHost is not empty. If it is, then
+						// we can't do a whole lot with this because the http request is fundamentally broken.
+						if (hostStringRef.size() == 0)
+						{
+							ReportWarning(u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - Host declaration is missing from the HTTP request. As the request is fundamentally broken, aborting any further analysis.");
+							return 0;
+						}
+
+						Reader r(m_filterLock);
+
+						auto hostStringRefHashed = util::string::Hash(hostStringRef);
+
+						if (m_domainRequestWhitelist.find(hostStringRefHashed) != m_domainRequestWhitelist.end())
+						{
+							// Whitelisted domain.
+							return 0;
+						}
+
+						std::string fullRequest{ isSecure ? u8"https://" : u8"http://" };
+						fullRequest.append(hostStringRef.to_string()).append(u8"/").append(request->RequestURI());
+
+						std::string fullRequestNoScheme{ hostStringRef.to_string().append(u8"/").append(request->RequestURI()) };
+
+						auto fullRequestHashed = util::string::Hash(boost::string_ref(fullRequest));
+						auto fullRequestNoSchemeHashed = util::string::Hash(boost::string_ref(fullRequestNoScheme));
+
+						if (m_domainRequestWhitelist.find(fullRequestNoSchemeHashed) != m_domainRequestWhitelist.end() || m_domainRequestWhitelist.find(fullRequestHashed) != m_domainRequestWhitelist.end())
+						{
+							// Whitelisted request.
+							return 0;
+						}
+
+						auto blSearch = m_domainRequestBlacklist.find(hostStringRefHashed);
+
+						if (blSearch != m_domainRequestBlacklist.end())
+						{
+							// Blacklisted domain.
+							ReportRequestBlocked(request, response);
+							ReportInfo("Blocked by host string ref hashed.");							
+							return blSearch->second;
+						}
+
+						blSearch = m_domainRequestBlacklist.find(fullRequestNoSchemeHashed);
+
+						if (blSearch != m_domainRequestBlacklist.end())
+						{
+							// Blacklisted request.
+							ReportRequestBlocked(request, response);
+							ReportInfo("Blocked by full req with no scheme.");
+							return blSearch->second;
+						}
+
+						blSearch = m_domainRequestBlacklist.find(fullRequestHashed);
+
+						if (blSearch != m_domainRequestBlacklist.end())
+						{
+							// Blacklisted request.
+							ReportRequestBlocked(request, response);
+							ReportInfo("Blocked by full request hashed.");
+							return blSearch->second;
+						}
+
+						// Last thing to do, since we've decided not to block here, is to see if the
+						// response is not complete. If it is not yet complete, and the response headers
+						// declare types of data we are capable of inspecting, we want to go ahead and
+						// flag those responses to have them entirely consumed in-memory (where limits
+						// allow). This way we'll get the responses give back to use here inside of
+						// ShouldBlock to be checked again.
+						if (response != nullptr)
+						{
+							if (response->IsPayloadComplete() == false)
 							{
-								blockedContentSize = static_cast<uint32_t>(std::stoi(contentLenHeader.first->second));
+								// Force the payload to be downloaded.
+								if (response->IsPayloadText())
+								{
+									// We want to consume JSON responses. By consuming them to the end, the ShouldBlock
+									// method on the Engine will pass it off to the content classification callback if
+									// it's available. Porn results can be caught this way.
+
+									// We filter with CSS filters, so we want to consume entire HTML responses before
+									// sending them back to the client, so we can filter them first.
+									response->SetConsumeAllBeforeSending(true);
+								}
 							}
-							catch (...)
+							else
 							{
-								// This isn't critical. We don't really care for the specifics of the exception. Maybe
-								// it's a malicious web server, a broken one, or a troll putting "trololol" as the content
-								// length. Who cares.
+								if (response->IsPayloadCompressed())
+								{
+									if (!response->DecompressPayload())
+									{
+										ReportWarning(u8"In HttpFilteringEngine::ShouldBlock(...) - Failed to decompress payload, cannot inspect.");
+										return 0;
+									}
+								}
 
-								ReportWarning(u8"In HttpFilteringEnginethi(mhttp::HttpRequest*, mhttp::HttpResponse*) -  \
-												Failed to parse content-length of blocked response. Using default average.");
-							}
-						}
+								// Get a reference to the response payload.
+								const auto& payload = response->GetPayload();
 
-						auto fullRequest = request->RequestURI();
-						const auto hostHeader = request->GetHeader(util::http::headers::Host);
-						if (hostHeader.first != hostHeader.second)
-						{
-							fullRequest = hostHeader.first->second + fullRequest;
-						}
-
-						ReportRequestBlocked(blockCategory, blockedContentSize, fullRequest);
-
-						return blockCategory;
-					}
-
-					AbpFilterSettings transactionSettings;
-					
-					// XXX TODO - Check if the specified host is just an IP address and if so, reverse resolve the domain name.
-					boost::string_ref hostStringRef;
-
-					// The simplest form of blocking is domain blacklisting, so if the request has
-					// been supplied here, then extract the host and check to see if it is a
-					// blacklisted host. Of course before doing so, check to see if the host is
-					// whitelisted, meaning no processing by this engine should be done against
-					// content to or from the specified host.
-					auto hostHeaders = request->GetHeader(util::http::headers::Host);
-
-					if (hostHeaders.first != hostHeaders.second)
-					{
-						hostStringRef = boost::string_ref(hostHeaders.first->second);
-					}
-
-					hostStringRef = ExtractHostNameFromUrl(hostStringRef);
-
-					// Before going any further, we must verify that the extractedHost is not empty. If it is, then
-					// we can't do a whole lot with this because the http request is fundamentally broken.
-					if (hostStringRef.size() == 0)
-					{
-						ReportWarning(u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - Host declaration is missing from the HTTP request. As the request is fundamentally broken, aborting any further analysis.");
-						return 0;
-					}
-
-					// First thing is to check and see if the request is third party or not. This can be easily
-					// accomplished by comparing the referer string host against the destination host for the
-					// request.
-					auto refererHeaders = request->GetHeader(util::http::headers::Referer);
-
-					boost::string_ref extractedRefererStrRef;
-
-					if (refererHeaders.first != refererHeaders.second)
-					{
-						extractedRefererStrRef = boost::string_ref(refererHeaders.first->second);
-					}
-
-					extractedRefererStrRef = ExtractHostNameFromUrl(extractedRefererStrRef);
-
-					if (extractedRefererStrRef.size() == 0)
-					{
-						// If the referer is empty, it's almost 100% guaranteed that the request
-						// is a direct navigation, meaning that the user manually requested this domain.
-						// If that's the case, then the request definitely isn't third party.
-						transactionSettings[AbpFilterOption::notthird_party] = true;
-					}
-					else 
-					{
-						if (extractedRefererStrRef.compare(hostStringRef) == 0)
-						{
-							transactionSettings[AbpFilterOption::notthird_party] = true;
-						}
-						else 
-						{
-							transactionSettings[AbpFilterOption::third_party] = true;							
-						}
-					}
-
-					// Next, check if the request is an "XML Http Request" by checking the non-standard header
-					// X-Requested-With. This is important because it's used rather heavily in ABP filters.
-					auto requestedWithHeaders = request->GetHeader(util::http::headers::XRequestedWith);
-
-					boost::string_ref xmlHttpRequestStrRef(u8"XMLHttpRequest");
-
-					while (requestedWithHeaders.first != requestedWithHeaders.second)
-					{						
-						if (xmlHttpRequestStrRef.size() == requestedWithHeaders.first->second.size() && boost::iequals(requestedWithHeaders.first->second, xmlHttpRequestStrRef))
-						{
-							transactionSettings[AbpFilterOption::xmlhttprequest] = true;
-							break;
-						}
-
-						requestedWithHeaders.first++;
-					}
-
-					transactionSettings[AbpFilterOption::notxmlhttprequest] = !transactionSettings[AbpFilterOption::xmlhttprequest];
-
-					// Until we know better, this request is not for any of the following types.
-					// We're recycling the abp filter options to build a description of the
-					// transaction here, rather than an abp formatted rule. So we're going to assume
-					// explicitly, unless content-type tells us otherwise, that this transaction
-					// isn't CSS, script or image content.
-					transactionSettings[AbpFilterOption::notscript] = true;
-					transactionSettings[AbpFilterOption::notimage] = true;
-					transactionSettings[AbpFilterOption::notstylesheet] = true;
-
-					// This bool is basically used to indicate later that the response is present
-					// and content-type data was extracted from it. If this is the case, then typed
-					// rules will be checked. If not, then typed rules will be omitted.
-					bool hasTypeData = false;
-
-					if (response != nullptr)
-					{
-						if (response->IsPayloadImage())
-						{
-							transactionSettings[AbpFilterOption::notimage] = false;
-							transactionSettings[AbpFilterOption::image] = true;
-							hasTypeData = true;
-						}
-						else if (response->IsPayloadCss())
-						{
-							transactionSettings[AbpFilterOption::notstylesheet] = false;
-							transactionSettings[AbpFilterOption::stylesheet] = true;
-							hasTypeData = true;
-						}
-						else if (response->IsPayloadJavascript())
-						{
-							transactionSettings[AbpFilterOption::notscript] = false;
-							transactionSettings[AbpFilterOption::script] = true;
-							hasTypeData = true;
-						}						
-					}
-
-					// boost::string_ref, I'd love you even more if you had ::append()
-					std::string fullRequest{ isSecure ? u8"https://" : u8"http://" };
-					fullRequest.append(hostStringRef.to_string()).append(u8"/").append(request->RequestURI());
-
-					// All of the filtering objects internally use boost::string_ref for parsing and
-					// storage, so they expect boost::string_ref objects for matching. Rather than
-					// doing a bunch of allocations and copying when splitting filter strings up for
-					// the matching routines, string_refs are used/
-					boost::string_ref fullRequestStrRef(fullRequest);
-					
-					// Reader lock.
-					Reader r(m_filterLock);
-
-					// C++11 you've got to take by auto reference to avoid copying out the data
-					// member of the pair. This can be observed by pushing unique_ptr wrapped
-					// objects to a map and doing a find without an auto reference, as it won't even
-					// compile for accessing the deleted copy ctor. This is a juicy little gotcha
-					// that would have us copying potentially huge amounts of data, several times,
-					// per http transaction, committing cold blooded homocide against performance,
-					// so watch this.
-					const auto& globalTypelessIncludesPair = m_typelessIncludeRules.find(m_globalRuleKey);
-					const auto& domainTypelessIncludesPair = m_typelessIncludeRules.find(hostStringRef);
-
-					const auto& globalTypelessExcludesPair = m_typelessExcludeRules.find(m_globalRuleKey);
-					const auto& domainTypelessExcludesPair = m_typelessExcludeRules.find(hostStringRef);
-
-					const size_t globalTypelessExcludeSize = (globalTypelessExcludesPair != m_typelessExcludeRules.end()) ? globalTypelessExcludesPair->second.size() : 0;
-					const size_t globalTypelessIncludeSize = (globalTypelessIncludesPair != m_typelessIncludeRules.end()) ? globalTypelessIncludesPair->second.size() : 0;
-
-					const size_t domainTypelessExcludeSize = (domainTypelessExcludesPair != m_typelessExcludeRules.end()) ? domainTypelessExcludesPair->second.size() : 0;
-					const size_t domainTypelessIncludeSize = (domainTypelessIncludesPair != m_typelessIncludeRules.end()) ? domainTypelessIncludesPair->second.size() : 0;
-
-					// We only want to check the typeless rules if the response is not present. The
-					// idea here is that if a response is present, then the request should have
-					// already been checked indepdently before reaching this phase. If a response is
-					// present, that means that the initial request survived the global typeless
-					// rules, so it's just a waste to recheck them again.
-					if (response == nullptr)
-					{
-						// First thing we want to look for are exclusions. If we find an exclusion,
-						// we can return without any further inspection. Check host specific rules
-						// first, since that collection is bound to be much smaller.
-						for (size_t he = 0; he < domainTypelessExcludeSize; ++he)
-						{
-							if ((m_programOptions->GetIsHttpCategoryFiltered(domainTypelessExcludesPair->second[he]->GetCategory())) &&
-								domainTypelessExcludesPair->second[he]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
-							{
-								// Exclusion found, don't filter or block.								
-								return 0;
-							}
-						}
-
-						for (size_t ge = 0; ge < globalTypelessExcludeSize; ++ge)
-						{
-							if ((m_programOptions->GetIsHttpCategoryFiltered(globalTypelessExcludesPair->second[ge]->GetCategory())) &&
-								globalTypelessExcludesPair->second[ge]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
-							{
-								// Exclusion found, don't filter or block.
-								return 0;
-							}
-						}
-					}					
-
-					// If hasTypeData is true, then we'll check the typed exclude rules as well.
-					if (hasTypeData)
-					{
-						const auto& globalTypedExcludesPair = m_typedExcludeRules.find(m_globalRuleKey);
-						const auto& domainTypedExcludesPair = m_typedExcludeRules.find(hostStringRef);
-
-						const size_t globalTypedExcludeSize = (globalTypedExcludesPair != m_typedExcludeRules.end()) ? globalTypedExcludesPair->second.size() : 0;
-						const size_t domainTypedExcludeSize = (domainTypedExcludesPair != m_typedExcludeRules.end()) ? domainTypedExcludesPair->second.size() : 0;
-
-						// Check host specific rules first, since that collection is bound to be much smaller.
-						for (size_t dte = 0; dte < domainTypedExcludeSize; ++dte)
-						{							
-							if ((m_programOptions->GetIsHttpCategoryFiltered(domainTypedExcludesPair->second[dte]->GetCategory())) &&
-								domainTypedExcludesPair->second[dte]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
-							{
-								// Exclusion found, don't filter or block.
-								return 0;
-							}
-						}
-
-						for (size_t gte = 0; gte < globalTypedExcludeSize; ++gte)
-						{
-							if ((m_programOptions->GetIsHttpCategoryFiltered(globalTypedExcludesPair->second[gte]->GetCategory())) &&
-								globalTypedExcludesPair->second[gte]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
-							{
-								// Exclusion found, don't filter or block.
-								return 0;
-							}
-						}
-					}
-
-					// We only want to check the typeless rules if the response is not present. The
-					// idea here is that if a response is present, then the request should have
-					// already been checked indepdently before reaching this phase. If a response is
-					// present, that means that the initial request survived the global typeless
-					// rules, so it's just a waste to recheck them again.
-					if (response == nullptr)
-					{
-						// Beyond this point, inclusions are being looked for.
-						for (size_t gi = 0; gi < globalTypelessIncludeSize; ++gi)
-						{
-							if ((m_programOptions->GetIsHttpCategoryFiltered(globalTypelessIncludesPair->second[gi]->GetCategory())) &&
-								globalTypelessIncludesPair->second[gi]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
-							{
-								// Inclusion found, block and return the category of the matching rule.
-								return globalTypelessIncludesPair->second[gi]->GetCategory();
-							}
-						}
-
-						for (size_t di = 0; di < domainTypelessIncludeSize; ++di)
-						{
-							if ((m_programOptions->GetIsHttpCategoryFiltered(domainTypelessIncludesPair->second[di]->GetCategory())) &&
-								domainTypelessIncludesPair->second[di]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
-							{
-								// Inclusion found, block and return the category of the matching rule.
-								return domainTypelessIncludesPair->second[di]->GetCategory();
-							}
-						}
-					}
-
-					// If hasTypeData is true, then we'll check the typed include rules as well.
-					if (hasTypeData)
-					{
-						const auto& globalTypedIncludesPair = m_typedIncludeRules.find(m_globalRuleKey);
-						const auto& domainTypedIncludesPair = m_typedIncludeRules.find(hostStringRef);
-
-						const size_t globalTypedIncludeSize = (globalTypedIncludesPair != m_typedIncludeRules.end()) ? globalTypedIncludesPair->second.size() : 0;
-						const size_t domainTypedIncludeSize = (domainTypedIncludesPair != m_typedIncludeRules.end()) ? domainTypedIncludesPair->second.size() : 0;
-
-						// Check host specific rules first, since that collection is bound to be much smaller.
-						for (size_t dti = 0; dti < domainTypedIncludeSize; ++dti)
-						{
-							if ((m_programOptions->GetIsHttpCategoryFiltered(domainTypedIncludesPair->second[dti]->GetCategory())) &&
-								domainTypedIncludesPair->second[dti]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
-							{
-								// Inclusion found, block and return the category of the matching rule.
-								return domainTypedIncludesPair->second[dti]->GetCategory();
-							}
-						}
-
-						for (size_t gti = 0; gti < globalTypedIncludeSize; ++gti)
-						{
-							if ((m_programOptions->GetIsHttpCategoryFiltered(globalTypedIncludesPair->second[gti]->GetCategory())) &&
-								globalTypedIncludesPair->second[gti]->IsMatch(fullRequestStrRef, transactionSettings, hostStringRef))
-							{
-								// Inclusion found, block and return the category of the matching rule.
-								return globalTypedIncludesPair->second[gti]->GetCategory();
-							}
-						}
-					}					
-
-					// Last thing to do, since we've decided not to block here, is to see if the
-					// response is not complete. If it is not yet complete, and the response headers
-					// declare types of data we are capable of inspecting, we want to go ahead and
-					// flag those responses to have them entirely consumed in-memory (where limits
-					// allow). This way we'll get the responses give back to use here inside of
-					// ShouldBlock to be checked again.
-					if (response != nullptr)
-					{
-
-						if (response->IsPayloadComplete() == false)
-						{
-							// Force the payload to be downloaded.
-							if (response->IsPayloadJson() || response->IsPayloadHtml())
-							{
-								// We want to consume JSON responses. By consuming them to the end, the ShouldBlock
-								// method on the Engine will pass it off to the content classification callback if
-								// it's available. Porn results can be caught this way.
-
-								// We filter with CSS filters, so we want to consume entire HTML responses before
-								// sending them back to the client, so we can filter them first.
-								response->SetConsumeAllBeforeSending(true);
-							}
-						}
-						else
-						{
-							// If true, payload was flagged for analysis and is complete.
-							if (response->GetConsumeAllBeforeSending())
-							{
-								if (response->IsPayloadJson() || response->IsPayloadText())
+								if (response->IsPayloadText())
 								{
 									// This will include JSON, XML, HTML, etc.
-									auto shouldBlockDueToTextTrigger = ShouldBlockBecauseOfTextTrigger(response->GetPayload());
+									//ReportInfo(u8"Checking json or text payload for triggers.");
+									//ReportInfo(fullRequest);
+									auto shouldBlockDueToTextTrigger = ShouldBlockBecauseOfTextTrigger(payload);
 
 									if (shouldBlockDueToTextTrigger != 0)
 									{
+										// Report block action because we have a response. Whenever we have a response in
+										// this context, it's our last chance to report on the transaction before
+										// it is terminated.
+										ReportRequestBlocked(request, response);
+										ReportInfo("Blocked by text trigger.");
 										return shouldBlockDueToTextTrigger;
 									}
 								}
@@ -673,27 +463,36 @@ namespace te
 								// that we can classify. Check if we have an external classification callback.
 								if (m_onClassifyContent)
 								{
+									//ReportInfo(u8"Checking for content classification.");
+									//ReportInfo(fullRequest);
+
+									// Default to an empty aka unknown string for content type;
+									std::string contentTypeString;
 									auto contentTypeHeader = response->GetHeader(util::http::headers::ContentType);
 
-									// Default to an empty aka unknown string.
-									std::string contentTypeString;
 									if (contentTypeHeader.first != contentTypeHeader.second)
 									{
 										contentTypeString = contentTypeHeader.first->second;
 									}
 
-									const auto& payload = response->GetPayload();
+									// Pass over the content for classification.
+									uint8_t contentClassResult = m_onClassifyContent(payload.data(), payload.size(), contentTypeString.c_str(), contentTypeString.size());
 
-									auto contentClassification = m_onClassifyContent(payload.data(), payload.size(), contentTypeString.c_str(), contentTypeString.size());
-
-									if (m_programOptions->GetIsHttpCategoryFiltered(contentClassification))
+									if (contentClassResult != 0 && m_programOptions->GetIsHttpCategoryFiltered(contentClassResult))
 									{
-										return contentClassification;
+										// Report block action because we have a response. Whenever we have a response in
+										// this context, it's our last chance to report on the transaction before
+										// it is terminated.
+										ReportRequestBlocked(request, response);
+										ReportInfo("Blocked by content classification.");
+										return contentClassResult;
 									}
 								}
 
 								// We're not blocking, so last thing to do is run selectors if payload is HTML.
-								if (response->IsPayloadHtml())
+								// We'll only do this though if we actually have selectors. No sense in
+								// parsing the HTML if we don't.
+								if (response->IsPayloadHtml() && (m_inclusionSelectors.size() > 0 || m_exceptionSelectors.size() > 0))
 								{
 									// Payload is complete, it's HTML, and it was kept for further inspection. Let the CSS selectors
 									// rip through the HTML payload before returning.
@@ -706,7 +505,14 @@ namespace te
 									}
 								}
 							}
-						}						
+						}
+					}
+					catch(std::exception& e)
+					{
+						// This would only happen, AFAIK, if we failed to parse any valid HTML.
+						std::string errMessage(u8"In HttpFilteringEngine::ShouldBlock(...) const - Error:\t");
+						errMessage.append(e.what());
+						ReportError(errMessage);
 					}
 
 					// No matches of any kind were found, so the transaction should be allowed to complete.
@@ -757,9 +563,7 @@ namespace te
 					auto payloadString = payloadStrRef.to_string();
 
 					try
-					{
-						// XXX TODO - Why doesn't GQ take a string_ref param so we don't have to copy? Good grief,
-						// who wrote that crap?
+					{	
 						doc->Parse(payloadString);
 					}
 					catch (std::runtime_error& e)
@@ -779,7 +583,7 @@ namespace te
 
 					// We'll start out getting global selectors and running them against the
 					// document, collecting all results into the NodeMutationCollection structure.
-					const auto& globalIncludeSelectors = m_inclusionSelectors.find(m_globalRuleKey);
+					const auto& globalIncludeSelectors = m_inclusionSelectors.find(m_globalRuleKeyHashed);
 
 					if (globalIncludeSelectors != m_inclusionSelectors.end())
 					{
@@ -798,7 +602,7 @@ namespace te
 
 					// Try to get the host information from the request.
 					boost::string_ref hostStringRef;
-
+					auto hostStringRefHashed = util::string::Hash(hostStringRef);
 					auto hostHeaders = request->GetHeader(util::http::headers::Host);
 
 					if (hostHeaders.first != hostHeaders.second)
@@ -810,7 +614,7 @@ namespace te
 					// all results in the same collection.
 					if (hostStringRef.size() > 0)
 					{
-						const auto& hostIncludeSelectors = m_inclusionSelectors.find(hostStringRef);
+						const auto& hostIncludeSelectors = m_inclusionSelectors.find(hostStringRefHashed);
 
 						if (hostIncludeSelectors != m_inclusionSelectors.end())
 						{
@@ -831,7 +635,7 @@ namespace te
 						// prune down the collection with whitelist selectors. Start with host specific
 						// while we're in this scope.
 
-						const auto& hostExcludeSelectors = m_exceptionSelectors.find(hostStringRef);
+						const auto& hostExcludeSelectors = m_exceptionSelectors.find(hostStringRefHashed);
 
 						if (hostExcludeSelectors != m_exceptionSelectors.end())
 						{
@@ -850,7 +654,7 @@ namespace te
 					}
 
 					// Now we'll run global whitelist selectors and prune our results further.
-					const auto& globalExceptionSelectors = m_exceptionSelectors.find(m_globalRuleKey);
+					const auto& globalExceptionSelectors = m_exceptionSelectors.find(m_globalRuleKeyHashed);
 
 					if (globalExceptionSelectors != m_exceptionSelectors.end())
 					{
@@ -906,52 +710,107 @@ namespace te
 					return finalResult;
 				}
 
-				uint8_t HttpFilteringEngine::ShouldBlockBecauseOfTextTrigger(const std::vector<char>& payload) const
+				void HttpFilteringEngine::FinalizeBlockedResponse(mhttp::HttpResponse* response) const
 				{
+					if (response == nullptr)
+					{
+						return;
+					}
+
+					bool handled = false;
+					
+					if (response->IsPayloadHtml())
+					{
+						auto userDefinedHtmlBlockedPage = m_programOptions->GetHtmlBlockedPagePayload();
+
+						if (userDefinedHtmlBlockedPage.size() > 0)
+						{
+							response->SetPayload(userDefinedHtmlBlockedPage);
+							handled = true;
+						}
+					}
+
+					if (!handled)
+					{
+						response->Make204();
+					}
+				}
+
+				uint8_t HttpFilteringEngine::ShouldBlockBecauseOfTextTrigger(const std::vector<char>& payload) const
+				{	
 					boost::string_ref content = boost::string_ref(payload.data(), payload.size());
 
-					// For now, the alphabet, periods and hyphens are surprisingly sufficient. Catches
-					// words and domains.
-					auto validData = boost::string_ref(u8"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.-");
-
-					auto start = content.find_first_of(validData);
-
-					while (start != boost::string_ref::npos)
+					auto collect = [content]() -> std::vector<boost::string_ref>
 					{
-						content = content.substr(start);
+						std::vector<boost::string_ref> ret;
 
-						auto end = content.find_first_not_of(validData);
+						boost::string_ref::size_type start = 0, end = 0;
+						auto len = content.size();
 
-						if (end != boost::string_ref::npos && end > start)
+						for (auto i = 0; i < len; ++i)
 						{
-							// Get the current match candidate.
-							auto entry = content.substr(0, end);
-
-							// Try and find the match candidate in the triggers map.
-							auto match = m_textTriggers.find(entry);
-
-							if (match != m_textTriggers.end())
+							if (std::isalnum(content[i]) || (content[i] == '.' || content[i] == '-'))
 							{
-								// If the trigger is both found and the match category is enabled, just return that category.
-								if (m_programOptions->GetIsHttpCategoryFiltered(match->second))
+								++end;
+								continue;
+							}
+
+							if (end > start && end < len)
+							{
+								ret.emplace_back(content.substr(start, end - start));
+							}
+
+							start = i + 1;
+							end = i + 1;
+						}
+
+						return ret;
+					};
+
+					auto toCheck = collect();
+
+					for (auto entry : toCheck)
+					{
+						auto hashedEntry = util::string::Hash(entry);
+
+						// Try and find the match candidate in the triggers map.
+						auto match = m_domainRequestBlacklist.find(hashedEntry);
+
+						if (match != m_domainRequestBlacklist.end())
+						{
+							// If the trigger is both found and the match category is enabled, and it's not whitelisted,
+							// just return the found category.
+							if (m_domainRequestWhitelist.find(hashedEntry) == m_domainRequestWhitelist.end() && m_programOptions->GetIsHttpCategoryFiltered(match->second))
+							{
+								ReportInfo(entry);
+								return match->second;
+							}
+						}
+
+						// Now we're going to widdle down this match in case we find a subdomain that is blocked
+						// For example, this match might presently be www.somethingbad.com, where we only have
+						// somethingbad.com in our lists. So, we're gonna chop it down till there's nothing
+						// left looking for a match.
+						auto subDomainIndicator = entry.find('.');
+
+						while (subDomainIndicator != boost::string_ref::npos && subDomainIndicator + 1 < entry.size())
+						{
+							entry = entry.substr(subDomainIndicator + 1);
+							hashedEntry = util::string::Hash(boost::string_ref(entry));
+							match = m_domainRequestBlacklist.find(hashedEntry);
+
+							if (match != m_domainRequestBlacklist.end())
+							{
+								// If the trigger is both found and the match category is enabled, and it's not whitelisted,
+								// just return the found category.
+								if (m_domainRequestWhitelist.find(hashedEntry) == m_domainRequestWhitelist.end() && m_programOptions->GetIsHttpCategoryFiltered(match->second))
 								{
+									ReportInfo(entry);
 									return match->second;
 								}
 							}
 
-							// Carry on to next entry if possible.
-							if (end + 1 < content.size())
-							{
-								content = content.substr(end + 1);
-								start = content.find_first_of(validData);
-								continue;
-							}
-
-							break;
-						}
-						else
-						{
-							break;
+							subDomainIndicator = entry.find('.');
 						}
 					}
 
@@ -1053,28 +912,23 @@ namespace te
 
 								try
 								{
-									auto filter = m_filterParser->Parse(extractedRule, category);
-
-									const auto& filterIncDomains = filter->GetInclusionDomains();									
-
-									auto addFunc = filter->IsException() ?
-										std::bind(&HttpFilteringEngine::AddExceptionFilter, this, std::placeholders::_1, std::placeholders::_2) :
-										std::bind(&HttpFilteringEngine::AddInclusionFilter, this, std::placeholders::_1, std::placeholders::_2);
-
-									bool hadOne = false;
-									for (const auto& dmn : filterIncDomains)
+									if (extractedRule.size() > 2)
 									{
-										hadOne = true;
-										addFunc(dmn, filter);
-									}
-
-									if (!hadOne)
-									{
-										// If there wasn't a single inclusion domain, it's a global rule.
-										addFunc(m_globalRuleKey, filter);
-									}
-
-									return true;
+										std::transform(extractedRule.begin(), extractedRule.end(), extractedRule.begin(), ::tolower);
+										if (extractedRule[0] == '@' && extractedRule[1] == '@')
+										{
+											extractedRule = extractedRule.substr(2);											
+											m_domainRequestWhitelist[util::string::Hash(boost::string_ref(extractedRule))] = category;
+											return true;
+										}
+										else
+										{
+											m_domainRequestBlacklist[util::string::Hash(boost::string_ref(extractedRule))] = category;
+											return true;
+										}
+									}									
+								
+									return false;
 								}
 								catch (std::runtime_error& pErr)
 								{
@@ -1173,10 +1027,7 @@ namespace te
 
 				void HttpFilteringEngine::AddIncludeSelector(boost::string_ref domain, const SharedCategorizedCssSelector& selector)
 				{
-					// This absolutely must be done, otherwise we can't guarantee that the string which
-					// the "domain" argument wraps will survive the lifetime of this object, which may
-					// destroy the universe.
-					auto domainStored = GetPreservedICaseStringRef(domain);
+					auto domainStored = util::string::Hash(boost::string_ref(domain));
 
 					const auto& i = m_inclusionSelectors.find(domainStored);
 
@@ -1192,10 +1043,7 @@ namespace te
 
 				void HttpFilteringEngine::AddExceptionSelector(boost::string_ref domain, const SharedCategorizedCssSelector& selector)
 				{
-					// This absolutely must be done, otherwise we can't guarantee that the string which
-					// the "domain" argument wraps will survive the lifetime of this object, which may
-					// destroy the universe.
-					auto domainStored = GetPreservedICaseStringRef(domain);
+					auto domainStored = util::string::Hash(boost::string_ref(domain));
 
 					const auto& i = m_exceptionSelectors.find(domainStored);
 
@@ -1209,79 +1057,8 @@ namespace te
 					}
 				}
 
-				void HttpFilteringEngine::AddInclusionFilter(boost::string_ref domain, const SharedFilter& filter)
-				{
-					// Nullchecks and asserts are already done on filter before reaching here, as this method
-					// is only ever called by the AddXFilterMultiDomain(...). If that ever changes, then
-					// XXX TODO add asserts and release checks here.
-
-					// This absolutely must be done, otherwise we can't guarantee that the string which
-					// the "domain" argument wraps will survive the lifetime of this object, which may
-					// destroy the universe.
-
-					auto domainStored = GetPreservedICaseStringRef(domain);
-
-					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefICaseHash, util::string::StringRefIEquals>* container = nullptr;
-
-					if (filter->IsTypeBound())
-					{
-						container = &m_typedIncludeRules;
-					}
-					else
-					{
-						container = &m_typelessIncludeRules;
-					}
-
-					const auto& i = container->find(domainStored);
-
-					if (i == container->end())
-					{
-						container->insert({ domainStored, std::vector<SharedFilter> {filter} });
-					}
-					else
-					{
-						i->second.push_back(filter);
-					}
-				}
-
-				void HttpFilteringEngine::AddExceptionFilter(boost::string_ref domain, const SharedFilter& filter)
-				{
-					// Nullchecks and asserts are already done on filter before reaching here, as this method
-					// is only ever called by the AddXFilterMultiDomain(...). If that ever changes, then
-					// XXX TODO add asserts and release checks here.
-
-					// This absolutely must be done, otherwise we can't guarantee that the string which
-					// the "domain" argument wraps will survive the lifetime of this object, which may
-					// destroy the universe.
-					auto domainStored = GetPreservedICaseStringRef(domain);
-
-					std::unordered_map<boost::string_ref, std::vector<SharedFilter>, util::string::StringRefICaseHash, util::string::StringRefIEquals>* container = nullptr;
-
-					if (filter->IsTypeBound())
-					{
-						container = &m_typedExcludeRules;
-					}
-					else
-					{
-						container = &m_typelessExcludeRules;
-					}
-
-					const auto& i = container->find(domainStored);
-
-					if (i == container->end())
-					{
-						container->insert({ domainStored, std::vector<SharedFilter> {filter} });
-					}
-					else
-					{
-						i->second.push_back(filter);
-					}
-				}
-
 				boost::string_ref HttpFilteringEngine::ExtractHostNameFromUrl(boost::string_ref url) const
 				{
-					// This is much, much faster than using built-in methods like ::compare().
-
 					size_t i = 0;
 					bool m = true;
 
@@ -1334,44 +1111,60 @@ namespace te
 					}
 
 					return std::string();
-				}		
-
-				boost::string_ref HttpFilteringEngine::GetPreservedICaseStringRef(boost::string_ref domain)
-				{
-					// Special case of the global key. Already stored safely in static storage
-					// wrapped by member variable.
-					if (domain.size() == 0  || (domain.size() == 1 && domain[0] == '*'))
-					{
-						return m_globalRuleKey;
-					}
-
-					// So when all things are considered, this seems like it's a lot of extra work
-					// for little benefit. Yes, we generate a bunch of copies by calling to_string,
-					// but this is done once at program startup, maybe twice max if list updates are available.
-					// 
-					// Because we have several containers that store domain information, we end up
-					// saving in the long run, and get to avoid making copies continnuously on every
-					// single HTTP transaction of host strings and such.
-					std::string domainString = domain.to_string();
-
-					// Convert to upper case to avoid case-caused duplicates.
-					std::transform(domainString.begin(), domainString.end(), domainString.begin(), ::toupper);
-
-					// Simply do an insert. If the item exists, we'll get back the inserted/stored
-					// string. If the value doesn't exist, an insert will happen and we'll still get
-					// back the inserted/stored string. It's this we want to wrap in-place and return.
-					const auto& insertResult = m_allKnownListDomains.insert(domainString);
-
-					boost::string_ref domainFromStorage(insertResult.first->c_str());
-
-					return domainFromStorage;
 				}
 
-				void HttpFilteringEngine::ReportRequestBlocked(const uint8_t category, const uint32_t payloadSizeBlocked, boost::string_ref fullRequest) const
+				// const uint8_t category, const uint32_t payloadSizeBlocked, boost::string_ref fullRequest
+				void HttpFilteringEngine::ReportRequestBlocked(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response) const
 				{
 					if (m_onRequestBlocked)
-					{
-						m_onRequestBlocked(category, payloadSizeBlocked, fullRequest.begin(), fullRequest.size());
+					{						
+						uint8_t blockedCategory = 0;
+						uint32_t totalBytesBlocked = 0;
+
+						std::string fullRequest;
+
+						if (request != nullptr)
+						{						
+
+							blockedCategory = request->GetShouldBlock();
+
+							fullRequest = request->RequestURI();
+							const auto hostHeader = request->GetHeader(util::http::headers::Host);
+							if (hostHeader.first != hostHeader.second)
+							{
+								fullRequest = hostHeader.first->second + fullRequest;
+							}
+
+							if (response != nullptr)
+							{
+
+								if (blockedCategory == 0)
+								{
+									blockedCategory = response->GetShouldBlock();
+								}
+
+								auto contentLenHeader = response->GetHeader(util::http::headers::ContentLength);
+
+								if (contentLenHeader.first != contentLenHeader.second)
+								{
+									try
+									{
+										totalBytesBlocked = static_cast<uint32_t>(std::stoi(contentLenHeader.first->second));
+									}
+									catch (...)
+									{
+										// This isn't critical. We don't really care for the specifics of the exception. Maybe
+										// it's a malicious web server, a broken one, or a troll putting "trololol" as the content
+										// length. Who cares.
+
+										ReportWarning(u8"In HttpFilteringEngine::ReportRequestBlocked(mhttp::HttpRequest*, mhttp::HttpResponse*) -  \
+												Failed to parse content-length of blocked response. Using default average.");
+									}
+								}
+							}
+						}
+
+						m_onRequestBlocked(blockedCategory, totalBytesBlocked, fullRequest.c_str(), fullRequest.size());
 					}
 				}
 
@@ -1381,6 +1174,19 @@ namespace te
 					{
 						m_onElementsBlocked(numElementsRemoved, fullRequest.begin(), fullRequest.size());
 					}
+				}
+
+				boost::string_ref HttpFilteringEngine::RemoveSchemeFromUri(boost::string_ref uri) const
+				{
+					boost::string_ref schemeEndStr(u8"://");
+					auto schemeStart = uri.find(schemeEndStr);
+
+					if (schemeStart != boost::string_ref::npos)
+					{
+						uri = uri.substr(schemeStart + schemeEndStr.size());
+					}
+
+					return uri;
 				}
 
 			} /* namespace http */

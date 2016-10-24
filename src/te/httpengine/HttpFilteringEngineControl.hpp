@@ -90,6 +90,10 @@ namespace te
 			/// configuration and platform specific. If this fails and no CA bundle is supplied,
 			/// TLS/SSL will basically be non functional.
 			/// </param>
+			/// <param name="blockedHtmlPage">
+			/// An optional, but recommended, pointer to a HTML string to display whenever a HTML
+			/// payload is blocked.
+			/// </param>
 			/// <param name="httpListenerPort">
 			/// The desired port for the proxy to listen for incoming plain TCP HTTP clients on.
 			/// Default is zero, as it is recommended to allow the OS to select an available port
@@ -135,8 +139,9 @@ namespace te
 			/// supplied post-construction.
 			/// </param>
 			HttpFilteringEngineControl(
-				util::cb::FirewallCheckFunction firewallCb,
+				util::cb::FirewallCheckFunction firewallCb,				
 				std::string caBundleAbsolutePath = std::string(u8"none"),
+				std::string blockedHtmlPage = std::string(),
 				uint16_t httpListenerPort = 0,
 				uint16_t httpsListenerPort = 0,
 				uint32_t proxyNumThreads = std::thread::hardware_concurrency(),
@@ -401,6 +406,14 @@ namespace te
 			/// The category for which to unload any and all rules.
 			/// </param>
 			void UnloadRulesForCategory(const uint8_t category);
+
+			/// <summary>
+			/// Unloads and and all text triggers created for the given category.
+			/// </summary>
+			/// <param name="category">
+			/// The category for which to unload any and all text triggers.
+			/// </param>
+			void UnloadTextTriggersForCategory(const uint8_t category);
 
 		private:
 

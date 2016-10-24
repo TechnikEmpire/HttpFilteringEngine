@@ -224,6 +224,11 @@ namespace te
 					HANDLE m_diversionHandle = nullptr;
 
 					/// <summary>
+					/// A WinDivert handle to drop QUIC traffic.
+					/// </summary>
+					HANDLE m_quicBlockHandle = nullptr;
+
+					/// <summary>
 					/// For synchronization during ::Run()/::Stop() calls.
 					/// </summary>
 					std::mutex m_startStopMutex;

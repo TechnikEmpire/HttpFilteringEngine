@@ -70,8 +70,11 @@ namespace te
 						return false;
 					}
 
+					auto hashed = util::string::Hash(dataHost);
+
+					/*
 					// If the host is in the exception domain list, just return false.
-					if (m_exceptionDomains.find(dataHost) != m_exceptionDomains.end())
+					if (m_exceptionDomains.find(hashed) != m_exceptionDomains.end())
 					{
 						return false;
 					}
@@ -80,11 +83,12 @@ namespace te
 					// within that list, then we return false.
 					if (m_inclusionDomains.size() > 0)
 					{
-						if (m_inclusionDomains.find(dataHost) == m_inclusionDomains.end())
+						if (m_inclusionDomains.find(hashed) == m_inclusionDomains.end())
 						{
 							return false;
 						}
 					}
+					
 
 					auto dataCpy = data;
 
@@ -108,10 +112,14 @@ namespace te
 								{
 									// Here we're going to find the host in a case-insensitive way.
 									// Everything else should be case sensitive.
+									
 									auto hostPos = boost::ifind_first(data, part);
 
 									if (!hostPos.empty())
 									{
+										ReportInfo(u8"Host not empty.");
+										ReportInfo(data);
+										ReportInfo(part);
 										// We get the index of the start of the match by calculating the distance
 										// between the start of the data string, and the start of the returned
 										// match in the first iterator of our boost::ifind_first search.
@@ -135,6 +143,12 @@ namespace te
 
 										lastMatch = hostInReqPos + plen;
 										continue;
+									}
+									else
+									{
+										ReportInfo(u8"Host is empty.");
+										ReportInfo(data);
+										ReportInfo(part);
 									}
 								}
 								
@@ -229,6 +243,7 @@ namespace te
 						}
 					}
 
+					*/
 					// All matches were found successfully so, we matched
 					return true;
 				}
@@ -258,14 +273,16 @@ namespace te
 					return m_isException;
 				}
 
-				const std::unordered_set<boost::string_ref, util::string::StringRefICaseHash, util::string::StringRefIEquals>& AbpFilter::GetExceptionDomains() const
+				const std::unordered_set<size_t>& AbpFilter::GetExceptionDomains() const
 				{
-					return m_exceptionDomains;
+					return std::unordered_set<size_t>{};
+					//return m_exceptionDomains;
 				}
 
-				const std::unordered_set<boost::string_ref, util::string::StringRefICaseHash, util::string::StringRefIEquals>& AbpFilter::GetInclusionDomains() const
+				const std::unordered_set<size_t>& AbpFilter::GetInclusionDomains() const
 				{
-					return m_inclusionDomains;
+					return std::unordered_set<size_t>{};
+					//return m_inclusionDomains;
 				}
 
 				bool AbpFilter::SettingsApply(const AbpFilterSettings transactionSettings, const AbpFilterSettings ruleSettings) const

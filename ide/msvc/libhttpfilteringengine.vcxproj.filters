@@ -180,9 +180,6 @@
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpBridge.hpp">
       <Filter>Header Files\te\httpengine\mitm\secure</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.hpp">
-      <Filter>Header Files\te\httpengine</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\BaseDiverter.hpp">
       <Filter>Header Files\te\httpengine\mitm\diversion</Filter>
     </ClInclude>
@@ -216,14 +213,8 @@
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpAcceptor.hpp">
       <Filter>Header Files\te\httpengine\mitm\secure</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\AbpFilterParser.hpp">
-      <Filter>Header Files\te\httpengine\filtering\http</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\AbpFilter.hpp">
-      <Filter>Header Files\te\httpengine\filtering\http</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\AbpFilterOptions.hpp">
-      <Filter>Header Files\te\httpengine\filtering\http</Filter>
+    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.hpp">
+      <Filter>Header Files\te\httpengine</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -251,9 +242,6 @@
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpBridge.cpp">
       <Filter>Source Files\te\httpengine\mitm\secure</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.cpp">
-      <Filter>Source Files\te\httpengine</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\diversion\BaseDiverter.cpp">
       <Filter>Source Files\te\httpengine\mitm\diversion</Filter>
     </ClCompile>
@@ -275,14 +263,11 @@
     <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineCAPI.cpp">
       <Filter>Source Files\te\httpengine</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\te\httpengine\filtering\http\AbpFilterParser.cpp">
-      <Filter>Source Files\te\httpengine\filtering\http</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\te\httpengine\filtering\http\AbpFilter.cpp">
-      <Filter>Source Files\te\httpengine\filtering\http</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\deps\http-parser\http_parser.c">
       <Filter>Source Files\http_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.cpp">
+      <Filter>Source Files\te\httpengine</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

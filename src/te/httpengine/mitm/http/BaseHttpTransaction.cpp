@@ -198,6 +198,7 @@ namespace te
 								std::string errMsg(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse headers. Got http_parser error: ");								
 								errMsg.append(http_errno_description(HTTP_PARSER_ERRNO(m_httpParser)));
 								ReportError(errMsg);
+								ReportInfo(hdrString);
 								return false;
 							}
 							else
@@ -268,43 +269,9 @@ namespace te
 							}
 						}
 
-						const auto contentEncoding = GetHeader(util::http::headers::ContentEncoding);
-
-						if (finalizationFailed == false && contentEncoding.first != contentEncoding.second)
+						if (finalizationFailed == false && !DecompressPayload())
 						{
-							if (boost::iequals(contentEncoding.first->second, u8"gzip"))
-							{
-								if (!DecompressGzip())
-								{
-									// We will report an error, but will not abort further operations, since even if this fails,
-									// the transaction can theoretically be simply passed on to the client. 
-									finalizationFailed = true;
-									ReportError("In BaseHttpTransaction::Parse(const size_t&) - Failed to decompress Gzip encoded payload!");
-								}
-								else
-								{
-									RemoveHeader(util::http::headers::ContentEncoding);
-								}
-							}
-							else if(boost::iequals(contentEncoding.first->second, u8"deflate"))
-							{
-								if (!DecompressDeflate())
-								{
-									// We will report an error, but will not abort further operations, since even if this fails,
-									// the transaction can theoretically be simply passed on to the client. 
-									finalizationFailed = true;
-									ReportError("In BaseHttpTransaction::Parse(const size_t&) - Failed to decompress Deflate encoded payload!");
-								}
-								else
-								{
-									RemoveHeader(util::http::headers::ContentEncoding);
-								}
-							}
-							else
-							{
-								finalizationFailed = true;
-								ReportError("In BaseHttpTransaction::Parse(const size_t&) - Unknown Content-Encoding, cannot decompress: " + contentEncoding.first->second);
-							}							
+							finalizationFailed = true;
 						}
 
 						success = !finalizationFailed;
@@ -637,7 +604,8 @@ namespace te
 					if (DoesContentTypeContain(ContentTypeText))
 					{
 						return true;
-					}else if (DoesContentTypeContain(ContentTypeHtml))
+					}
+					else if (DoesContentTypeContain(ContentTypeHtml))
 					{
 						return true;
 					}
@@ -688,17 +656,16 @@ namespace te
 				{
 					auto contentTypeHeader = GetHeader(util::http::headers::ContentType);
 
-					if (contentTypeHeader.first != contentTypeHeader.second)
+					while (contentTypeHeader.first != contentTypeHeader.second)
 					{
-						while (contentTypeHeader.first != contentTypeHeader.second)
+						auto result = boost::ifind_first(contentTypeHeader.first->second, type);
+						
+						if (!result.empty())
 						{
-							if (boost::ifind_first(contentTypeHeader.first->second, type))
-							{
-								return true;
-							}
-
-							contentTypeHeader.first++;
+							return true;
 						}
+
+						contentTypeHeader.first++;
 					}
 
 					return false;
@@ -780,6 +747,60 @@ namespace te
 					else {
 						return false;
 					}
+				}
+
+				const bool BaseHttpTransaction::DecompressPayload()
+				{
+					if (!IsPayloadComplete())
+					{
+						// Can't decompress incomplete buffer.
+						return false;
+					}
+
+					if (!IsPayloadCompressed())
+					{
+						// Already decompressed, so we've succeeded.
+						return true;
+					}
+
+					const auto contentEncoding = GetHeader(util::http::headers::ContentEncoding);
+
+					if (contentEncoding.first != contentEncoding.second)
+					{
+						if (boost::iequals(contentEncoding.first->second, u8"gzip"))
+						{
+							if (!DecompressGzip())
+							{
+								return false;
+								ReportError("In BaseHttpTransaction::DecompressPayload() - Failed to decompress Gzip encoded payload!");
+							}
+							else
+							{
+								RemoveHeader(util::http::headers::ContentEncoding);
+							}
+						}
+						else if (boost::iequals(contentEncoding.first->second, u8"deflate"))
+						{
+							if (!DecompressDeflate())
+							{
+								// We will report an error, but will not abort further operations, since even if this fails,
+								// the transaction can theoretically be simply passed on to the client. 
+								return false;
+								ReportError("In BaseHttpTransaction::DecompressPayload() - Failed to decompress Deflate encoded payload!");
+							}
+							else
+							{
+								RemoveHeader(util::http::headers::ContentEncoding);
+							}
+						}
+						else
+						{
+							return false;
+							ReportError("In BaseHttpTransaction::DecompressPayload() - Unknown Content-Encoding, cannot decompress: " + contentEncoding.first->second);
+						}
+					}
+
+					return true;
 				}
 
 				const bool BaseHttpTransaction::DecompressGzip()

@@ -111,9 +111,19 @@ namespace te
 
 						m_diversionHandle = WinDivertOpen(u8"outbound and tcp and (ip.DstAddr != 127.0.0.1 and ip.SrcAddr != 127.0.0.1)", WINDIVERT_LAYER_NETWORK, -1000, WINDIVERT_FLAG_NO_CHECKSUM);
 
+						m_quicBlockHandle = WinDivertOpen(u8"udp and (udp.DstPort == 80 || udp.DstPort == 443)", WINDIVERT_LAYER_NETWORK, 0, WINDIVERT_FLAG_NO_CHECKSUM | WINDIVERT_FLAG_DROP);
+
 						if (m_diversionHandle == INVALID_HANDLE_VALUE)
 						{
 							std::string errMessage("In WinDiverter::Run() - Failed to start Diversion, got invalid WinDivert handle with error:\t");
+							errMessage.append(std::to_string(GetLastError()));
+
+							throw std::runtime_error(errMessage.c_str());
+						}
+
+						if (m_quicBlockHandle == INVALID_HANDLE_VALUE)
+						{
+							std::string errMessage("In WinDiverter::Run() - Failed to start quic blocking diversion, got invalid WinDivert handle with error:\t");
 							errMessage.append(std::to_string(GetLastError()));
 
 							throw std::runtime_error(errMessage.c_str());
@@ -153,6 +163,12 @@ namespace te
 						{
 							WinDivertClose(m_diversionHandle);
 							m_diversionHandle = INVALID_HANDLE_VALUE;
+						}
+
+						if (m_quicBlockHandle != nullptr && m_quicBlockHandle != INVALID_HANDLE_VALUE)
+						{
+							WinDivertClose(m_quicBlockHandle);
+							m_quicBlockHandle = INVALID_HANDLE_VALUE;
 						}
 					}					
 				}

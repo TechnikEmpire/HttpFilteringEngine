@@ -43,6 +43,8 @@ PHttpFilteringEngineCtl fe_ctl_create(
 	FirewallCheckCallback firewallCb,
 	const char* caBundleAbsolutePath,
 	uint32_t caBundleAbsolutePathLength,
+	const char* blockedHtmlPage,
+	uint32_t blockedHtmlPageLength,
 	uint16_t httpListenerPort,
 	uint16_t httpsListenerPort,
 	uint32_t numThread,
@@ -79,9 +81,16 @@ PHttpFilteringEngineCtl fe_ctl_create(
 
 	std::string caPath(u8"none");
 
+	std::string blockedHtmlPageStr;
+
 	if (caBundleAbsolutePathLength > 0 && caBundleAbsolutePath != nullptr)
 	{
 		caPath = std::string(caBundleAbsolutePath, static_cast<size_t>(caBundleAbsolutePathLength));
+	}
+
+	if (blockedHtmlPageLength > 0 && blockedHtmlPage != nullptr)
+	{
+		blockedHtmlPageStr = std::string(blockedHtmlPage, static_cast<size_t>(blockedHtmlPageLength));
 	}
 
 	PHttpFilteringEngineCtl inst = nullptr;
@@ -92,6 +101,7 @@ PHttpFilteringEngineCtl fe_ctl_create(
 		inst = reinterpret_cast<PHttpFilteringEngineCtl>(new te::httpengine::HttpFilteringEngineControl(
 			firewallCb,
 			caPath,
+			blockedHtmlPageStr,
 			httpListenerPort,
 			httpsListenerPort,
 			numThread,
@@ -113,7 +123,7 @@ PHttpFilteringEngineCtl fe_ctl_create(
 	}
 	catch (std::exception& e)
 	{
-
+		std::cout << "error: " << e.what() << std::endl;
 	}
 
 	return inst;
@@ -581,6 +591,30 @@ void fe_ctl_unload_rules_for_category(PHttpFilteringEngineCtl ptr, const uint8_t
 		if (ptr != nullptr)
 		{
 			reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->UnloadRulesForCategory(category);
+			callSuccess = true;
+		}
+	}
+	catch (std::exception& e)
+	{
+		reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
+	}
+
+	assert(callSuccess == true && u8"In fe_ctl_get_rootca_pem(...) - Caught exception and failed to unload rules for category.");
+}
+
+void fe_ctl_unload_text_triggers_for_category(PHttpFilteringEngineCtl ptr, const uint8_t category)
+{
+#ifndef NDEBUG
+	assert(ptr != nullptr && u8"In fe_ctl_unload_rules_for_category(char**, size_t*) - Supplied PHttpFilteringEngineCtl ptr is nullptr!");
+#endif
+
+	bool callSuccess = false;
+
+	try
+	{
+		if (ptr != nullptr)
+		{
+			reinterpret_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->UnloadTextTriggersForCategory(category);
 			callSuccess = true;
 		}
 	}

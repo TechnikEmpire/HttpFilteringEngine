@@ -547,30 +547,46 @@ namespace te
 
 							if (downstreamShutdownErr)
 							{
+								/*
+								These errors are super annoying and offer little to no insight.
+
 								std::string err(u8"In TlsCapableHttpBridge<BridgeSocketType>::Kill() - When shutting down downstream socket, got error:\t");
 								err.append(downstreamShutdownErr.message());
 								ReportError(err);
+								*/
 							}
 
 							if (downstreamCloseErr)
 							{
+								/*
+								These errors are super annoying and offer little to no insight.
+
 								std::string err(u8"In TlsCapableHttpBridge<BridgeSocketType>::Kill() - When closing downstream socket, got error:\t");
 								err.append(downstreamCloseErr.message());
 								ReportError(err);
+								*/
 							}
 
 							if (upstreamShutdownErr)
 							{
+								/*
+								These errors are super annoying and offer little to no insight.
+
 								std::string dErrMessage(u8"In TlsCapableHttpBridge<BridgeSocketType>::Kill() - When shutting down upstream socket, got error:\t");
 								dErrMessage.append(upstreamShutdownErr.message());
 								ReportError(dErrMessage);
+								*/
 							}
 
 							if (upstreamCloseErr)
 							{
+								/*
+								These errors are super annoying and offer little to no insight.
+
 								std::string err(u8"In TlsCapableHttpBridge<BridgeSocketType>::Kill() - When closing upstream socket, got error:\t");
 								err.append(upstreamCloseErr.message());
 								ReportError(err);
+								*/
 							}
 
 							m_killed = true;
@@ -686,10 +702,10 @@ namespace te
 									// By setting ShouldBlock to a non-zero value, this adjusts the internal
 									// state of the response to be "complete", meaning that as far as this
 									// bridge is concerned, this transaction is finished. Setting shouldblock
-									// **does not** make the response a 204 response. This needs to be done
-									// explicitly.
+									// **does not** make the response payload a correct blocked response. 
+									// This needs to be done explicitly.
 									m_response->SetShouldBlock(blockResult);
-									m_response->Make204();
+									m_filteringEngine->FinalizeBlockedResponse(m_response.get());
 
 									auto responseBuffer = m_response->GetWriteBuffer();
 
@@ -863,10 +879,10 @@ namespace te
 										// By setting ShouldBlock to a non-zero value, this adjusts the internal
 										// state of the response to be "complete", meaning that as far as this
 										// bridge is concerned, this transaction is finished. Setting shouldblock
-										// **does not** make the response a 204 response. This needs to be done
-										// explicitly.
+										// **does not** make the response payload a correct blocked response. 
+										// This needs to be done explicitly.
 										m_response->SetShouldBlock(blockResult);
-										m_response->Make204();
+										m_filteringEngine->FinalizeBlockedResponse(m_response.get());										
 									}
 								}
 								
@@ -1080,7 +1096,11 @@ namespace te
 							if (m_request->Parse(bytesTransferred))
 							{								
 								auto requestBlockResult = m_filteringEngine->ShouldBlock(m_request.get(), nullptr, std::is_same<BridgeSocketType, network::TlsSocket>::value);
-								m_request->SetShouldBlock(requestBlockResult);
+								
+								if (requestBlockResult != 0)
+								{
+									m_request->SetShouldBlock(requestBlockResult);
+								}
 
 								// This little business is for dealing with browsers like Chrome, who just have
 								// to use their own "I'm too cool for skool" compression methods like SDHC. We
@@ -1842,9 +1862,11 @@ namespace te
 											// XXX TODO - See notes in the version of ::OnResolve(...), specialized for TLS clients.
 											m_upstreamHostPort = 443;
 
+											/*
 											std::string extractedSniMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - ");
 											extractedSniMessage.append(u8"Extracted SNI hostname: ").append(hostName.to_string()).append(u8".");
 											ReportInfo(extractedSniMessage);
+											*/
 
 											try
 											{

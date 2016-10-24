@@ -40,7 +40,7 @@ namespace te
 			namespace options
 			{
 
-				ProgramWideOptions::ProgramWideOptions()
+				ProgramWideOptions::ProgramWideOptions(const std::string& blockedPageHtml) : m_htmlBlockPagePayload(blockedPageHtml.begin(), blockedPageHtml.end())
 				{
 					// Must initialize all atomic bools to false explicitly.
 					std::fill(m_httpContentFilteringCategories.begin(), m_httpContentFilteringCategories.end(), false);
@@ -85,6 +85,11 @@ namespace te
 				void ProgramWideOptions::SetIsHttpFilteringOptionEnabled(const http::HttpFilteringOption option, const bool value)
 				{
 					m_httpFilteringOptions[static_cast<uint32_t>(option)] = value;
+				}
+
+				std::vector<char> ProgramWideOptions::GetHtmlBlockedPagePayload() const
+				{
+					return m_htmlBlockPagePayload;
 				}
 
 			} /* namespace options */

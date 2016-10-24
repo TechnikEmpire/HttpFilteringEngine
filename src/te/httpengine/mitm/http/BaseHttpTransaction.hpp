@@ -647,6 +647,19 @@ namespace te
 					/// </returns>
 					const bool CompressDeflate();
 
+					/// <summary>
+					/// Attempts to decompress the payload. This will modify the object internally,
+					/// adjusting headers and the payload buffer itself to reflect the new state in
+					/// the event that decompression is successful.
+					/// </summary>
+					/// <returns>
+					/// True if the payload was successfully decompressed, false otherwise. Note that
+					/// if the payload is already decompressed, this function will return true, so
+					/// a return value of false should always indicate an error. Note also that this
+					/// will return false if the payload is incomplete.
+					/// </returns>
+					const bool DecompressPayload();
+
 				protected:
 					
 					/// <summary>

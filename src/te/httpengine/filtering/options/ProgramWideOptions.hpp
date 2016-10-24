@@ -34,6 +34,7 @@
 #include <array>
 #include <atomic>
 #include <cstdint>
+#include <vector>
 #include <algorithm>
 #include "HttpFilteringOptions.hpp"
 
@@ -69,7 +70,7 @@ namespace te
 					/// <summary>
 					/// Default constructor.
 					/// </summary>
-					ProgramWideOptions();
+					ProgramWideOptions(const std::string& blockedPageHtml);
 
 					/// <summary>
 					/// No copy no move no thx.
@@ -172,6 +173,16 @@ namespace te
 					/// </param>
 					void SetIsHttpFilteringOptionEnabled(const http::HttpFilteringOption option, const bool value);
 
+					/// <summary>
+					/// Gets the user-defined HTML page to display when a HTML page is blocked.
+					/// </summary>
+					/// <returns>
+					/// The bytes for the user-defined HTML page to display when a HTML page is
+					/// blocked. This is uncompressed, and can/should simply be assigned to response
+					/// payloads.
+					/// </returns>
+					std::vector<char> GetHtmlBlockedPagePayload() const;
+
 				private:
 
 					/// <summary>
@@ -189,6 +200,11 @@ namespace te
 					/// way.
 					/// </summary>
 					std::array<std::atomic_bool, static_cast<size_t>(http::HttpFilteringOption::NUMBER_OF_ENTRIES)> m_httpFilteringOptions;
+
+					/// <summary>
+					/// Holds the payload for the user-defined HTML blocked page.
+					/// </summary>
+					std::vector<char> m_htmlBlockPagePayload;
 
 				};
 

@@ -88,23 +88,30 @@ namespace Te {
 			/// <summary>
 			/// Constructs a new Engine.
 			/// </summary>
+			/// <param name="classificationFunc">
+			/// A function that will be called as a last resort to attempt to classify the content of
+			/// a request, to determine if that request should be blocked.
+			/// </param>
 			/// <param name="firewallCheckFunc">
 			/// A function that will determine whether a binary at a specified absolute path has
 			/// firewall permission to access the internet.
 			/// </param>
 			/// <param name="caBundleAbsPath">
-			/// Absolute path to a CA bundle, such as the cURL/Mozilla ca-bundle. This bundle will
-			/// be loaded and used for verifying all upstream server certificates.
+			/// Absolute path to a CA bundle, such as the cURL/Mozilla ca-bundle. This bundle will be
+			/// loaded and used for verifying all upstream server certificates.
+			/// </param>
+			/// <param name="blockedHtmlPage">
+			/// HTML to display when a HTML payload is blocked.
 			/// </param>
 			/// <param name="httpListenerPort">
 			/// The port that the proxy is to listen on for diverted plain TCP HTTP clients.
-			/// Recommended value is zero. By setting the value to zero, this allows the OS to
-			/// select an available port from the ephimeral port range.
+			/// Recommended value is zero. By setting the value to zero, this allows the OS to select
+			/// an available port from the ephimeral port range.
 			/// </param>
 			/// <param name="httpsListenerPort">
-			/// The port that the proxy is to listen on for diverted secure HTTP clients.
-			/// Recommended value is zero. By setting the value to zero, this allows the OS to
-			/// select an available port from the ephimeral port range.
+			/// The port that the proxy is to listen on for diverted secure HTTP clients. Recommended
+			/// value is zero. By setting the value to zero, this allows the OS to select an
+			/// available port from the ephimeral port range.
 			/// </param>
 			/// <param name="numThreads">
 			/// The number of threads to use to run against the underlying boost::asio::io_service
@@ -113,7 +120,7 @@ namespace Te {
 			/// Be advised that these are the same threads responsible for running the filtering
 			/// code.
 			/// </param>
-			Engine(FirewallCheckHandler^ firewallCheckFunc, ClassifyContentHandler^ classificationFunc, System::String^ caBundleAbsPath, uint16_t httpListenerPort, uint16_t httpsListenerPort, uint32_t numThreads);
+			Engine(FirewallCheckHandler^ firewallCheckFunc, ClassifyContentHandler^ classificationFunc, System::String^ caBundleAbsPath, System::String^ blockedHtmlPage, uint16_t httpListenerPort, uint16_t httpsListenerPort, uint32_t numThreads);
 
 			/// <summary>
 			/// Destructor, invokes finalizer as per docs here
@@ -132,6 +139,20 @@ namespace Te {
 			property System::String^ CaBundleAbsolutePath
 			{
 			
+			public:
+				System::String^ get();
+
+			private:
+				void set(System::String^ value);
+
+			}
+
+			/// <summary>
+			/// HTML to display when a HTML payload is blocked.
+			/// </summary>
+			property System::String^ BlockedHtmlPage
+			{
+
 			public:
 				System::String^ get();
 
@@ -346,6 +367,14 @@ namespace Te {
 			void UnloadAllFilterRulesForCategory(const uint8_t category);
 
 			/// <summary>
+			/// Unloads any and all text triggers assigned to the given category.
+			/// </summary>
+			/// <param name="category">
+			/// The category for which to unload all text triggers.
+			/// </param>
+			void UnloadAllTextTriggersForCategory(const uint8_t category);
+
+			/// <summary>
 			/// Checks if the specified option is enabled.
 			/// </summary>
 			/// <param name="option">
@@ -501,6 +530,11 @@ namespace Te {
 			/// Absolute path to the CA bundle to be used, supplied at construction.
 			/// </summary>
 			System::String^ m_caBundleAbsPath = nullptr;
+
+			/// <summary>
+			/// HTML to display when a HTML payload is blocked.
+			/// </summary>
+			System::String^ m_blockedHtmlPage = nullptr;
 
 			/// <summary>
 			/// Port on which the proxy should list for HTTP clients. Supplied at construction,
