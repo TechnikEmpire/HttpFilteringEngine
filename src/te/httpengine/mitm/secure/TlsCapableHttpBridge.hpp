@@ -490,6 +490,166 @@ namespace te
 
 				private:
 
+					class PreviewParser
+					{
+						private:
+
+							struct HeaderCbData
+							{
+								std::unordered_map<std::string, std::string> headers;
+								std::string lastHeaderName;
+							};
+
+						public:
+
+							enum class ParseResult
+							{
+								IsHttp,
+								NotHttp,
+								HttpWithUpgrade,
+								Failure
+							};
+
+							const ParseResult Parse(const char* data, const size_t dataLength, std::string& outHost)
+							{
+
+								if (!data || dataLength == 0)
+								{
+									return ParseResult::Failure;
+								}
+
+								auto onBody = [](http_parser* parser, const char *at, size_t length)->int
+								{
+									return 0;
+								};
+
+								auto onChunkComplete = [](http_parser* parser)->int
+								{
+									return 0;
+								};
+
+								auto onChunkHeader = [](http_parser* parser)->int
+								{
+									return 0;
+								};
+
+								auto onHeadersComplete = [](http_parser* parser)->int
+								{
+									return 0;
+								};
+
+								auto onHeaderField = [](http_parser* parser, const char *at, size_t length)->int
+								{
+									if (parser == nullptr || at == nullptr || parser->data == nullptr)
+									{
+										// Failure. Somehow.
+										return -1;
+									}
+
+									auto* data = static_cast<HeaderCbData*>(parser->data);
+									if (data != nullptr)
+									{
+										data->lastHeaderName = std::string(at, length);
+										return 0;
+									}
+
+									return -1;
+								};
+
+								auto onHeaderValue = [](http_parser* parser, const char *at, size_t length)->int
+								{
+									if (parser == nullptr || at == nullptr || parser->data == nullptr)
+									{
+										// Failure. Somehow.
+										return -1;
+									}
+
+									auto* data = static_cast<HeaderCbData*>(parser->data);
+									if (data != nullptr)
+									{
+										data->headers[data->lastHeaderName] = std::string(at, length);
+										return 0;
+									}
+
+									return -1;
+								};
+
+								auto onUrl = [](http_parser* parser, const char *at, size_t length)->int
+								{
+									return 0;
+								};
+
+								auto onMessageBegin = [](http_parser* parser)->int
+								{
+									return 0;
+								};
+
+								auto onMessageComplete = [](http_parser* parser)->int
+								{
+									return 0;
+								};
+
+								http_parser_settings parserSettings;
+
+								parserSettings.on_body = onBody;
+								parserSettings.on_chunk_complete = onChunkComplete;
+								parserSettings.on_chunk_header = onChunkHeader;
+								parserSettings.on_headers_complete = onHeadersComplete;
+								parserSettings.on_header_field = onHeaderField;
+								parserSettings.on_header_value = onHeaderValue;
+								parserSettings.on_message_begin = onMessageBegin;
+								parserSettings.on_message_complete = onMessageComplete;
+								parserSettings.on_status = onUrl;
+								parserSettings.on_url = onUrl;
+
+								http_parser* parser;
+								parser = static_cast<http_parser*>(malloc(sizeof(http_parser)));
+
+								if (!parser)
+								{
+									return ParseResult::Failure;
+								}
+
+								http_parser_init(parser, HTTP_REQUEST);
+
+								HeaderCbData parserData;
+								parser->data = &parserData;
+
+								auto nparsed = http_parser_execute(parser, &parserSettings, data, dataLength);
+
+								// Set the host before we leave.
+								auto host = parserData.headers.find(util::http::headers::Host);
+								if (host != parserData.headers.end())
+								{
+									outHost = host->second;
+								}
+
+								if (parser->upgrade == 1)
+								{
+									if (outHost.size() == 0)
+									{
+										// Most definitely should not be empty.
+										return ParseResult::Failure;
+									}
+
+									return ParseResult::HttpWithUpgrade;
+								}
+
+								if (parser->http_errno != 0)
+								{
+									return ParseResult::NotHttp;
+								}
+
+								if (outHost.size() == 0)
+								{
+									// Most definitely should not be empty.
+									return ParseResult::Failure;
+								}
+
+								return ParseResult::IsHttp;
+							}							
+					};
+
 					/// <summary>
 					/// Initiates shutdown of all pending asynchronous operations, which will
 					/// eventually lead to the destruction of this object once all pending handlers
@@ -522,21 +682,22 @@ namespace te
 							// since the kinds of errors you usually get from these calls are non-fatal
 							// issues. Usually just complaints about state etc.
 
+							boost::system::error_code downstreamCancelErr;
 							boost::system::error_code downstreamShutdownErr;
 							boost::system::error_code downstreamCloseErr;	
+							boost::system::error_code upstreamCancelErr;
 							boost::system::error_code upstreamShutdownErr;
 							boost::system::error_code upstreamCloseErr;
 
+							this->m_resolver.cancel();							
+
+							this->DownstreamSocket().cancel(downstreamCancelErr);
 							this->DownstreamSocket().shutdown(boost::asio::socket_base::shutdown_both, downstreamShutdownErr);
 							this->DownstreamSocket().close(downstreamCloseErr);
 
-							// To try and cut down annoying error messages about shutdown failures when the upstream
-							// socket hasn't even been used yet and ::Kill() has been called.
-							if (m_upstreamHost.size() > 0)
-							{						
-								this->UpstreamSocket().shutdown(boost::asio::socket_base::shutdown_both, upstreamShutdownErr);
-								this->UpstreamSocket().close(upstreamCloseErr);
-							}							
+							this->UpstreamSocket().cancel(upstreamCancelErr);
+							this->UpstreamSocket().shutdown(boost::asio::socket_base::shutdown_both, upstreamShutdownErr);
+							this->UpstreamSocket().close(upstreamCloseErr);
 
 							// We set the stream timeout to any negative value to force the stream
 							// to have any pending async_wait's cancelled and the new timeout set to
@@ -1085,7 +1246,7 @@ namespace te
 					void OnDownstreamHeaders(const boost::system::error_code& error, const size_t bytesTransferred)
 					{
 						#ifndef NDEBUG
-						ReportInfo(u8"TlsCapableHttpBridge::OnDownstreamHeaders");
+						ReportInfo(u8"TlsCapableHttpBridge::::OnDownstreamHeaders");
 						#endif // !NDEBUG
 
 						// EOF doesn't necessarily mean something critical happened. Could simply be
@@ -1431,6 +1592,7 @@ namespace te
 									m_response->SetOnWarning(m_onWarning);
 									m_response->SetOnError(m_onError);
 
+									/*
 									boost::asio::async_read_until(
 										m_downstreamSocket,
 										m_request->GetHeaderReadBuffer(),
@@ -1444,7 +1606,8 @@ namespace te
 												)
 											)
 										);
-
+									*/
+									TryInitiateHttpTransaction();
 									return;
 								}
 							}							
@@ -1502,31 +1665,7 @@ namespace te
 						ReportWarning(u8"In TlsCapableHttpBridge<BridgeSocketType>::OnStreamTimeout(const boost::system::error_code&) - Stream timed out.");
 
 						Kill();
-					}
-
-					/// <summary>
-					/// Sets or resets the timeout for the bridge's stream operations. If the
-					/// timeout is reached and the completion handler invoked, then the bridge will
-					/// be killed, with both downstream and upstream operations cancelled in an
-					/// asynchrous manner, at which time the bridge's reference count will reach
-					/// zero and the destructor will be called.
-					/// </summary>
-					/// <param name="millisecondsFromNow">
-					/// The number of milliseconds from now until the timeout. If any negative value
-					/// is supplied, the timeout will be set to positive infinity, so it never expires.
-					/// </param>
-					void SetStreamTimeout(int millisecondsFromNow)
-					{
-						m_streamTimer.cancel();
-
-						if (millisecondsFromNow < 0)
-						{
-							m_streamTimer.expires_at(boost::posix_time::pos_infin);
-							return;
-						}
-						
-						m_streamTimer.async_wait(std::bind(&TlsCapableHttpBridge::OnStreamTimeout, shared_from_this(), std::placeholders::_1));
-					}
+					}					
 
 					/// <summary>
 					/// Completion handler for when the asynchrous handshake operation with the
@@ -1639,6 +1778,7 @@ namespace te
 							SetNoDelay(UpstreamSocket(), true);
 							SetNoDelay(DownstreamSocket(), true);
 
+							/*
 							boost::asio::async_read_until(
 								m_downstreamSocket, 
 								m_request->GetHeaderReadBuffer(), 
@@ -1652,7 +1792,8 @@ namespace te
 										)
 									)
 								);
-							
+							*/
+							TryInitiateHttpTransaction();
 							return;
 						}
 
@@ -1862,12 +2003,6 @@ namespace te
 											// XXX TODO - See notes in the version of ::OnResolve(...), specialized for TLS clients.
 											m_upstreamHostPort = 443;
 
-											/*
-											std::string extractedSniMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnTlsPeek(const boost::system::error_code&, const size_t) - ");
-											extractedSniMessage.append(u8"Extracted SNI hostname: ").append(hostName.to_string()).append(u8".");
-											ReportInfo(extractedSniMessage);
-											*/
-
 											try
 											{
 												boost::asio::ip::tcp::resolver::query query(m_upstreamHost, "https");
@@ -1989,6 +2124,496 @@ namespace te
 						}
 
 						return verified;
+					}					
+
+					/// <summary>
+					/// This method is invoked by an initial call to read from the upstream socket,
+					/// and will continue to call itself recurrently after every successful
+					/// asynchronous read of the upstream socket, until the connection is closed. The
+					/// purpose of this method is to continuously poll the upstream socket for data,
+					/// and give it to the downstream socket. This is one of two methods that
+					/// function in this way, one for each socket, and these methods are invoked when
+					/// it has been determined that the connected client and server are communicating
+					/// in a non-http protocol. The reason for these methods is to ensure that
+					/// connectivity is still permitted, rather than simply dropped.
+					/// </summary>
+					/// <param name="error">
+					/// Error code from the asynchronous read which is calling this method as its
+					/// completion handler.
+					/// </param>
+					/// <param name="bytesTransferred">
+					/// The number of bytes transferred in the asynchronous read which is calling
+					/// this method as its completion handler.
+					/// </param>
+					/// <param name="buffer">
+					/// The buffer that the data was read into, if any.
+					/// </param>
+					void OnUpstreamReadVolley(const boost::system::error_code& error, const size_t bytesTransferred, std::shared_ptr< std::array<char, TlsPeekBufferSize> > buffer)
+					{
+						
+						if (!error && bytesTransferred > 0 && buffer && buffer->data())
+						{
+														
+
+							boost::asio::async_write(
+								m_downstreamSocket,
+								boost::asio::buffer(buffer->data(), bytesTransferred),
+								boost::asio::transfer_all(),
+								m_downstreamStrand.wrap(
+									std::bind(
+										&TlsCapableHttpBridge::OnDownstreamWriteVolley,
+										shared_from_this(),
+										std::placeholders::_1,
+										buffer)
+								)
+							);
+
+							
+							return;
+						}
+
+						
+						Kill();
+					}
+
+					void OnDownstreamWriteVolley(const boost::system::error_code& error, std::shared_ptr< std::array<char, TlsPeekBufferSize> > buffer)
+					{
+						
+						// This is called when the write to downstream is done. So, we just start over.
+						if (!error && buffer && buffer->data())
+						{
+							
+							boost::asio::async_read(
+								m_upstreamSocket,
+								boost::asio::buffer(buffer->data(), buffer->size()),
+								boost::asio::transfer_at_least(1),
+								m_upstreamStrand.wrap(
+									std::bind(
+										&TlsCapableHttpBridge::OnUpstreamReadVolley,
+										shared_from_this(),
+										std::placeholders::_1,
+										std::placeholders::_2,
+										buffer)
+								)
+							);
+
+							
+							return;
+						}
+
+						
+						Kill();
+					}
+
+					/// <summary>
+					/// This method is invoked by an initial call to read from the downstream socket,
+					/// and will continue to call itself recurrently after every successful
+					/// asynchronous read of the downstream socket, until the connection is closed. The
+					/// purpose of this method is to continuously poll the downstream socket for data,
+					/// and give it to the upstream socket. This is one of two methods that
+					/// function in this way, one for each socket, and these methods are invoked when
+					/// it has been determined that the connected client and server are communicating
+					/// in a non-http protocol. The reason for these methods is to ensure that
+					/// connectivity is still permitted, rather than simply dropped.
+					/// </summary>
+					/// <param name="error">
+					/// Error code from the asynchronous read which is calling this method as its
+					/// completion handler.
+					/// </param>
+					/// <param name="bytesTransferred">
+					/// The number of bytes transferred in the asynchronous read which is calling
+					/// this method as its completion handler.
+					/// </param>
+					/// <param name="buffer">
+					/// The buffer that the data was read into, if any.
+					/// </param>
+					void OnDownstreamReadVolley(const boost::system::error_code& error, const size_t bytesTransferred, std::shared_ptr< std::array<char, TlsPeekBufferSize> > buffer)
+					{
+						
+
+						if (!error && bytesTransferred > 0 && buffer && buffer->data())
+						{
+							
+
+							boost::asio::async_write(
+								m_upstreamSocket,
+								boost::asio::buffer(buffer->data(), bytesTransferred),
+								boost::asio::transfer_all(),
+								m_upstreamStrand.wrap(
+									std::bind(
+										&TlsCapableHttpBridge::OnUpstreamWriteVolley,
+										shared_from_this(),
+										std::placeholders::_1,
+										buffer)
+								)
+							);
+							
+							return;
+						}
+						
+						Kill();
+					}	
+
+					void OnUpstreamWriteVolley(const boost::system::error_code& error, std::shared_ptr< std::array<char, TlsPeekBufferSize> > buffer)
+					{
+						
+						// This is called when the write to upstream is done. So, we just start over.
+						if (!error && buffer && buffer->data())
+						{
+							
+							boost::asio::async_read(
+								m_downstreamSocket,
+								boost::asio::buffer(buffer->data(), buffer->size()),
+								boost::asio::transfer_at_least(1),
+								m_downstreamStrand.wrap(
+									std::bind(
+										&TlsCapableHttpBridge::OnDownstreamReadVolley,
+										shared_from_this(),
+										std::placeholders::_1,
+										std::placeholders::_2,
+										buffer)
+								)
+							);
+							
+							return;
+						}
+
+						
+						Kill();
+					}
+
+					void StartPassthroughVolley()
+					{	
+						ReportInfo(u8"Starting passthrough.");
+
+						std::shared_ptr<std::array<char, TlsPeekBufferSize>> downstreamBuff = std::make_shared<std::array<char, TlsPeekBufferSize>>();
+						std::shared_ptr<std::array<char, TlsPeekBufferSize>> upstreamBuff = std::make_shared<std::array<char, TlsPeekBufferSize>>();
+
+						// Just start to read from both sockets and we're done.
+						boost::asio::async_read(
+							m_downstreamSocket,
+							boost::asio::buffer(downstreamBuff->data(), downstreamBuff->size()),
+							boost::asio::transfer_at_least(1),
+							m_downstreamStrand.wrap(
+								std::bind(
+									&TlsCapableHttpBridge::OnDownstreamReadVolley,
+									shared_from_this(),
+									std::placeholders::_1,
+									std::placeholders::_2,
+									downstreamBuff)
+							)
+						);
+
+						boost::asio::async_read(
+							m_upstreamSocket,
+							boost::asio::buffer(upstreamBuff->data(), upstreamBuff->size()),
+							boost::asio::transfer_at_least(1),
+							m_upstreamStrand.wrap(
+								std::bind(
+									&TlsCapableHttpBridge::OnUpstreamReadVolley,
+									shared_from_this(),
+									std::placeholders::_1,
+									std::placeholders::_2,
+									upstreamBuff)
+							)
+						);
+					}
+
+					/// <summary>
+					/// Attempts to start the HTTP transaction process by doing a peek read from the
+					/// downstream (client) socket, to determine if the incoming data is legal HTTP
+					/// data. If this is the case, then this function will initiate the asynchronous
+					/// operation to read all headers from the downstream socket.
+					///
+					/// If it is determined that the incoming data is not HTTP data, but is Websocket
+					/// data, then the process will start a back and forth volley with a raw buffer
+					/// between the upstream and downstream sockets, passing the data through
+					/// directly without processing or parsing it.
+					/// </summary>
+					void TryInitiateHttpTransaction()
+					{
+						try
+						{
+							// Allow 5 seconds for a peek read.
+							SetStreamTimeout(5000);
+
+							std::shared_ptr<std::array<char, TlsPeekBufferSize>> httpPeekBuffer = std::make_shared< std::array<char, TlsPeekBufferSize> >();
+
+							DownstreamSocket().async_receive(
+								boost::asio::buffer(httpPeekBuffer->data(), httpPeekBuffer->size()),
+								boost::asio::ip::tcp::socket::message_peek,
+								m_downstreamStrand.wrap(
+									std::bind(
+										&TlsCapableHttpBridge::OnInitialPeek,
+										shared_from_this(),
+										std::placeholders::_1,
+										std::placeholders::_2,
+										httpPeekBuffer)
+								)
+							);
+						}
+						catch (std::exception& e)
+						{
+							std::string err(e.what());
+							ReportError(err);
+						}
+					}
+
+					void OnInitialPeek(const boost::system::error_code& error, const size_t bytesTransferred, std::shared_ptr<std::array<char, TlsPeekBufferSize>> httpPeekBuffer)
+					{
+						if (!error && httpPeekBuffer && httpPeekBuffer.get() && httpPeekBuffer->data() && bytesTransferred > 0)
+						{
+							
+							// Cancel the stream timeout mechanism before entering starting this process. We're going to need
+							// to possibly leave this cancelled if we're handling a passthrough connection.
+							SetStreamTimeout(-1);
+
+							
+							PreviewParser p;
+							std::string parsedHost;
+							auto parseResult = p.Parse(httpPeekBuffer->data(), bytesTransferred, parsedHost);
+
+							
+
+							switch (parseResult)
+							{
+								case PreviewParser::ParseResult::Failure:
+								{
+									ReportError(u8"In TlsCapableHttpBridge:: InitiateHttpTransaction() - Failed when trying to peek connected client.");
+									Kill();
+									return;
+								}
+								break;
+
+								case PreviewParser::ParseResult::IsHttp:
+								{
+									
+									// Just go ahead and start officially reading the headers.
+
+									// Set the timeout to something reasonable.
+									SetStreamTimeout(5000);
+
+									boost::asio::async_read_until(
+										m_downstreamSocket,
+										m_request->GetHeaderReadBuffer(),
+										u8"\r\n\r\n",
+										m_downstreamStrand.wrap(
+											std::bind(
+												&TlsCapableHttpBridge::OnDownstreamHeaders,
+												shared_from_this(),
+												std::placeholders::_1,
+												std::placeholders::_2
+											)
+										)
+									);
+
+									return;
+								}
+								break;
+
+								case PreviewParser::ParseResult::HttpWithUpgrade:
+								{
+									
+									// If it's non-TLS, then we need to resolve the host and connect to it
+									// as well. If it is TLS, then we don't care because this is done
+									// right away on connect with TLS clients because the host is extracted
+									// from SNI extension.
+									bool needsResolveAndConnect = std::is_same<BridgeSocketType, network::TcpSocket>::value;
+
+									if (needsResolveAndConnect)
+									{
+										
+										SetStreamTimeout(5000);
+
+										if (parsedHost.size() == 0)
+										{
+											ReportWarning(u8"HTTP-With-Upgrade passthrough detected, but no host extracted.");
+											Kill();
+											return;
+										}
+
+										// Trim port, if present.
+										auto portPos = parsedHost.find_last_of(u8":");
+
+										// Find out if a custom port is being used and pass it
+										// to our resolve handler so we can adjust where we're
+										// connecting to on resolve.
+										size_t customPort = 0;
+
+										if (portPos != std::string::npos)
+										{
+											
+											parsedHost = parsedHost.substr(0, portPos);
+
+											if (portPos + 1 < parsedHost.size())
+											{
+												
+												try
+												{
+													customPort = static_cast<uint16_t>(std::stoi(parsedHost.substr(portPos + 1)));
+												}
+												catch (...)
+												{
+													
+													customPort = 0;
+												}
+											}
+										}
+
+										if (m_filteringEngine->ShouldBlockHost(parsedHost))
+										{
+											// This host is filtered.
+											Kill();
+											return;
+										}
+
+										boost::asio::ip::tcp::resolver::query query(parsedHost, std::is_same<BridgeSocketType, network::TlsSocket>::value ? "https" : "http");
+
+										m_resolver.async_resolve(
+											query,
+											m_upstreamStrand.wrap(											
+												std::bind(
+													&TlsCapableHttpBridge::OnUpgradeResolve,
+													shared_from_this(),
+													std::placeholders::_1,
+													std::placeholders::_2,
+													customPort
+												)
+											)
+										);
+
+										
+
+										return;
+									}
+									else
+									{
+										// Check here if already-established host is blocked. In this case, the host would have been
+										// extracted via SNI extension parsing.
+										if (m_upstreamHost.size() > 0)
+										{
+											if (m_filteringEngine->ShouldBlockHost(m_upstreamHost))
+											{
+												// This host is filtered.
+												Kill();
+												return;
+											}
+										}
+
+										// We're already connected as HTTPS so just do the volley.
+										StartPassthroughVolley();
+										return;
+									}
+								}
+								break;
+
+								case PreviewParser::ParseResult::NotHttp:
+								{
+									// If this is not HTTP AND it's not TLS with SNI, then we can't do anything about this.
+									if (std::is_same<BridgeSocketType, network::TcpSocket>::value)
+									{
+										
+										ReportError(u8"In TlsCapableHttpBridge::TryInitiateHttpTransaction() - Connected client is non-tls and sending content in an unexpected protocol. Terminating because no mechanism exists to resolve the original upstream host.");
+										Kill();
+										return;
+									}
+									else
+									{
+										// Check here if already-established host is blocked. In this case, the host would have been
+										// extracted via SNI extension parsing.
+										if (m_upstreamHost.size() > 0)
+										{
+											if (m_filteringEngine->ShouldBlockHost(m_upstreamHost))
+											{
+												// This host is filtered.
+												Kill();
+												return;
+											}
+										}
+
+										// We're already connected as HTTPS so just do the volley.
+										StartPassthroughVolley();
+										return;
+									}
+								}
+								break;
+							}
+						}
+
+						
+						Kill();
+					}
+
+					void OnUpgradeResolve(const boost::system::error_code& error, boost::asio::ip::tcp::resolver::iterator endpointIterator, const size_t customPort)
+					{
+						if (!error)
+						{
+							
+							auto ep = *endpointIterator;
+
+							if (customPort != 0)
+							{
+								// A custom port was parsed from the peeked request headers.
+								
+								ep.endpoint().port(customPort);
+							}
+
+							UpstreamSocket().async_connect(
+								ep,
+								m_upstreamStrand.wrap(
+									std::bind(
+										&TlsCapableHttpBridge::OnUpgradeConnect,
+										shared_from_this(),
+										std::placeholders::_1
+									)
+								)
+							);
+
+							
+							return;
+						}
+
+						
+						// Failed to resolve host.
+						Kill();
+					}
+
+					void OnUpgradeConnect(const boost::system::error_code& error)
+					{
+						if (!error)
+						{
+							// We managed to connect, do just start to volley.
+							StartPassthroughVolley();
+							
+							return;
+						}
+
+						// Failed to connect.
+						Kill();
+					}
+
+					/// <summary>
+					/// Sets or resets the timeout for the bridge's stream operations. If the
+					/// timeout is reached and the completion handler invoked, then the bridge will
+					/// be killed, with both downstream and upstream operations cancelled in an
+					/// asynchrous manner, at which time the bridge's reference count will reach
+					/// zero and the destructor will be called.
+					/// </summary>
+					/// <param name="millisecondsFromNow">
+					/// The number of milliseconds from now until the timeout. If any negative value
+					/// is supplied, the timeout will be set to positive infinity, so it never expires.
+					/// </param>
+					void SetStreamTimeout(int millisecondsFromNow)
+					{
+						m_streamTimer.cancel();
+
+						if (millisecondsFromNow < 0)
+						{
+							m_streamTimer.expires_at(boost::posix_time::pos_infin);
+							return;
+						}
+
+						m_streamTimer.async_wait(std::bind(&TlsCapableHttpBridge::OnStreamTimeout, shared_from_this(), std::placeholders::_1));
 					}
 
 					/// <summary>
@@ -2038,6 +2663,26 @@ namespace te
 							errorMessage.append(err.message());
 							ReportError(errorMessage);
 						}
+					}
+
+					/// <summary>
+					/// Determines if the supplied socket has data waiting to be read off the buffer.
+					/// This is used to attempt to determine if a transaction is complete whenever we
+					/// have to handle a passthrough connection.
+					/// </summary>
+					/// <param name="socket">
+					/// The socket to be polled.
+					/// </param>
+					/// <returns>
+					/// True of the supplied socket has data to be read, false otherwise.
+					/// </returns>
+					const bool SocketHasData(boost::asio::ip::tcp::socket& socket)
+					{
+						boost::asio::socket_base::bytes_readable command(true);
+						socket.io_control(command);
+						std::size_t bytes_readable = command.get();
+
+						return bytes_readable > 0;
 					}
 				};				
 

@@ -152,6 +152,7 @@ namespace te
 					{
 						SetStreamTimeout(10000);
 
+						/*
 						// We start off by simply reading the client request headers.
 						boost::asio::async_read_until(
 							m_downstreamSocket, 
@@ -166,7 +167,8 @@ namespace te
 									)
 								)
 							);
-
+						*/
+						TryInitiateHttpTransaction();
 						return;
 					}
 					catch (std::exception& e)

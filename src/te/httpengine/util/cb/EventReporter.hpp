@@ -33,6 +33,7 @@
 
 #include "EngineCallbackTypes.h"
 #include <boost/utility/string_ref.hpp>
+#include <thread>
 
 namespace te
 {
@@ -136,7 +137,13 @@ namespace te
 					{
 						if (m_onInfo && infoMessage.data())
 						{
-							m_onInfo(infoMessage.begin(), infoMessage.size());
+							#ifndef NDEBUG
+								std::string m = u8"From Thread " + std::to_string(std::hash<std::thread::id>()(std::this_thread::get_id()));
+								m.append(": ").append(infoMessage.to_string());
+								m_onInfo(m.c_str(), m.size());
+							#else
+								m_onInfo(infoMessage.begin(), infoMessage.size());
+							#endif
 						}
 					}
 
@@ -151,7 +158,13 @@ namespace te
 					{
 						if (m_onWarning && warningMessage.data())
 						{
-							m_onWarning(warningMessage.begin(), warningMessage.size());
+							#ifndef NDEBUG
+								std::string m = u8"From Thread " + std::to_string(std::hash<std::thread::id>()(std::this_thread::get_id()));
+								m.append(": ").append(warningMessage.to_string());
+								m_onWarning(m.c_str(), m.size());
+							#else
+								m_onWarning(warningMessage.begin(), warningMessage.size());
+							#endif							
 						}
 					}
 
@@ -166,7 +179,13 @@ namespace te
 					{
 						if (m_onError && errorMessage.data())
 						{
-							m_onError(errorMessage.begin(), errorMessage.size());
+							#ifndef NDEBUG
+								std::string m = u8"From Thread " + std::to_string(std::hash<std::thread::id>()(std::this_thread::get_id()));
+								m.append(": ").append(errorMessage.to_string());
+								m_onError(m.c_str(), m.size());
+							#else
+								m_onError(errorMessage.begin(), errorMessage.size());
+							#endif
 						}
 					}
 

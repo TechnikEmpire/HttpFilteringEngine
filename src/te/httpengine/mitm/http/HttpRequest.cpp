@@ -43,6 +43,15 @@ namespace te
 				{
 					m_httpParserSettings.on_url = &OnUrl;
 
+					// Why do we do this? Apparently, in our tests, sometimes methods that ought not
+					// to be called for the type of parser we're using get called, and so if we don't
+					// define all of these methods here, then we MAY get a memory access violation
+					// resulting in random crashed.
+					m_httpParserSettings.on_status = [](http_parser* parser, const char *at, size_t length)->int
+					{
+						return 0;
+					};
+
 					m_httpParser = static_cast<http_parser*>(malloc(sizeof(http_parser)));
 					http_parser_init(m_httpParser, HTTP_REQUEST);
 					m_httpParser->data = this;

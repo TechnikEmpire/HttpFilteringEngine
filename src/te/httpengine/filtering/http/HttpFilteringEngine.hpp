@@ -358,6 +358,20 @@ namespace te
 					uint8_t ShouldBlock(const mhttp::HttpRequest* request, mhttp::HttpResponse* response = nullptr, const bool isSecure = false);					
 
 					/// <summary>
+					/// Determines if, given the current loaded rules, the supplied host should be
+					/// blocked.
+					/// </summary>
+					/// <param name="hostname">
+					/// The host in question.
+					/// </param>
+					/// <returns>
+					/// A non-zero value indicating the host should be blocked, with the integer
+					/// value representing the category that the host was found to belong to. Zero if
+					/// the host should not be blocked.
+					/// </returns>
+					uint8_t ShouldBlockHost(boost::string_ref hostname);
+
+					/// <summary>
 					/// Attempts to load and parse the response portion of the supplied transaction,
 					/// then runs all relevant CSS selectors against the document, collecting nodes
 					/// that match the supplied selectors. Once this is done, the document is
@@ -516,7 +530,7 @@ namespace te
 					/// A non-zero value if the content should be blocked. Zero if the content should
 					/// not be blocked.
 					/// </returns>
-					uint8_t ShouldBlockBecauseOfTextTrigger(const std::vector<char>& payload) const;
+					uint8_t ShouldBlockBecauseOfTextTrigger(const std::vector<char>& payload) const;					
 
 					/// <summary>
 					/// Method that accepts a single Adblock Plus formatted filter or selector

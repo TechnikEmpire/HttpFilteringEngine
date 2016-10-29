@@ -525,6 +525,14 @@ namespace te
 					void SetConsumeAllBeforeSending(const bool value);
 
 					/// <summary>
+					/// Determine if the payload is chunked or not. Looks for the transfer-encoding header.
+					/// </summary>
+					/// <returns>
+					/// True if the payload is chunked, false otherwise.
+					/// </returns>
+					const bool IsPayloadChunked() const;
+
+					/// <summary>
 					/// Determine if the payload is compressed or not.
 					/// </summary>
 					/// <returns>
@@ -753,7 +761,9 @@ namespace te
 					/// this container before sending it outbound, in order to perform operations
 					/// such as deep content analysis on the payload data.
 					/// </summary>
-					std::vector<char> m_transactionData;
+					std::vector<char> m_parsedTransactionData;
+
+					std::vector<char> m_payloadBuffer;					
 
 					/// <summary>
 					/// This object uses a vector of char for storing our payload data. This object
@@ -773,7 +783,7 @@ namespace te
 					/// This variable will store how much payload/body data has actually been read
 					/// into this objects internal payload buffer.
 					/// </summary>
-					size_t m_unwrittenPayloadSize = 0;
+					//size_t m_unwrittenPayloadSize = 0;
 
 					/// <summary>
 					/// Flag used to indicate if the headers for the transaction have been fully

@@ -315,12 +315,20 @@ namespace te
 
 					try
 					{
-						// If the request is already set to be blocked, and the repsonse is supplied,
+						// If the request is already set to be blocked, and the response is supplied,
 						// then we simply want to report the size of the blocked content from the 
 						// response headers before actually downloading all of the response.
-						if (response != nullptr && request->GetShouldBlock() != 0)
+						if (request != nullptr && request->GetShouldBlock() != 0)
 						{
 							auto blockCategory = request->GetShouldBlock();
+
+							ReportRequestBlocked(request, response);
+							return blockCategory;
+						}
+
+						if (response != nullptr && response->GetShouldBlock() != 0)
+						{
+							auto blockCategory = response->GetShouldBlock();
 
 							ReportRequestBlocked(request, response);
 							return blockCategory;
@@ -377,7 +385,7 @@ namespace te
 
 						auto blSearch = m_domainRequestBlacklist.find(hostStringRefHashed);
 
-						if (blSearch != m_domainRequestBlacklist.end())
+						if (blSearch != m_domainRequestBlacklist.end() && m_programOptions->GetIsHttpCategoryFiltered(blSearch->second))
 						{
 							// Blacklisted domain.
 							ReportRequestBlocked(request, response);
@@ -387,7 +395,7 @@ namespace te
 
 						blSearch = m_domainRequestBlacklist.find(fullRequestNoSchemeHashed);
 
-						if (blSearch != m_domainRequestBlacklist.end())
+						if (blSearch != m_domainRequestBlacklist.end() && m_programOptions->GetIsHttpCategoryFiltered(blSearch->second))
 						{
 							// Blacklisted request.
 							ReportRequestBlocked(request, response);
@@ -397,7 +405,7 @@ namespace te
 
 						blSearch = m_domainRequestBlacklist.find(fullRequestHashed);
 
-						if (blSearch != m_domainRequestBlacklist.end())
+						if (blSearch != m_domainRequestBlacklist.end() && m_programOptions->GetIsHttpCategoryFiltered(blSearch->second))
 						{
 							// Blacklisted request.
 							ReportRequestBlocked(request, response);
@@ -473,6 +481,11 @@ namespace te
 									if (contentTypeHeader.first != contentTypeHeader.second)
 									{
 										contentTypeString = contentTypeHeader.first->second;
+									}
+
+									if (contentTypeString.size() == 0)
+									{
+										contentTypeString = std::string(u8"unknown");
 									}
 
 									// Pass over the content for classification.
@@ -812,6 +825,41 @@ namespace te
 
 							subDomainIndicator = entry.find('.');
 						}
+					}
+
+					return 0;
+				}
+
+				uint8_t HttpFilteringEngine::ShouldBlockHost(boost::string_ref hostname)
+				{
+					// XXX TODO - This can be improved later to factor in the full request
+					// string, but for now we're looking to block non-http requests by
+					// just the host name.
+
+					if(!hostname.data() || hostname.size() == 0 )
+					{
+						// No valid data supplied.
+						return 0;
+					}
+
+					Reader r(m_filterLock);
+
+					auto hostStringRefHashed = util::string::Hash(hostname);
+
+					if (m_domainRequestWhitelist.find(hostStringRefHashed) != m_domainRequestWhitelist.end())
+					{
+						// Whitelisted domain.
+						return 0;
+					}
+
+					auto blSearch = m_domainRequestBlacklist.find(hostStringRefHashed);
+
+					if (blSearch != m_domainRequestBlacklist.end() && m_programOptions->GetIsHttpCategoryFiltered(blSearch->second))
+					{
+						// Blacklisted domain.						
+						ReportInfo("Blocked by host string ref hashed.");
+						ReportInfo(hostname);
+						return blSearch->second;
 					}
 
 					return 0;
