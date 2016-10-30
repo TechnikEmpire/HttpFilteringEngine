@@ -751,6 +751,10 @@ namespace te
 
 				uint8_t HttpFilteringEngine::ShouldBlockBecauseOfTextTrigger(const std::vector<char>& payload) const
 				{	
+					#ifndef NDEBUG
+						return 0;
+					#endif
+
 					boost::string_ref content = boost::string_ref(payload.data(), payload.size());
 
 					auto collect = [content]() -> std::vector<boost::string_ref>

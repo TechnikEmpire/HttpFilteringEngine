@@ -62,6 +62,19 @@ namespace te
 					HttpResponse();
 
 					/// <summary>
+					/// Constructs a response with the initial given payload. The payload is placed
+					/// in the header buffer directly, leaving this object in the same state is if it
+					/// had just finished being used to complete its first read from raw socket data.
+					/// </summary>
+					/// <param name="data">
+					/// A valid pointer to the start of the initial payload data.
+					/// </param>
+					/// <param name="length">
+					/// The total length in bytes of the initial payload data
+					/// </param>
+					HttpResponse(const char* data, const size_t length);
+
+					/// <summary>
 					/// Default destructor. Frees the internal http_parser.
 					/// </summary>
 					virtual ~HttpResponse();

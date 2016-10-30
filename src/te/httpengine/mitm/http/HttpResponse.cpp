@@ -58,6 +58,13 @@ namespace te
 					m_httpParser->data = this;
 				}
 
+				HttpResponse::HttpResponse(const char* data, const size_t length) : HttpResponse()
+				{
+					// Write the data into the header buffer and that's it.
+					std::ostream os(&m_headerBuffer);
+					os.write(data, length);
+				}
+
 				HttpResponse::~HttpResponse()
 				{
 

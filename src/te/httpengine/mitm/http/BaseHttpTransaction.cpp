@@ -200,7 +200,7 @@ namespace te
 						auto nparsed = http_parser_execute(m_httpParser, &m_httpParserSettings, hdrString.c_str(), bytesToParse);
 
 						if (m_httpParser->http_errno != 0)
-						{
+						{	
 							std::string errMsg(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse headers. Got http_parser error: ");
 							errMsg.append(http_errno_description(HTTP_PARSER_ERRNO(m_httpParser)));
 							ReportError(errMsg);

@@ -498,7 +498,10 @@ namespace te
 							{
 								std::unordered_map<std::string, std::string> headers;
 								std::string lastHeaderName;
+								bool headersComplete;
 							};
+
+							bool m_headersComplete = false;
 
 						public:
 
@@ -509,6 +512,13 @@ namespace te
 								HttpWithUpgrade,
 								Failure
 							};
+
+							const bool HeadersComplete() const
+							{
+								return m_headersComplete;
+							}
+
+							std::string errorMessage;
 
 							const ParseResult Parse(const char* data, const size_t dataLength, std::string& outHost)
 							{
@@ -535,7 +545,20 @@ namespace te
 
 								auto onHeadersComplete = [](http_parser* parser)->int
 								{
-									return 0;
+									if (parser == nullptr)
+									{
+										// Failure. Somehow.
+										return -1;
+									}
+
+									auto* data = static_cast<HeaderCbData*>(parser->data);
+									if (data != nullptr)
+									{
+										data->headersComplete = true;
+										return 0;
+									}
+
+									return -1;
 								};
 
 								auto onHeaderField = [](http_parser* parser, const char *at, size_t length)->int
@@ -624,6 +647,8 @@ namespace te
 									outHost = host->second;
 								}
 
+								m_headersComplete = parserData.headersComplete;
+
 								if (parser->upgrade == 1)
 								{
 									if (outHost.size() == 0)
@@ -637,7 +662,13 @@ namespace te
 
 								if (parser->http_errno != 0)
 								{
-									return ParseResult::NotHttp;
+									errorMessage = std::string(u8"In ParseResult::Parse(...) -Got http_parser error: ");
+									errorMessage.append(http_errno_description(HTTP_PARSER_ERRNO(parser)));									
+									
+									if (parser->http_errno == HPE_INVALID_METHOD || parser->http_errno == HPE_UNKNOWN)
+									{
+										return ParseResult::NotHttp;
+									}
 								}
 
 								if (outHost.size() == 0)
@@ -2282,13 +2313,18 @@ namespace te
 						Kill();
 					}
 
-					void StartPassthroughVolley()
+					void StartPassthroughVolley(std::shared_ptr<std::array<char, TlsPeekBufferSize>> downstreamBuff, const size_t initialBytes)
 					{	
 						ReportInfo(u8"Starting passthrough.");
 
-						std::shared_ptr<std::array<char, TlsPeekBufferSize>> downstreamBuff = std::make_shared<std::array<char, TlsPeekBufferSize>>();
 						std::shared_ptr<std::array<char, TlsPeekBufferSize>> upstreamBuff = std::make_shared<std::array<char, TlsPeekBufferSize>>();
 
+						boost::system::error_code err;
+						err.clear();
+
+						OnDownstreamReadVolley(err, initialBytes, downstreamBuff);
+
+						/*
 						// Just start to read from both sockets and we're done.
 						boost::asio::async_read(
 							m_downstreamSocket,
@@ -2303,7 +2339,7 @@ namespace te
 									downstreamBuff)
 							)
 						);
-
+						*/
 						boost::asio::async_read(
 							m_upstreamSocket,
 							boost::asio::buffer(upstreamBuff->data(), upstreamBuff->size()),
@@ -2339,9 +2375,12 @@ namespace te
 
 							std::shared_ptr<std::array<char, TlsPeekBufferSize>> httpPeekBuffer = std::make_shared< std::array<char, TlsPeekBufferSize> >();
 
-							DownstreamSocket().async_receive(
+							auto dataAvailable = SocketHasData(DownstreamSocket());
+
+							boost::asio::async_read(
+								m_downstreamSocket,
 								boost::asio::buffer(httpPeekBuffer->data(), httpPeekBuffer->size()),
-								boost::asio::ip::tcp::socket::message_peek,
+								boost::asio::transfer_at_least(18),
 								m_downstreamStrand.wrap(
 									std::bind(
 										&TlsCapableHttpBridge::OnInitialPeek,
@@ -2358,6 +2397,7 @@ namespace te
 							ReportError(err);
 						}
 					}
+					
 
 					void OnInitialPeek(const boost::system::error_code& error, const size_t bytesTransferred, std::shared_ptr<std::array<char, TlsPeekBufferSize>> httpPeekBuffer)
 					{
@@ -2373,7 +2413,7 @@ namespace te
 							std::string parsedHost;
 							auto parseResult = p.Parse(httpPeekBuffer->data(), bytesTransferred, parsedHost);
 
-							
+							ReportError(p.errorMessage);
 
 							switch (parseResult)
 							{
@@ -2388,11 +2428,30 @@ namespace te
 								case PreviewParser::ParseResult::IsHttp:
 								{
 									
+									ReportInfo(u8"Is normal HTTP.");
+									boost::string_ref peekedData(httpPeekBuffer->data(), bytesTransferred);
+									ReportInfo(peekedData);
+
 									// Just go ahead and start officially reading the headers.
 
 									// Set the timeout to something reasonable.
 									SetStreamTimeout(5000);
 
+									if (p.HeadersComplete())
+									{
+										// Create a new request for this data and just jump to OnDownstreamHeaders.
+										m_request.reset(new http::HttpRequest(httpPeekBuffer->data(), bytesTransferred));
+										OnDownstreamHeaders(error, bytesTransferred);
+										return;
+									}
+									else
+									{
+										ReportError(u8"Is HTTP but headers incomplete!");
+										Kill();
+										return;
+									}
+
+									/*
 									boost::asio::async_read_until(
 										m_downstreamSocket,
 										m_request->GetHeaderReadBuffer(),
@@ -2406,14 +2465,17 @@ namespace te
 											)
 										)
 									);
-
-									return;
+									*/
+									
 								}
 								break;
 
 								case PreviewParser::ParseResult::HttpWithUpgrade:
 								{
-									
+									ReportInfo(u8"HTTP with upgrade.");
+									boost::string_ref peekedData(httpPeekBuffer->data(), bytesTransferred);
+									ReportInfo(peekedData);
+
 									// If it's non-TLS, then we need to resolve the host and connect to it
 									// as well. If it is TLS, then we don't care because this is done
 									// right away on connect with TLS clients because the host is extracted
@@ -2469,20 +2531,52 @@ namespace te
 
 										boost::asio::ip::tcp::resolver::query query(parsedHost, std::is_same<BridgeSocketType, network::TlsSocket>::value ? "https" : "http");
 
+										auto self(shared_from_this());
+
 										m_resolver.async_resolve(
 											query,
 											m_upstreamStrand.wrap(											
-												std::bind(
-													&TlsCapableHttpBridge::OnUpgradeResolve,
-													shared_from_this(),
-													std::placeholders::_1,
-													std::placeholders::_2,
-													customPort
-												)
-											)
-										);
+												[this, self, customPort, httpPeekBuffer, bytesTransferred](const boost::system::error_code& error, boost::asio::ip::tcp::resolver::iterator endpointIterator)
+												{
+													if (!error)
+													{
+														auto ep = *endpointIterator;
 
-										
+														if (customPort != 0)
+														{
+															// A custom port was parsed from the peeked request headers.
+								
+															ep.endpoint().port(customPort);
+														}
+
+														UpstreamSocket().async_connect(
+															ep,
+															m_upstreamStrand.wrap(
+																[this, self, httpPeekBuffer, bytesTransferred](const boost::system::error_code& error)
+																{
+																	if (!error)
+																	{
+																		// We managed to connect, do just start to volley.
+																		StartPassthroughVolley(httpPeekBuffer, bytesTransferred);
+
+																		return;
+																	}
+
+																	// Failed to connect.
+																	Kill();
+																}
+															)
+														);
+
+														return;
+													}
+
+						
+													// Failed to resolve host.
+													Kill();
+												}
+											)
+										);										
 
 										return;
 									}
@@ -2501,14 +2595,14 @@ namespace te
 										}
 
 										// We're already connected as HTTPS so just do the volley.
-										StartPassthroughVolley();
+										StartPassthroughVolley(httpPeekBuffer, bytesTransferred);
 										return;
 									}
 								}
 								break;
 
 								case PreviewParser::ParseResult::NotHttp:
-								{
+								{	
 									// If this is not HTTP AND it's not TLS with SNI, then we can't do anything about this.
 									if (std::is_same<BridgeSocketType, network::TcpSocket>::value)
 									{
@@ -2519,6 +2613,11 @@ namespace te
 									}
 									else
 									{
+										ReportInfo(u8"Not http and is TLS.");
+
+										boost::string_ref peekedData(httpPeekBuffer->data(), bytesTransferred);
+										ReportInfo(peekedData);
+
 										// Check here if already-established host is blocked. In this case, the host would have been
 										// extracted via SNI extension parsing.
 										if (m_upstreamHost.size() > 0)
@@ -2532,7 +2631,7 @@ namespace te
 										}
 
 										// We're already connected as HTTPS so just do the volley.
-										StartPassthroughVolley();
+										StartPassthroughVolley(httpPeekBuffer, bytesTransferred);
 										return;
 									}
 								}
@@ -2542,55 +2641,7 @@ namespace te
 
 						
 						Kill();
-					}
-
-					void OnUpgradeResolve(const boost::system::error_code& error, boost::asio::ip::tcp::resolver::iterator endpointIterator, const size_t customPort)
-					{
-						if (!error)
-						{
-							
-							auto ep = *endpointIterator;
-
-							if (customPort != 0)
-							{
-								// A custom port was parsed from the peeked request headers.
-								
-								ep.endpoint().port(customPort);
-							}
-
-							UpstreamSocket().async_connect(
-								ep,
-								m_upstreamStrand.wrap(
-									std::bind(
-										&TlsCapableHttpBridge::OnUpgradeConnect,
-										shared_from_this(),
-										std::placeholders::_1
-									)
-								)
-							);
-
-							
-							return;
-						}
-
-						
-						// Failed to resolve host.
-						Kill();
-					}
-
-					void OnUpgradeConnect(const boost::system::error_code& error)
-					{
-						if (!error)
-						{
-							// We managed to connect, do just start to volley.
-							StartPassthroughVolley();
-							
-							return;
-						}
-
-						// Failed to connect.
-						Kill();
-					}
+					}								
 
 					/// <summary>
 					/// Sets or resets the timeout for the bridge's stream operations. If the
