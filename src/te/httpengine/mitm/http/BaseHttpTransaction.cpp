@@ -191,6 +191,17 @@ namespace te
 					{	
 						std::string hdrString{ (std::istreambuf_iterator<char>(&m_headerBuffer)), std::istreambuf_iterator<char>() };
 
+						// Pull server requests for HTTP2 upgrade
+						if (hdrString.size() > 0)
+						{
+							auto http2 = boost::string_ref(u8"Upgrade: h2\r\n");
+							auto http2c = boost::string_ref(u8"Upgrade: h2c\r\n");
+							
+							boost::erase_all(hdrString, http2);
+							boost::erase_all(hdrString, http2c);
+						}
+						//
+
 						// Because boost::asio lies to us and reads more data into the header buffer than just headers, we cannot
 						// rely on the bytesReceived value here. We must look at the whole buffer.
 						auto bytesToParse = hdrString.size();
@@ -209,10 +220,10 @@ namespace te
 						}
 
 						if (m_httpParser->upgrade == 1)
-						{							
+						{		
 							ReportError(u8"In BaseHttpTransaction::Parse(const size_t&) - Upgrade requested. Unsupported.");
 							ReportInfo(hdrString);
-							return false;
+							return false;							
 						}
 
 						if (nparsed != bytesToParse)
@@ -312,7 +323,7 @@ namespace te
 						m_payloadBuffer.resize(PayloadBufferReadSize);
 					}
 
-					return boost::asio::mutable_buffers_1(m_payloadBuffer.data(), PayloadBufferReadSize);
+					return boost::asio::mutable_buffers_1(m_payloadBuffer.data(), m_payloadBuffer.size());
 				}
 
 				boost::asio::const_buffers_1 BaseHttpTransaction::GetWriteBuffer()
@@ -321,8 +332,12 @@ namespace te
 					{
 						auto headersVector = HeadersToVector();				
 						auto newSize = headersVector.size() + m_parsedTransactionData.size();
-						headersVector.reserve(newSize);						
-						headersVector.insert(headersVector.end(), m_parsedTransactionData.begin(), m_parsedTransactionData.end());
+						headersVector.reserve(newSize);
+
+						if (m_parsedTransactionData.size() > 0)
+						{
+							headersVector.insert(headersVector.end(), m_parsedTransactionData.begin(), m_parsedTransactionData.end());
+						}
 
 						m_parsedTransactionData = std::move(headersVector);
 
@@ -348,29 +363,6 @@ namespace te
 					RemoveHeader(util::http::headers::TransferEncoding);
 					RemoveHeader(util::http::headers::ContentEncoding);					
 
-					/*
-					auto payloadSize = m_parsedTransactionData.size();
-					if (
-						payloadSize >= 4 &&
-						m_parsedTransactionData[payloadSize - 4] == '\r' &&
-						m_parsedTransactionData[payloadSize - 3] == '\n' &&
-						m_parsedTransactionData[payloadSize - 2] == '\r' &&
-						m_parsedTransactionData[payloadSize - 1] == '\n'
-						)
-					{
-						payloadSize = m_parsedTransactionData.size() - 4;
-					}
-					else 
-					{
-						payloadSize = m_parsedTransactionData.size();
-
-						m_parsedTransactionData.push_back('\r');
-						m_parsedTransactionData.push_back('\n');
-						m_parsedTransactionData.push_back('\r');
-						m_parsedTransactionData.push_back('\n');
-					}
-					*/
-
 					std::string length = std::to_string(m_parsedTransactionData.size());
 
 					RemoveHeader(util::http::headers::ContentLength);
@@ -387,29 +379,6 @@ namespace te
 					RemoveHeader(util::http::headers::ContentLength);
 					RemoveHeader(util::http::headers::TransferEncoding);
 					RemoveHeader(util::http::headers::ContentEncoding);
-
-					/*
-					auto payloadSize = m_parsedTransactionData.size();
-					if (
-						payloadSize >= 4 &&
-						m_parsedTransactionData[payloadSize - 4] == '\r' &&
-						m_parsedTransactionData[payloadSize - 3] == '\n' &&
-						m_parsedTransactionData[payloadSize - 2] == '\r' &&
-						m_parsedTransactionData[payloadSize - 1] == '\n'
-						)
-					{
-						payloadSize = m_parsedTransactionData.size() - 4;
-					}
-					else
-					{
-						payloadSize = m_parsedTransactionData.size();
-
-						m_parsedTransactionData.push_back('\r');
-						m_parsedTransactionData.push_back('\n');
-						m_parsedTransactionData.push_back('\r');
-						m_parsedTransactionData.push_back('\n');
-					}
-					*/
 
 					std::string length = std::to_string(m_parsedTransactionData.size());
 
@@ -627,19 +596,13 @@ namespace te
 						return false;
 					}
 
-					if (m_parsedTransactionData.size() > compressed.size())
-					{
-						SetPayload(compressed);
+					SetPayload(compressed);
 
-						// Must re-add encoding header AFTER calling SetPayload, because it removes such headers.
-						std::string gzip(u8"gzip");
-						RemoveHeader(util::http::headers::ContentEncoding);
-						AddHeader(util::http::headers::ContentEncoding, gzip);
-						return true;
-					}
-					else {
-						return false;
-					}
+					// Must re-add encoding header AFTER calling SetPayload, because it removes such headers.
+					std::string gzip(u8"gzip");
+					RemoveHeader(util::http::headers::ContentEncoding);
+					AddHeader(util::http::headers::ContentEncoding, gzip);
+					return true;
 				}
 
 				const bool BaseHttpTransaction::CompressDeflate()
@@ -669,19 +632,13 @@ namespace te
 						return false;
 					}
 
-					if (m_parsedTransactionData.size() > compressed.size())
-					{
-						SetPayload(compressed);
+					SetPayload(compressed);
 
-						// Must re-add encoding header AFTER calling SetPayload, because it removes such headers.
-						std::string deflate(u8"deflate");
-						RemoveHeader(util::http::headers::ContentEncoding);
-						AddHeader(util::http::headers::ContentEncoding, deflate);
-						return true;
-					}
-					else {
-						return false;
-					}
+					// Must re-add encoding header AFTER calling SetPayload, because it removes such headers.
+					std::string deflate(u8"deflate");
+					RemoveHeader(util::http::headers::ContentEncoding);
+					AddHeader(util::http::headers::ContentEncoding, deflate);
+					return true;
 				}
 
 				const bool BaseHttpTransaction::DecompressPayload()
@@ -1052,9 +1009,6 @@ namespace te
 				{
 					if (parser != nullptr)
 					{
-						/*
-						
-						*/
 
 						BaseHttpTransaction* trans = static_cast<BaseHttpTransaction*>(parser->data);
 
@@ -1063,7 +1017,10 @@ namespace te
 							throw std::runtime_error(u8"In BaseHttpTransaction::OnBody() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
-						trans->m_parsedTransactionData.insert(trans->m_parsedTransactionData.end(), at, at + length);						
+						trans->m_parsedTransactionData.reserve(trans->m_parsedTransactionData.capacity() + length);
+						std::copy(at, at + length, std::back_inserter(trans->m_parsedTransactionData));
+
+						//trans->m_parsedTransactionData.insert(trans->m_parsedTransactionData.end(), at, at + length);						
 					}
 					else
 					{
