@@ -437,8 +437,7 @@ namespace te
 
 				template<>
 				void TlsCapableHttpBridge<network::TlsSocket>::OnResolve(const boost::system::error_code& error, boost::asio::ip::tcp::resolver::iterator endpointIterator)
-				{
-
+				{	
 					#ifndef NDEBUG
 					ReportInfo(u8"TlsCapableHttpBridge<network::TlsSocket>::OnResolve");
 					#endif // !NDEBUG
@@ -489,8 +488,8 @@ namespace te
 					}
 
 					Kill();
-				}				
-
+				}
+				
 			} /* namespace secure */
 		} /* namespace mitm */
 	} /* namespace httpengine */

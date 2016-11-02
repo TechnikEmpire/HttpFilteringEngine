@@ -58,7 +58,7 @@ namespace te
 					// 
 					// Also, 0 should always be false, that's what it's there to indicate, that
 					// wherever you find this value, don't filter.
-					if (category == 0)
+					if (category == 0 || category > m_httpContentFilteringCategories.size())
 					{
 						return false;
 					}
@@ -69,7 +69,7 @@ namespace te
 				void ProgramWideOptions::SetIsHttpCategoryFiltered(const uint8_t category, const bool value)
 				{
 					// See remarks in ::GetIsHttpCategoryFiltered(...)
-					if (category == 0)
+					if (category == 0 || category > m_httpContentFilteringCategories.size())
 					{
 						return;
 					}
@@ -79,11 +79,21 @@ namespace te
 
 				bool ProgramWideOptions::GetIsHttpFilteringOptionEnabled(const http::HttpFilteringOption option) const
 				{
+					if (static_cast<uint32_t>(option) > m_httpFilteringOptions.size())
+					{
+						return false;
+					}
+					
 					return m_httpFilteringOptions[static_cast<uint32_t>(option)];
 				}
 
 				void ProgramWideOptions::SetIsHttpFilteringOptionEnabled(const http::HttpFilteringOption option, const bool value)
 				{
+					if (static_cast<uint32_t>(option) > m_httpFilteringOptions.size())
+					{
+						return;
+					}
+
 					m_httpFilteringOptions[static_cast<uint32_t>(option)] = value;
 				}
 

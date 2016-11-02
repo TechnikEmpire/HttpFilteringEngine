@@ -1207,8 +1207,7 @@ namespace te
 							{
 								// Client is all done, get the response headers.
 
-								SetStreamTimeout(5000);
-
+								SetStreamTimeout(5000);								
 								boost::asio::async_read_until(
 									m_upstreamSocket,
 									m_response->GetHeaderReadBuffer(), 

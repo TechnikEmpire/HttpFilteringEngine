@@ -751,9 +751,6 @@ namespace te
 
 				uint8_t HttpFilteringEngine::ShouldBlockBecauseOfTextTrigger(const std::vector<char>& payload) const
 				{	
-					#ifndef NDEBUG
-						return 0;
-					#endif
 
 					boost::string_ref content = boost::string_ref(payload.data(), payload.size());
 
@@ -766,13 +763,15 @@ namespace te
 
 						for (auto i = 0; i < len; ++i)
 						{
-							if (std::isalnum(content[i]) || (content[i] == '.' || content[i] == '-'))
+							auto c = static_cast<unsigned char>(content[i]);
+
+							if (std::isalnum(c) || (content[i] == '.' || content[i] == '-'))
 							{
 								++end;
 								continue;
 							}
 
-							if (end > start && end < len)
+							if (start < len && (end - start) > start && (start + (end - start)) < len)
 							{
 								ret.emplace_back(content.substr(start, end - start));
 							}
