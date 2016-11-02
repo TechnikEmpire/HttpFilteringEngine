@@ -48,6 +48,18 @@
 #include <NodeMutationCollection.hpp>
 #include <Serializer.hpp>
 
+// This enables us to use boost::split with boost::string_ref
+namespace boost
+{
+	template <>
+	inline string_ref
+		copy_range<string_ref, iterator_range<char const*>>
+		(iterator_range<char const*> const& r)
+	{
+		return string_ref(begin(r), end(r) - begin(r));
+	}
+}
+
 namespace te
 {
 	namespace httpengine
@@ -750,34 +762,22 @@ namespace te
 				}
 
 				uint8_t HttpFilteringEngine::ShouldBlockBecauseOfTextTrigger(const std::vector<char>& payload) const
-				{	
-
+				{
 					boost::string_ref content = boost::string_ref(payload.data(), payload.size());
 
 					auto collect = [content]() -> std::vector<boost::string_ref>
 					{
+						std::vector<boost::string_ref> v;
 						std::vector<boost::string_ref> ret;
+						
+						boost::split(v, content, DomainOrWordDelimiter(), boost::token_compress_on);
 
-						boost::string_ref::size_type start = 0, end = 0;
-						auto len = content.size();
-
-						for (auto i = 0; i < len; ++i)
+						for (auto&& ref : v)
 						{
-							auto c = static_cast<unsigned char>(content[i]);
-
-							if (std::isalnum(c) || (content[i] == '.' || content[i] == '-'))
+							if (!ref.empty())
 							{
-								++end;
-								continue;
+								ret.emplace_back(ref);
 							}
-
-							if (start < len && (end - start) > start && (start + (end - start)) < len)
-							{
-								ret.emplace_back(content.substr(start, end - start));
-							}
-
-							start = i + 1;
-							end = i + 1;
 						}
 
 						return ret;
@@ -786,7 +786,7 @@ namespace te
 					auto toCheck = collect();
 
 					for (auto entry : toCheck)
-					{
+					{	
 						auto hashedEntry = util::string::Hash(entry);
 
 						// Try and find the match candidate in the triggers map.

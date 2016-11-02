@@ -412,6 +412,17 @@ namespace te
 				private:
 
 					/// <summary>
+					/// Finds a char that we don't consider to be valid as part of a word or a domain.
+					/// </summary>
+					struct DomainOrWordDelimiter 
+					{						
+						bool operator()(char c) const 
+						{ 
+							return (std::isalnum(static_cast<uint8_t>(c)) == false && c != '.' && c != '-');
+						}
+					};
+
+					/// <summary>
 					/// Pointer to the provided ProgramWideOptions object governing the functionality
 					/// of this filtering engine.
 					/// </summary>
