@@ -75,8 +75,10 @@ namespace te
 					#endif
 					
 
+					// We purposely don't catch here. We want the acceptor to catch.
 					m_request.reset(new http::HttpRequest());
 					m_response.reset(new http::HttpResponse());
+					
 
 					// XXX TODO - This is ugly, our bad design is showing. See notes in the
 					// EventReporter class header.
@@ -129,8 +131,11 @@ namespace te
 					#endif
 					
 
+					// We purposely don't catch here. We want the acceptor to catch
+					// this.
 					m_request.reset(new http::HttpRequest());
 					m_response.reset(new http::HttpResponse());
+
 					m_tlsPeekBuffer.reset(new std::array<char, TlsPeekBufferSize>());	
 
 					// XXX TODO - This is ugly, our bad design is showing. See notes in the

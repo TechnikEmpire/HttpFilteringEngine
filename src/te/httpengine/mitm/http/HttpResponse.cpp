@@ -54,6 +54,12 @@ namespace te
 					};
 
 					m_httpParser = static_cast<http_parser*>(malloc(sizeof(http_parser)));
+
+					if (m_httpParser == nullptr)
+					{
+						throw std::runtime_error(u8"In HttpResponse::HttpResponse() - Failed to initialize http_parser.");
+					}
+
 					http_parser_init(m_httpParser, HTTP_RESPONSE);
 					m_httpParser->data = this;
 				}

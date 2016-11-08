@@ -1321,11 +1321,11 @@ namespace te
 
 									auto portInd = hostWithoutPort.find(':');
 
-									if (portInd != std::string::npos)
+									if (portInd != std::string::npos && portInd < hostWithoutPort.size())
 									{
-										hostWithoutPort = hostWithoutPort.substr(0, portInd);
-										
 										auto portString = hostWithoutPort.substr(portInd + 1);
+
+										hostWithoutPort = hostWithoutPort.substr(0, portInd);
 
 										try
 										{
@@ -1610,8 +1610,18 @@ namespace te
 
 									SetStreamTimeout(5000);
 
-									m_request.reset(new http::HttpRequest());
-									m_response.reset(new http::HttpResponse());
+									try
+									{
+
+										m_request.reset(new http::HttpRequest());
+										m_response.reset(new http::HttpResponse());
+									}
+									catch (std::exception& e)
+									{
+										ReportError(e.what());
+										Kill();
+										return;
+									}
 
 									// XXX TODO - This is ugly, our bad design is showing. See notes in the
 									// EventReporter class header.
@@ -2439,7 +2449,18 @@ namespace te
 									if (p.HeadersComplete())
 									{
 										// Create a new request for this data and just jump to OnDownstreamHeaders.
-										m_request.reset(new http::HttpRequest(httpPeekBuffer->data(), bytesTransferred));
+										try
+										{
+
+											m_request.reset(new http::HttpRequest(httpPeekBuffer->data(), bytesTransferred));											
+										}
+										catch (std::exception& e)
+										{
+											ReportError(e.what());
+											Kill();
+											return;
+										}
+										
 										OnDownstreamHeaders(error, bytesTransferred);
 										return;
 									}
