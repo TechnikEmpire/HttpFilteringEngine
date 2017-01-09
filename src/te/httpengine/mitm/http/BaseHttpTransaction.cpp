@@ -34,6 +34,7 @@
 #include <stdexcept>
 #include <utility>
 #include <algorithm>
+#include <iomanip>
 #include <chrono>
 #include <boost/algorithm/string.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
@@ -180,6 +181,7 @@ namespace te
 						// When we're not filling the buffer over potentially multiple reads, just
 						// clear it out every single time we're called to parse.
 						m_parsedTransactionData.clear();						
+						m_chunkedTransactionData.clear();
 					}
 
 					// We reserve at minimum the same amount of data we got here, so that when we're
@@ -328,23 +330,40 @@ namespace te
 
 				boost::asio::const_buffers_1 BaseHttpTransaction::GetWriteBuffer()
 				{
+					std::vector<char>& whichVec = m_parsedTransactionData;
+
+					if (!m_consumeAllBeforeSending && IsPayloadChunked() && m_chunkedTransactionData.size() > 0)
+					{
+						whichVec = m_chunkedTransactionData;
+					}
+
 					if (!m_headersSent)
 					{
 						auto headersVector = HeadersToVector();				
-						auto newSize = headersVector.size() + m_parsedTransactionData.size();
+						auto newSize = headersVector.size() + whichVec.size();
 						headersVector.reserve(newSize);
 
-						if (m_parsedTransactionData.size() > 0)
+						if (whichVec.size() > 0)
 						{
-							headersVector.insert(headersVector.end(), m_parsedTransactionData.begin(), m_parsedTransactionData.end());
+							headersVector.insert(headersVector.end(), whichVec.begin(), whichVec.end());
 						}
 
 						m_parsedTransactionData = std::move(headersVector);
 
-						m_headersSent = true;
-					}			
+						whichVec = m_parsedTransactionData;
 
-					return boost::asio::const_buffers_1(m_parsedTransactionData.data(), m_parsedTransactionData.size());
+						m_headersSent = true;
+					}
+
+					if (m_payloadComplete)
+					{
+						whichVec.push_back('\r');
+						whichVec.push_back('\n');
+						whichVec.push_back('\r');
+						whichVec.push_back('\n');
+					}
+
+					return boost::asio::const_buffers_1(whichVec.data(), whichVec.size());
 				}
 
 				const std::vector<char>& BaseHttpTransaction::GetPayload() const
@@ -460,15 +479,16 @@ namespace te
 					m_consumeAllBeforeSending = value;
 				}
 
-				
-
 				const bool BaseHttpTransaction::IsPayloadChunked() const
 				{
 					const auto contentEncoding = GetHeader(util::http::headers::TransferEncoding);
 
 					if (contentEncoding.first != contentEncoding.second)
 					{
-						return true;
+						if (boost::iequals(contentEncoding.first->second, u8"chunked"))
+						{
+							return true;
+						}
 					}
 
 					return false;
@@ -898,12 +918,14 @@ namespace te
 							throw std::runtime_error(u8"In BaseHttpTransaction::OnChunkHeader() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
-						// TODO - Do we even need this callback? I think not, as the only state information it
-						// provides is the determined length of the upcoming chunk, which might be useful for 
-						// adjusting payload/body storage containers for when the actual chunk content comes
-						// in through the OnBody callback. Leaving the code here anyway, just for the sake
-						// of wasting time calling a function that does nothing. ;)
-
+						if (!trans->m_consumeAllBeforeSending)
+						{
+							std::stringstream chunkHeaderSs;
+							chunkHeaderSs << std::hex << parser->content_length;
+							chunkHeaderSs << u8"\r\n";
+							std::string chunkHeader(chunkHeaderSs.str());
+							trans->m_chunkedTransactionData.insert(trans->m_chunkedTransactionData.end(), chunkHeader.begin(), chunkHeader.end());
+						}
 					}
 					else
 					{
@@ -927,8 +949,11 @@ namespace te
 							throw std::runtime_error(u8"In BaseHttpTransaction::OnChunkComplete() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
-						// TODO - Do we even need this callback? Methinks no, see notes in the ::OnChunkHeader
-						// implementation.
+						if (!trans->m_consumeAllBeforeSending)
+						{	
+							trans->m_chunkedTransactionData.push_back('\r');
+							trans->m_chunkedTransactionData.push_back('\n');
+						}
 
 					}
 					else
@@ -1020,7 +1045,11 @@ namespace te
 						trans->m_parsedTransactionData.reserve(trans->m_parsedTransactionData.capacity() + length);
 						std::copy(at, at + length, std::back_inserter(trans->m_parsedTransactionData));
 
-						//trans->m_parsedTransactionData.insert(trans->m_parsedTransactionData.end(), at, at + length);						
+						if (!trans->m_consumeAllBeforeSending && trans->IsPayloadChunked())
+						{
+							trans->m_chunkedTransactionData.reserve(trans->m_chunkedTransactionData.capacity() + length);
+							std::copy(at, at + length, std::back_inserter(trans->m_chunkedTransactionData));
+						}
 					}
 					else
 					{

@@ -763,6 +763,8 @@ namespace te
 					/// </summary>
 					std::vector<char> m_parsedTransactionData;
 
+					std::vector<char> m_chunkedTransactionData;
+
 					std::vector<char> m_payloadBuffer;					
 
 					/// <summary>
