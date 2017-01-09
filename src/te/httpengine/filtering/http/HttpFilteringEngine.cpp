@@ -334,7 +334,7 @@ namespace te
 						{
 							auto blockCategory = request->GetShouldBlock();
 
-							ReportRequestBlocked(request, response);
+							ReportRequestBlocked(request, response, blockCategory);
 							return blockCategory;
 						}
 
@@ -342,7 +342,7 @@ namespace te
 						{
 							auto blockCategory = response->GetShouldBlock();
 
-							ReportRequestBlocked(request, response);
+							ReportRequestBlocked(request, response, blockCategory);
 							return blockCategory;
 						}
 
@@ -400,7 +400,7 @@ namespace te
 						if (blSearch != m_domainRequestBlacklist.end() && m_programOptions->GetIsHttpCategoryFiltered(blSearch->second))
 						{
 							// Blacklisted domain.
-							ReportRequestBlocked(request, response);
+							ReportRequestBlocked(request, response, blSearch->second);
 							ReportInfo("Blocked by host string ref hashed.");							
 							return blSearch->second;
 						}
@@ -410,7 +410,7 @@ namespace te
 						if (blSearch != m_domainRequestBlacklist.end() && m_programOptions->GetIsHttpCategoryFiltered(blSearch->second))
 						{
 							// Blacklisted request.
-							ReportRequestBlocked(request, response);
+							ReportRequestBlocked(request, response, blSearch->second);
 							ReportInfo("Blocked by full req with no scheme.");
 							return blSearch->second;
 						}
@@ -420,7 +420,7 @@ namespace te
 						if (blSearch != m_domainRequestBlacklist.end() && m_programOptions->GetIsHttpCategoryFiltered(blSearch->second))
 						{
 							// Blacklisted request.
-							ReportRequestBlocked(request, response);
+							ReportRequestBlocked(request, response, blSearch->second);
 							ReportInfo("Blocked by full request hashed.");
 							return blSearch->second;
 						}
@@ -473,7 +473,7 @@ namespace te
 										// Report block action because we have a response. Whenever we have a response in
 										// this context, it's our last chance to report on the transaction before
 										// it is terminated.
-										ReportRequestBlocked(request, response);
+										ReportRequestBlocked(request, response, shouldBlockDueToTextTrigger);
 										ReportInfo("Blocked by text trigger.");
 										return shouldBlockDueToTextTrigger;
 									}
@@ -508,7 +508,7 @@ namespace te
 										// Report block action because we have a response. Whenever we have a response in
 										// this context, it's our last chance to report on the transaction before
 										// it is terminated.
-										ReportRequestBlocked(request, response);
+										ReportRequestBlocked(request, response, contentClassResult);
 										ReportInfo("Blocked by content classification.");
 										return contentClassResult;
 									}
@@ -1165,19 +1165,16 @@ namespace te
 				}
 
 				// const uint8_t category, const uint32_t payloadSizeBlocked, boost::string_ref fullRequest
-				void HttpFilteringEngine::ReportRequestBlocked(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response) const
+				void HttpFilteringEngine::ReportRequestBlocked(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response, uint8_t categoryId) const
 				{
 					if (m_onRequestBlocked)
-					{						
-						uint8_t blockedCategory = 0;
+					{	
 						uint32_t totalBytesBlocked = 0;
 
 						std::string fullRequest;
 
 						if (request != nullptr)
-						{						
-
-							blockedCategory = request->GetShouldBlock();
+						{	
 
 							fullRequest = request->RequestURI();
 							const auto hostHeader = request->GetHeader(util::http::headers::Host);
@@ -1188,12 +1185,6 @@ namespace te
 
 							if (response != nullptr)
 							{
-
-								if (blockedCategory == 0)
-								{
-									blockedCategory = response->GetShouldBlock();
-								}
-
 								auto contentLenHeader = response->GetHeader(util::http::headers::ContentLength);
 
 								if (contentLenHeader.first != contentLenHeader.second)
@@ -1215,7 +1206,7 @@ namespace te
 							}
 						}
 
-						m_onRequestBlocked(blockedCategory, totalBytesBlocked, fullRequest.c_str(), fullRequest.size());
+						m_onRequestBlocked(categoryId, totalBytesBlocked, fullRequest.c_str(), fullRequest.size());
 					}
 				}
 

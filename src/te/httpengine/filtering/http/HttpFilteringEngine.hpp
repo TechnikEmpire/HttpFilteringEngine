@@ -653,7 +653,7 @@ namespace te
 					/// <param name="response">
 					/// The blocked response.
 					/// </param>
-					void ReportRequestBlocked(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response) const;
+					void ReportRequestBlocked(const mhttp::HttpRequest* request, const mhttp::HttpResponse* response, uint8_t categoryId) const;
 
 					/// <summary>
 					/// If an appropriate callback was supplied at construction, reports information
