@@ -32,6 +32,7 @@
 #pragma once
 
 #include <atomic>
+#include <array>
 #include "../../util/cb/EventReporter.hpp"
 
 namespace te
@@ -141,6 +142,32 @@ namespace te
 						util::cb::MessageFunction onWarning = nullptr,
 						util::cb::MessageFunction onError = nullptr
 						);
+
+					/// <summary>
+					/// Determines if the supplied IPV4 address is a private address or not. Note that this is
+					/// </summary>
+					/// <param name="bytes">
+					/// The IPV4 address bytes.
+					/// </param>
+					/// <returns>
+					/// True if the supplied IPV4 address is in a private range, false otherwise.
+					/// </returns>
+					const bool IsV4AddressPrivate(const std::array<uint8_t, 4> bytes) const;
+
+					/// <summary>
+					/// Determines if the supplied payload is a SOCKS v4 or v5 CONNECT request.
+					/// </summary>
+					/// <param name="payload">
+					/// The payload to examine.
+					/// </param>
+					/// <param name="payloadSize">
+					/// The size of the payload to examine.
+					/// </param>
+					/// <returns>
+					/// True if the supplied payload contains a SOCKS v4 or v5 CONNECT request, false
+					/// otherwise.
+					/// </returns>
+					const bool IsSocksProxyConnect(const uint8_t*  payload, const size_t payloadSize) const;
 
 					/// <summary>
 					/// The port that intercepted HTTP packets should be diverted to.

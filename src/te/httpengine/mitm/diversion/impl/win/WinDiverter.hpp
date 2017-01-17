@@ -243,11 +243,6 @@ namespace te
 					using ProcessNfo = std::tuple<unsigned long, bool, std::chrono::high_resolution_clock::time_point>;
 
 					/// <summary>
-					/// The packet read buffer.
-					/// </summary>
-					std::unique_ptr < PacketBuffer > m_buffer;
-
-					/// <summary>
 					/// This method is the one that generated threads for running the diversion
 					/// invoke. This is where all the work is really done.
 					/// </summary>

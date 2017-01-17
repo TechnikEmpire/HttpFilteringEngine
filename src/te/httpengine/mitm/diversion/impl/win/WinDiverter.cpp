@@ -109,7 +109,8 @@ namespace te
 						// the filter to ignore all loopback sourced or destined packets. Slow startup aside,
 						// we're also blowing away loopback traffic. Now that's just rude.
 
-						m_diversionHandle = WinDivertOpen(u8"outbound and tcp and (ip.DstAddr != 127.0.0.1 and ip.SrcAddr != 127.0.0.1)", WINDIVERT_LAYER_NETWORK, -1000, WINDIVERT_FLAG_NO_CHECKSUM);
+						//  and (ip.DstAddr != 127.0.0.1 and ip.SrcAddr != 127.0.0.1)
+						m_diversionHandle = WinDivertOpen(u8"outbound and tcp", WINDIVERT_LAYER_NETWORK, -1000, WINDIVERT_FLAG_NO_CHECKSUM);
 
 						m_quicBlockHandle = WinDivertOpen(u8"udp and (udp.DstPort == 80 || udp.DstPort == 443)", WINDIVERT_LAYER_NETWORK, 0, WINDIVERT_FLAG_NO_CHECKSUM | WINDIVERT_FLAG_DROP);
 
@@ -183,7 +184,9 @@ namespace te
 					HANDLE divertHandle = static_cast<HANDLE>(diversionHandlePtr);
 
 					WINDIVERT_ADDRESS addr;
-					m_buffer.reset(new PacketBuffer());
+					PacketBuffer readBuffer;
+					PVOID payloadBuffer = nullptr;
+					uint32_t payloadLength = 0;
 
 					uint32_t recvLength = 0;
 
@@ -301,7 +304,7 @@ namespace te
 							}
 						#else						
 
-							if (!WinDivertRecv(divertHandle, m_buffer.get(), PacketBufferLength, &addr, &recvLength))
+							if (!WinDivertRecv(divertHandle, readBuffer.data(), PacketBufferLength, &addr, &recvLength))
 							{
 								std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert Recv, got error:\t");
 								errMessage.append(std::to_string(GetLastError()));
@@ -319,7 +322,7 @@ namespace te
 							// according to the docs. So we just fire it and check the validity of our 
 							// pointers after, and that's where we get our verification that this call
 							// succeeded.
-							WinDivertHelperParsePacket(m_buffer.get(), recvLength, &ipV4Header, &ipV6Header, nullptr, nullptr, &tcpHeader, nullptr, nullptr, nullptr);
+							WinDivertHelperParsePacket(readBuffer.data(), recvLength, &ipV4Header, &ipV6Header, nullptr, nullptr, &tcpHeader, nullptr, &payloadBuffer, &payloadLength);
 							
 							// I put the checks for ipv4 and ipv6 as a double if statement rather
 							// than an else if because I'm not sure how that would affect dual-mode
@@ -328,7 +331,21 @@ namespace te
 							// or uhh, something like that.
 
 							if (ipV4Header != nullptr && tcpHeader != nullptr)
-							{								
+							{		
+
+								if (payloadBuffer != nullptr)
+								{
+									if (IsSocksProxyConnect(static_cast<uint8_t*>(payloadBuffer), payloadLength))
+									{
+										// Skip past this packet all together. We refuse to allow
+										// any other proxy to function because this is our castle.
+										ReportInfo(u8"Blocking SOCKS proxy.");
+										payloadBuffer = nullptr;
+										payloadLength = 0;
+										continue;
+									}
+								}
+
 								if (tcpHeader->SrcPort == m_httpListenerPort || tcpHeader->SrcPort == m_httpsListenerPort)
 								{
 									// Means that the data is originating from our proxy in response
@@ -485,9 +502,12 @@ namespace te
 							}
 						} // if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND)
 
-						WinDivertHelperCalcChecksums(m_buffer.get(), recvLength, 0);
+						payloadBuffer = nullptr;
+						payloadLength = 0;
 
-						if (!WinDivertSendEx(divertHandle, m_buffer.get(), recvLength, 0, &addr, nullptr, nullptr))
+						WinDivertHelperCalcChecksums(readBuffer.data(), recvLength, 0);
+
+						if (!WinDivertSendEx(divertHandle, readBuffer.data(), recvLength, 0, &addr, nullptr, nullptr))
 						{
 							// XXX TODO - Perhaps report warning instead? This isn't exactly critical. Maybe a single
 							// packet gets lost, maybe it completes under the hood. Either way we can do nothing, and
