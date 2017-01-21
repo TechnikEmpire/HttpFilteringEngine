@@ -31,6 +31,10 @@
 
 #include "HttpFilteringEngineManaged.hpp"
 
+#pragma unmanaged
+#include "HttpFilteringEngineCAPI.h"
+#pragma managed
+
 namespace Te {
 
 	namespace HttpFilteringEngine
@@ -50,16 +54,17 @@ namespace Te {
 
 		Engine::~Engine()
 		{
-			this->!Engine();
-		}
-
-		Engine::!Engine()
-		{
 			if (m_handle != nullptr)
 			{
 				fe_ctl_destroy_unsafe(m_handle);
 				m_handle = nullptr;
 			}
+
+			this->!Engine();
+		}
+
+		Engine::!Engine()
+		{	
 		}
 
 		System::String^ Engine::CaBundleAbsolutePath::get()
@@ -169,7 +174,7 @@ namespace Te {
 			{				
 				auto listPathStr = msclr::interop::marshal_as<std::string>(listFilePath);
 
-				fe_ctl_load_list_from_file(m_handle, listPathStr.c_str(), listPathStr.size(), listCategory, flushExistingInCategory, &succeeded, &failed);				
+				fe_ctl_load_list_from_file(m_handle, listPathStr.c_str(), listPathStr.size(), listCategory, flushExistingInCategory, &succeeded, &failed);
 			}
 
 			rulesLoaded = succeeded;
@@ -217,11 +222,10 @@ namespace Te {
 			rulesFailed = failed;
 		}
 
-		void Engine::LoadTextTriggersFromFile(
+		uint32_t Engine::LoadTextTriggersFromFile(
 			System::String^ filePath,
 			uint8_t category,
-			bool flushExistingInCategory,
-			[Out] uint32_t% rulesLoaded
+			bool flushExistingInCategory
 			)
 		{
 			uint32_t loaded = 0;
@@ -245,14 +249,13 @@ namespace Te {
 				fe_ctl_load_text_triggers_from_file(m_handle, listFilePath.c_str(), listFilePath.size(), category, flushExistingInCategory, &loaded);
 			}
 
-			rulesLoaded = loaded;
+			return loaded;
 		}
 
-		void Engine::LoadTextTriggersFromString(
+		uint32_t Engine::LoadTextTriggersFromString(
 			System::String^ triggersString,
 			uint8_t category,
-			bool flushExistingInCategory,
-			[Out] uint32_t% rulesLoaded
+			bool flushExistingInCategory
 			)
 		{
 			uint32_t loaded = 0;
@@ -283,7 +286,7 @@ namespace Te {
 				//System::GC::Collect();
 			}
 
-			rulesLoaded = loaded;
+			return loaded;
 		}
 		
 		void Engine::UnloadAllFilterRulesForCategory(const uint8_t category)
@@ -348,7 +351,7 @@ namespace Te {
 			if (m_handle != nullptr)
 			{
 				char* buff;
-				size_t bsize;
+				size_t bsize;				
 				fe_ctl_get_rootca_pem(m_handle, &buff, &bsize);
 
 				if (bsize > 0)

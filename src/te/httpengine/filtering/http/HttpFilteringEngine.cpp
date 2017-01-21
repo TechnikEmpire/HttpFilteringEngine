@@ -207,8 +207,7 @@ namespace te
 				}
 
 				uint32_t HttpFilteringEngine::LoadTextTriggersFromString(const std::string& triggers, const uint8_t category, const bool flushExisting)
-				{
-					return 0;
+				{	
 					if (flushExisting)
 					{
 						UnloadAllTextTriggersForCategory(category);
@@ -231,8 +230,7 @@ namespace te
 
 							// We simply assign or insert. It's up to list maintainers to make sure that
 							// they're not overlapping their own rules.
-							m_domainRequestBlacklist[preserved] = category;
-							//m_textTriggers[preserved] = category;
+							m_textTriggers[preserved] = category;							
 							
 							++loadedRulesCount;
 						}
@@ -242,8 +240,7 @@ namespace te
 				}
 
 				void HttpFilteringEngine::UnloadAllFilterRulesForCategory(const uint8_t category)
-				{
-					
+				{	
 					Writer w(m_filterLock);
 
 					auto it = m_domainRequestBlacklist.begin();
@@ -253,6 +250,21 @@ namespace te
 						if (it->second == category)
 						{
 							it = m_domainRequestBlacklist.erase(it);
+						}
+						else
+						{
+							++it;
+						}
+					}
+
+					// XXX TODO - Should this be in here??!?! It has it's own function.
+					it = m_textTriggers.begin();
+
+					while (it != m_textTriggers.end())
+					{
+						if (it->second == category)
+						{
+							it = m_textTriggers.erase(it);
 						}
 						else
 						{
@@ -294,8 +306,7 @@ namespace te
 				}
 
 				void HttpFilteringEngine::UnloadAllTextTriggersForCategory(const uint8_t category)
-				{
-					/*
+				{	
 					Writer w(m_filterLock);
 
 					// Remove all entries where the category is the same.
@@ -310,8 +321,7 @@ namespace te
 						{
 							++it;
 						}
-					}
-					*/
+					}					
 				}
 
 				uint8_t HttpFilteringEngine::ShouldBlock(const mhttp::HttpRequest* request, mhttp::HttpResponse* response, const bool isSecure)
@@ -790,9 +800,9 @@ namespace te
 						auto hashedEntry = util::string::Hash(entry);
 
 						// Try and find the match candidate in the triggers map.
-						auto match = m_domainRequestBlacklist.find(hashedEntry);
+						auto match = m_textTriggers.find(hashedEntry);
 
-						if (match != m_domainRequestBlacklist.end())
+						if (match != m_textTriggers.end())
 						{
 							// If the trigger is both found and the match category is enabled, and it's not whitelisted,
 							// just return the found category.
@@ -813,9 +823,9 @@ namespace te
 						{
 							entry = entry.substr(subDomainIndicator + 1);
 							hashedEntry = util::string::Hash(boost::string_ref(entry));
-							match = m_domainRequestBlacklist.find(hashedEntry);
+							match = m_textTriggers.find(hashedEntry);
 
-							if (match != m_domainRequestBlacklist.end())
+							if (match != m_textTriggers.end())
 							{
 								// If the trigger is both found and the match category is enabled, and it's not whitelisted,
 								// just return the found category.

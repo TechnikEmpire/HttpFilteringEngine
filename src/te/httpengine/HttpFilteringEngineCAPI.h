@@ -31,7 +31,12 @@
 
 #pragma once
 
+
 #include "util/cb/EngineCallbackTypes.h"
+
+#ifndef PVOID
+typedef void* PVOID;
+#endif
 
 #ifdef HTTP_FILTERING_ENGINE_EXPORT
 	#ifdef _MSC_VER
@@ -51,10 +56,21 @@
 extern "C" {
 #endif // __cplusplus
 
+	/*
 	struct HttpFilteringEngineCtl;
 	typedef struct HttpFilteringEngineCtl HttpFilteringEngineCtl;
-	typedef HttpFilteringEngineCtl* PHttpFilteringEngineCtl;
-	typedef PHttpFilteringEngineCtl* PPHttpFilteringEngineCtl;
+	typedef HttpFilteringEngineCtl* PVOID;
+	typedef PVOID* PPVOID;
+	*/
+	
+	//#pragma managed(push, off)
+
+	/*
+	struct HttpFilteringEngineCtl;
+	typedef struct HttpFilteringEngineCtl* PVOID;
+	typedef PVOID* PPVOID;
+	*/
+	//#pragma managed(pop)
 
 	// Woa, major change in coding here. This guy can't even stay consistent with his coding
 	// convention. Tsk Tsk, shake head, etc. Even though looking at those thin little underscores
@@ -134,7 +150,7 @@ extern "C" {
 	/// <returns>
 	/// A valid pointer to the created instance if the call succeeded, nullptr otherwise.
 	/// </returns>
-	HTTP_FILTERING_ENGINE_API PHttpFilteringEngineCtl fe_ctl_create(
+	extern HTTP_FILTERING_ENGINE_API PVOID fe_ctl_create(
 		FirewallCheckCallback firewallCb,
 		const char* caBundleAbsolutePath,
 		uint32_t caBundleAbsolutePathLength,
@@ -159,7 +175,7 @@ extern "C" {
 	/// <param name="ptr">
 	/// A valid pointer to an existing Engine instance.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_destroy(PPHttpFilteringEngineCtl ptr);
+	extern HTTP_FILTERING_ENGINE_API void fe_ctl_destroy(PVOID* ptr);
 
 	/// <summary>
 	/// Destroys an existing Engine instance. If the Engine is running, it will be correctly shut
@@ -172,7 +188,7 @@ extern "C" {
 	/// <param name="ptr">
 	/// A valid pointer to an existing Engine instance.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_destroy_unsafe(PHttpFilteringEngineCtl ptr);
+	extern HTTP_FILTERING_ENGINE_API void fe_ctl_destroy_unsafe(PVOID ptr);
 
 	/// <summary>
 	/// Begins intercepting and diverting HTTP/S traffic through the Engine.
@@ -180,7 +196,7 @@ extern "C" {
 	/// <param name="ptr">
 	/// A valid pointer to an existing Engine instance.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API const bool fe_ctl_start(PHttpFilteringEngineCtl ptr);
+	extern HTTP_FILTERING_ENGINE_API const bool fe_ctl_start(PVOID ptr);
 
 	/// <summary>
 	/// Stops intercepting and diverting HTTP/S traffic through the Engine.
@@ -188,7 +204,7 @@ extern "C" {
 	/// <param name="ptr">
 	/// A valid pointer to an existing Engine instance.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_stop(PHttpFilteringEngineCtl ptr);
+	extern HTTP_FILTERING_ENGINE_API void fe_ctl_stop(PVOID ptr);
 
 	/// <summary>
 	/// Checks if the Engine is actively diverting and filtering HTTP/S traffic or not.
@@ -199,7 +215,7 @@ extern "C" {
 	/// <returns>
 	/// True if the Engine is actively diverting and filtering HTTP/S traffic, false otherwise.
 	/// </returns>
-	HTTP_FILTERING_ENGINE_API const bool fe_ctl_is_running(PHttpFilteringEngineCtl ptr);
+	extern HTTP_FILTERING_ENGINE_API const bool fe_ctl_is_running(PVOID ptr);
 
 	/// <summary>
 	/// Gets the port that the Engine is listening on for diverted HTTP connections.
@@ -210,7 +226,7 @@ extern "C" {
 	/// <returns>
 	/// The port the Engine is listening on for diverted HTTP connections.
 	/// </returns>
-	HTTP_FILTERING_ENGINE_API uint16_t fe_ctl_get_http_listener_port(PHttpFilteringEngineCtl ptr);
+	extern HTTP_FILTERING_ENGINE_API uint16_t fe_ctl_get_http_listener_port(PVOID ptr);
 
 	/// <summary>
 	/// Gets the port that the Engine is listening on for diverted HTTPS connections.
@@ -221,7 +237,7 @@ extern "C" {
 	/// <returns>
 	/// The port the Engine is listening on for diverted HTTPS connections
 	/// </returns>
-	HTTP_FILTERING_ENGINE_API uint16_t fe_ctl_get_https_listener_port(PHttpFilteringEngineCtl ptr);
+	extern HTTP_FILTERING_ENGINE_API uint16_t fe_ctl_get_https_listener_port(PVOID ptr);
 
 	/// <summary>
 	/// Checks whether the queried option is enabled in the Engine. Options are specific, and
@@ -240,7 +256,7 @@ extern "C" {
 	/// <returns>
 	/// True if the option queried is enabled, false otherwise.
 	/// </returns>
-	HTTP_FILTERING_ENGINE_API const bool fe_ctl_get_option(PHttpFilteringEngineCtl ptr, const uint32_t optionId);
+	extern HTTP_FILTERING_ENGINE_API const bool fe_ctl_get_option(PVOID ptr, const uint32_t optionId);
 
 	/// <summary>
 	/// Sets whether the queried option is enabled in the Engine or not. Options are specific, and
@@ -259,7 +275,7 @@ extern "C" {
 	/// <param name="val">
 	/// The value to set for the supplied option.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_set_option(PHttpFilteringEngineCtl ptr, const uint32_t optionId, const bool val);
+	extern HTTP_FILTERING_ENGINE_API void fe_ctl_set_option(PVOID ptr, const uint32_t optionId, const bool val);
 
 	/// <summary>
 	/// Sets whether the queried user defined category is enabled in the Engine or not. Categories
@@ -283,7 +299,7 @@ extern "C" {
 	/// <returns>
 	/// True if the category queried is enabled, false otherwise.
 	/// </returns>
-	HTTP_FILTERING_ENGINE_API const bool fe_ctl_get_category(PHttpFilteringEngineCtl ptr, const uint8_t categoryId);
+	extern HTTP_FILTERING_ENGINE_API const bool fe_ctl_get_category(PVOID ptr, const uint8_t categoryId);
 
 	/// <summary>
 	/// Gets whether the queried user defined category is enabled in the Engine or not. Categories
@@ -307,7 +323,7 @@ extern "C" {
 	/// <param name="val">
 	/// The value to set for the supplied category.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_set_category(PHttpFilteringEngineCtl ptr, const uint8_t categoryId, const bool val);
+	extern HTTP_FILTERING_ENGINE_API void fe_ctl_set_category(PVOID ptr, const uint8_t categoryId, const bool val);
 
 	/// <summary>
 	/// Attempts to have the Engine load an Adblock Plus formatted list containing filtering and
@@ -339,8 +355,8 @@ extern "C" {
 	/// A pointer to set, if non-null, indicating the total number of rules that failed to load and
 	/// or be parsed from the source.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_load_list_from_file(
-		PHttpFilteringEngineCtl ptr, 
+	extern HTTP_FILTERING_ENGINE_API void fe_ctl_load_list_from_file(
+		PVOID ptr, 
 		const char* filePath, 
 		const size_t filePathLength, 
 		const uint8_t listCategory,
@@ -379,8 +395,8 @@ extern "C" {
 	/// A pointer to set, if non-null, indicating the total number of rules that failed to load and
 	/// or be parsed from the source.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_load_list_from_string(
-		PHttpFilteringEngineCtl ptr, 
+	extern HTTP_FILTERING_ENGINE_API void fe_ctl_load_list_from_string(
+		PVOID ptr, 
 		const char* listString, 
 		const size_t listStringLength, 
 		const uint8_t listCategory,
@@ -415,8 +431,8 @@ extern "C" {
 	/// A pointer to set, if non-null, indicating the total number of rules successfully loaded and
 	/// parsed from the source.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_load_text_triggers_from_file(
-		PHttpFilteringEngineCtl ptr,
+	extern HTTP_FILTERING_ENGINE_API void fe_ctl_load_text_triggers_from_file(
+		PVOID ptr,
 		const char* filePath,
 		const size_t filePathLength,
 		const uint8_t category,
@@ -450,8 +466,8 @@ extern "C" {
 	/// A pointer to set, if non-null, indicating the total number of rules successfully loaded and
 	/// parsed from the source.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_load_text_triggers_from_string(
-		PHttpFilteringEngineCtl ptr,
+	extern HTTP_FILTERING_ENGINE_API void fe_ctl_load_text_triggers_from_string(
+		PVOID ptr,
 		const char* triggersString,
 		const size_t triggersStringLength,
 		const uint8_t category,
@@ -475,7 +491,7 @@ extern "C" {
 	/// A pointer to a size_t object that will hold the total number of elements in the populated
 	/// array.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_get_rootca_pem(PHttpFilteringEngineCtl ptr, char** bufferPP, size_t* bufferSize);
+	extern HTTP_FILTERING_ENGINE_API void fe_ctl_get_rootca_pem(PVOID ptr, char** bufferPP, size_t* bufferSize);
 
 	/// <summary>
 	/// Unloads any and all rules for the given category.
@@ -486,7 +502,7 @@ extern "C" {
 	/// <param name="category">
 	/// The category for which to unload any and all rules.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_unload_rules_for_category(PHttpFilteringEngineCtl ptr, const uint8_t category);
+	extern HTTP_FILTERING_ENGINE_API void fe_ctl_unload_rules_for_category(PVOID ptr, const uint8_t category);
 
 	/// <summary>
 	/// Unloads any and all text triggers for the given category.
@@ -497,7 +513,7 @@ extern "C" {
 	/// <param name="category">
 	/// The category for which to unload any and all text triggers.
 	/// </param>
-	HTTP_FILTERING_ENGINE_API void fe_ctl_unload_text_triggers_for_category(PHttpFilteringEngineCtl ptr, const uint8_t category);
+	extern HTTP_FILTERING_ENGINE_API void fe_ctl_unload_text_triggers_for_category(PVOID ptr, const uint8_t category);
 
 #ifdef __cplusplus
 };

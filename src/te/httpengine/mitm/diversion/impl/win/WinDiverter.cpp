@@ -160,6 +160,8 @@ namespace te
 							t.join();
 						}
 
+						m_diversionThreads.clear();
+
 						if (m_diversionHandle != nullptr && m_diversionHandle != INVALID_HANDLE_VALUE)
 						{
 							WinDivertClose(m_diversionHandle);
@@ -254,7 +256,7 @@ namespace te
 
 							recvOverlapped.hEvent = recvEvent;
 
-							if (!WinDivertRecvEx(divertHandle, m_buffer.get(), PacketBufferLength, 0, &addr, &recvLength, &recvOverlapped))
+							if (!WinDivertRecvEx(divertHandle, readBuffer.data(), PacketBufferLength, 0, &addr, &recvLength, &recvOverlapped))
 							{
 								auto err = GetLastError();
 								if (err != ERROR_IO_PENDING)
@@ -273,16 +275,19 @@ namespace te
 
 								if (result != WAIT_OBJECT_0)
 								{
-									if (result == WAIT_TIMEOUT)
+									if (result != WAIT_TIMEOUT)
+									{
+										// We don't care if it's a timeout. Thread will resume.
+										std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, got error:\t");
+										errMessage.append(std::to_string(GetLastError()));
+										ReportError(errMessage);										
+									}
+									/*
+									else
 									{
 										ReportError(u8"In WinDiverter::RunDiversion(LPVOID) - Call to WinDivert RecvEx timed out.");
 									}
-									else
-									{
-										std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, got error:\t");
-										errMessage.append(std::to_string(GetLastError()));
-										ReportError(errMessage);
-									}
+									*/
 
 									CloseHandle(recvEvent);
 									continue;

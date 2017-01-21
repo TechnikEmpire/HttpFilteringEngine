@@ -40,10 +40,6 @@
 /// https://svn.boost.org/trac/boost/ticket/10911
 /// </summary>
 
-#pragma managed(push, off)
-#include "HttpFilteringEngineCAPI.h"
-#pragma managed(pop)
-
 #include <msclr\marshal_cppstd.h>
 
 using namespace System;
@@ -324,11 +320,10 @@ namespace Te {
 			/// <param name="rulesLoaded">
 			/// The total number of rules loaded.
 			/// </param>
-			void LoadTextTriggersFromFile(
+			uint32_t LoadTextTriggersFromFile(
 				System::String^ filePath,
 				uint8_t category,
-				bool flushExistingInCategory,
-				[Out] uint32_t% rulesLoaded
+				bool flushExistingInCategory
 			);
 
 			/// <summary>
@@ -351,11 +346,10 @@ namespace Te {
 			/// <param name="rulesLoaded">
 			/// The total number of rules loaded.
 			/// </param>
-			void LoadTextTriggersFromString(
+			uint32_t LoadTextTriggersFromString(
 				System::String^ triggersString,
 				uint8_t category,
-				bool flushExistingInCategory,
-				[Out] uint32_t% rulesLoaded
+				bool flushExistingInCategory
 			);
 
 			/// <summary>
@@ -524,7 +518,7 @@ namespace Te {
 			/// <summary>
 			/// Pointer to the unmanaged Engine structure.
 			/// </summary>
-			PHttpFilteringEngineCtl m_handle = nullptr;
+			PVOID m_handle = nullptr;
 
 			/// <summary>
 			/// Absolute path to the CA bundle to be used, supplied at construction.

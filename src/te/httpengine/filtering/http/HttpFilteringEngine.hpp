@@ -528,7 +528,7 @@ namespace te
 					/// triggers are searched for inside text payloads, include JSON. The triggers
 					/// are hashed, and the resulting hash is used as a key.
 					/// </summary>
-					//std::unordered_map<size_t, uint8_t> m_textTriggers;
+					std::unordered_map<size_t, uint8_t> m_textTriggers;
 
 					/// <summary>
 					/// Checks if the given payload has text triggers, and if one is found where the
