@@ -248,40 +248,6 @@ namespace te
 					/// asio::async_read_until(...) operations. The second is a vector of char
 					/// elements which holds the raw payload of the transaction, if any.
 					/// 
-					/// The reason that this object must directly own its buffers is because of the
-					/// nature of how the parsing must be done and the nature of how instances of
-					/// this object and its subclasses could potentially be used, combined with the
-					/// varying nature of how content can be sent over the wire in the HTTP
-					/// protocol.
-					/// 
-					/// If this object did not exclusively own the buffers used for the read and
-					/// write operations, the parsing methods would simply perform copies of the
-					/// data provided from an external buffer, and then the contents of that
-					/// original buffer could potentially be lost forever, because this object does
-					/// not own it.
-					/// 
-					/// Now, consider a situation where a read is done on chunked content. The
-					/// internal parser of this object would only copy out the chunk data to the
-					/// payload vector, while the the chunk information would remain in the external
-					/// buffer. How is this supposed to function correctly, say when a decision is
-					/// made not to filter the object and simply transparently forward the raw
-					/// buffer outbound from the proxy?
-					/// 
-					/// Confusion would arise out of who owns the correct data to be written. This
-					/// object would hold incomplete data, the external buffer may have been lost
-					/// because of this unclear nature. As much as I wanted to keep the buffers
-					/// separate from this object, the potential confusion and misuse/error are too
-					/// great to do so.
-					/// 
-					/// As such, this object will always retain the buffers in the original state
-					/// that they arrived at over the socket. These buffers will only ever be
-					/// modified when the modifications are guaranteed to produce a valid state for
-					/// the object. The OnBody callbacks of the internal http_parser will be
-					/// ignored, as will the OnChunk methods, because no copy is necessary. Chunked
-					/// encoding will only ever be converted to fixed-length (content-length header
-					/// defined) transactions when ::ConsumeAllBeforeSending() is configured to
-					/// true.
-					/// 
 					/// Conversion from chunked to fixed-length content and decompression will be
 					/// done entirely manually by this objects own conversion implementation, thus
 					/// making the sole purpose of the http_parser object to accurately extract
@@ -303,34 +269,19 @@ namespace te
 					/// True of the parsing operation was a success, false otherwise.
 					/// </returns>
 					const bool Parse(const size_t bytes_transferred);
-					
-					/// <summary>
-					/// Gets the internal boost::asio::streambuf which is to be used exclusively for
-					/// reading headers of transactions in the supplied asio::async_read_until(...)
-					/// read methods.
-					/// 
-					/// ::Parse(...) absolutely must be called immediately in the completion handler
-					/// wherever this buffer is used.
-					/// 
-					/// If the streambuf already contains any data, it will be consumed first.
-					/// </summary>
-					/// <returns>
-					/// A reference to the internal boost::asio::streambuf object. 
-					/// </returns>
-					boost::asio::streambuf& GetHeaderReadBuffer();
 
 					/// <summary>
-					/// Gets the internal payload buffer wrapped in a boost::asio::mutable_buffers_1
-					/// object for use in asio::async_read(...) methods. ::Parse(...) absolutel must
-					/// be called immediately in the completion handler wherever this buffer is
-					/// used.
-					/// 
+					/// Gets the internal transaction buffer wrapped in a
+					/// boost::asio::mutable_buffers_1 object for use in asio::async_read(...)
+					/// methods. ::Parse(...) absolutely must be called immediately in the completion
+					/// handler wherever this buffer is used.
+					///
 					/// Depending on how the transaction is configured, this buffer may already
 					/// contain data and and is configured to begin writing at a position other than
-					/// 0. All of these details are handled internally, but be advised that should
-					/// you provide the returned mutable_buffers_1 to asio::async_read(...) methods
+					/// 0. All of these details are handled internally, so be advised that you should
+					/// provide the returned mutable_buffers_1 to asio::async_read(...) methods
 					/// without any modification to ensure an accurate state is maintained.
-					/// 
+					///
 					/// An example is when ::ConsumeAllBeforeSending() is true. This transaction may
 					/// take more than one read to complete and as such, the internal buffer will
 					/// already be partially populated with some of the content. This is tracked
@@ -340,7 +291,7 @@ namespace te
 					/// A boost::asio::mutable_buffers_1 which wraps the internal buffer, configured
 					/// for reading according to the state and configuration of this object.
 					/// </returns>
-					boost::asio::mutable_buffers_1 GetPayloadReadBuffer();
+					boost::asio::mutable_buffers_1 GetReadBuffer();
 
 					/// <summary>
 					/// Retrieve a boost::asio::const_buffers_1 object which wraps the internal
@@ -748,44 +699,11 @@ namespace te
 					/// </summary>
 					std::string m_lastHeader;
 
-					/// <summary>
-					/// This object is used exclusively for reading in headers using
-					/// asio::async_read_until(...) methods.
-					/// </summary>
-					boost::asio::streambuf m_headerBuffer;
+					bool m_lastHeaderFresh = false;
 
-					/// <summary>
-					/// Contains the payload for the HTTP transaction. Unless otherwise specified,
-					/// this container is cleared as data comes through the proxy in chunks. However,
-					/// it's possible to instruct the transaction to collect the entire payload in
-					/// this container before sending it outbound, in order to perform operations
-					/// such as deep content analysis on the payload data.
-					/// </summary>
-					std::vector<char> m_parsedTransactionData;
+					std::vector<char> m_buffer;
 
-					std::vector<char> m_chunkedTransactionData;
-
-					std::vector<char> m_payloadBuffer;					
-
-					/// <summary>
-					/// This object uses a vector of char for storing our payload data. This object
-					/// owns this payload data container in order to attempt to maintain a valid
-					/// state. As such, these containers are provided to external socket read/write
-					/// operations. However, when boost::asio::buffer(...) takes a vector to
-					/// construct a buffer type, the resulting type relies on the vector::size()
-					/// method for determining how much data the socket can read/write. According to
-					/// the docs, vectors as buffers are never automatically resized.
-					/// 
-					/// Therefore, for sequential reads when ::ConsumeAllBeforeSending() is true,
-					/// it's impossible to keep track of how much of the buffer is populated with
-					/// actual data, and how much of the buffer contains zero values that have yet
-					/// to be overwritten. As such, we need to independently keep track of how much
-					/// "real" data is being held in the buffer.
-					/// 
-					/// This variable will store how much payload/body data has actually been read
-					/// into this objects internal payload buffer.
-					/// </summary>
-					//size_t m_unwrittenPayloadSize = 0;
+					std::vector<char> m_payload;
 
 					/// <summary>
 					/// Flag used to indicate if the headers for the transaction have been fully

@@ -221,7 +221,7 @@ namespace te
 					/// (in the event of a count of failed rules greater than zero) should be
 					/// generated, so ensure that interacting objects are subscribed to those events.
 					/// </returns>
-					std::pair<uint32_t, uint32_t> LoadAbpFormattedListFromFile(const std::string& listFilePath, const uint8_t listCategory, const bool flushExistingRules);
+					const std::pair<uint32_t, uint32_t> LoadAbpFormattedListFromFile(const std::string& listFilePath, const uint8_t listCategory, const bool flushExistingRules);
 
 					/// <summary>
 					/// Parse a list of selectors and filters, written in Adblock Plus Filter
@@ -263,7 +263,7 @@ namespace te
 					/// (in the event of a count of failed rules greater than zero) should be
 					/// generated, so ensure that interacting objects are subscribed to those events.
 					/// </returns>
-					std::pair<uint32_t, uint32_t> LoadAbpFormattedListFromString(const std::string& list, const uint8_t listCategory, const bool flushExistingRules);
+					const std::pair<uint32_t, uint32_t> LoadAbpFormattedListFromString(const std::string& list, const uint8_t listCategory, const bool flushExistingRules);
 
 					/// <summary>
 					/// Loads text keywords from a file. Each unique keyword must be on a newline
@@ -285,7 +285,7 @@ namespace te
 					/// <returns>
 					/// The total number of triggers loaded from the provided source.
 					/// </returns>
-					uint32_t LoadTextTriggersFromFile(const std::string& triggersFilePath, const uint8_t category, const bool flushExisting);
+					const uint32_t LoadTextTriggersFromFile(const std::string& triggersFilePath, const uint8_t category, const bool flushExisting);
 
 					/// <summary>
 					/// Loads text keywords from a string. Each unique keyword must be on a newline.
@@ -307,7 +307,7 @@ namespace te
 					/// <returns>
 					/// The total number of triggers loaded from the provided source.
 					/// </returns>
-					uint32_t LoadTextTriggersFromString(const std::string& triggers, const uint8_t category, const bool flushExisting);
+					const uint32_t LoadTextTriggersFromString(const std::string& triggers, const uint8_t category, const bool flushExisting);
 
 					/// <summary>
 					/// Unloads any and all filtering rules assigned to the given category.
@@ -355,7 +355,7 @@ namespace te
 					/// be found, or that the category for a matched filter was disabled, and thus
 					/// the request should not be blocked.
 					/// </returns>
-					uint8_t ShouldBlock(const mhttp::HttpRequest* request, mhttp::HttpResponse* response = nullptr, const bool isSecure = false);					
+					const uint8_t ShouldBlock(const mhttp::HttpRequest* request, mhttp::HttpResponse* response = nullptr, const bool isSecure = false);					
 
 					/// <summary>
 					/// Determines if, given the current loaded rules, the supplied host should be
@@ -369,7 +369,7 @@ namespace te
 					/// value representing the category that the host was found to belong to. Zero if
 					/// the host should not be blocked.
 					/// </returns>
-					uint8_t ShouldBlockHost(boost::string_ref hostname);
+					const uint8_t ShouldBlockHost(boost::string_ref hostname);
 
 					/// <summary>
 					/// Attempts to load and parse the response portion of the supplied transaction,
@@ -569,7 +569,7 @@ namespace te
 					/// <returns>
 					/// True if the rule was successfully processed, false if not. 
 					/// </returns>
-					bool ProcessAbpFormattedRule(const std::string& rule, const uint8_t category);
+					const bool ProcessAbpFormattedRule(const std::string& rule, const uint8_t category);
 
 					/// <summary>
 					/// Adds an inclusion or exception selector, indexing it for use against only

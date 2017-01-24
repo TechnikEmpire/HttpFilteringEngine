@@ -40,6 +40,8 @@ namespace te
 		{
 			namespace secure
 			{					
+				template<typename T>
+				const std::string TlsCapableHttpBridge<T>::DoubleCRLF = u8"\r\n\r\n";
 
 				TlsCapableHttpBridge<network::TcpSocket>::TlsCapableHttpBridge(
 					boost::asio::io_service* service,					
@@ -261,7 +263,7 @@ namespace te
 							
 							try
 							{
-								auto requestReadBuffer = m_request->GetPayloadReadBuffer();
+								auto requestReadBuffer = m_request->GetReadBuffer();
 
 								boost::asio::async_read(
 									m_downstreamSocket,

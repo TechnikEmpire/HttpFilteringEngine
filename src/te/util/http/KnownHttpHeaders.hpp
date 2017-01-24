@@ -1729,6 +1729,14 @@ namespace te
 					/// </summary>
 					const std::string AlternateProtocol{ u8"Alternate-Protocol" };
 
+					/// <summary>
+					/// Header Name: Alternate-Protocol
+					/// Protocol: HTTP Extension
+					/// Status: Unknown
+					/// Defined In: http://httpwg.org/http-extensions/alt-svc.html
+					/// </summary>
+					const std::string AltSvc{ u8"Alt-Svc" };
+
 				} /* namespace headers */
 			} /* namespace http */
 		} /* namespace util */

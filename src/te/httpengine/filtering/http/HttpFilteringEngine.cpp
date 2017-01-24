@@ -100,7 +100,7 @@ namespace te
 
 				}
 
-				std::pair<uint32_t, uint32_t> HttpFilteringEngine::LoadAbpFormattedListFromFile(
+				const std::pair<uint32_t, uint32_t> HttpFilteringEngine::LoadAbpFormattedListFromFile(
 					const std::string& listFilePath, 
 					const uint8_t listCategory, 
 					const bool flushExistingRules
@@ -134,7 +134,7 @@ namespace te
 					return LoadAbpFormattedListFromString(listContents, listCategory, flushExistingRules);
 				}
 
-				std::pair<uint32_t, uint32_t> HttpFilteringEngine::LoadAbpFormattedListFromString(
+				const std::pair<uint32_t, uint32_t> HttpFilteringEngine::LoadAbpFormattedListFromString(
 					const std::string& list, 
 					const uint8_t listCategory, 
 					const bool flushExistingRules
@@ -176,7 +176,7 @@ namespace te
 					return { succeeded, failed };
 				}
 
-				uint32_t HttpFilteringEngine::LoadTextTriggersFromFile(const std::string& triggersFilePath, const uint8_t category, const bool flushExisting)
+				const uint32_t HttpFilteringEngine::LoadTextTriggersFromFile(const std::string& triggersFilePath, const uint8_t category, const bool flushExisting)
 				{
 					std::ifstream in(triggersFilePath, std::ios::binary | std::ios::in);
 
@@ -206,7 +206,7 @@ namespace te
 					return LoadTextTriggersFromString(listContents, category, flushExisting);
 				}
 
-				uint32_t HttpFilteringEngine::LoadTextTriggersFromString(const std::string& triggers, const uint8_t category, const bool flushExisting)
+				const uint32_t HttpFilteringEngine::LoadTextTriggersFromString(const std::string& triggers, const uint8_t category, const bool flushExisting)
 				{	
 					if (flushExisting)
 					{
@@ -324,7 +324,7 @@ namespace te
 					}					
 				}
 
-				uint8_t HttpFilteringEngine::ShouldBlock(const mhttp::HttpRequest* request, mhttp::HttpResponse* response, const bool isSecure)
+				const uint8_t HttpFilteringEngine::ShouldBlock(const mhttp::HttpRequest* request, mhttp::HttpResponse* response, const bool isSecure)
 				{
 					#ifndef NDEBUG
 						assert(request != nullptr && u8"In HttpFilteringEngine::ShouldBlock(mhttp::HttpRequest*, mhttp::HttpResponse*) - The HttpRequest parameter was supplied with a nullptr. The request is absolutely required to do accurate HTTP filtering.");
@@ -459,84 +459,89 @@ namespace te
 							}
 							else
 							{
-								if (response->IsPayloadCompressed())
+								// Don't bother classifying if we didn't flag it for consumption and it's complete.
+								if (response->GetConsumeAllBeforeSending())
 								{
-									if (!response->DecompressPayload())
+
+									if (response->IsPayloadCompressed())
 									{
-										ReportWarning(u8"In HttpFilteringEngine::ShouldBlock(...) - Failed to decompress payload, cannot inspect.");
-										return 0;
-									}
-								}
-
-								// Get a reference to the response payload.
-								const auto& payload = response->GetPayload();
-
-								if (response->IsPayloadText())
-								{
-									// This will include JSON, XML, HTML, etc.
-									//ReportInfo(u8"Checking json or text payload for triggers.");
-									//ReportInfo(fullRequest);
-									auto shouldBlockDueToTextTrigger = ShouldBlockBecauseOfTextTrigger(payload);
-
-									if (shouldBlockDueToTextTrigger != 0)
-									{
-										// Report block action because we have a response. Whenever we have a response in
-										// this context, it's our last chance to report on the transaction before
-										// it is terminated.
-										ReportRequestBlocked(request, response, shouldBlockDueToTextTrigger);
-										ReportInfo("Blocked by text trigger.");
-										return shouldBlockDueToTextTrigger;
-									}
-								}
-
-								// The very last thing we can check if we made it here, is to see if we have content
-								// that we can classify. Check if we have an external classification callback.
-								if (m_onClassifyContent)
-								{
-									//ReportInfo(u8"Checking for content classification.");
-									//ReportInfo(fullRequest);
-
-									// Default to an empty aka unknown string for content type;
-									std::string contentTypeString;
-									auto contentTypeHeader = response->GetHeader(util::http::headers::ContentType);
-
-									if (contentTypeHeader.first != contentTypeHeader.second)
-									{
-										contentTypeString = contentTypeHeader.first->second;
+										if (!response->DecompressPayload())
+										{
+											ReportWarning(u8"In HttpFilteringEngine::ShouldBlock(...) - Failed to decompress payload, cannot inspect.");
+											return 0;
+										}
 									}
 
-									if (contentTypeString.size() == 0)
+									// Get a reference to the response payload.
+									const auto& payload = response->GetPayload();
+
+									if (response->IsPayloadText())
 									{
-										contentTypeString = std::string(u8"unknown");
+										// This will include JSON, XML, HTML, etc.
+										//ReportInfo(u8"Checking json or text payload for triggers.");
+										//ReportInfo(fullRequest);
+										auto shouldBlockDueToTextTrigger = ShouldBlockBecauseOfTextTrigger(payload);
+
+										if (shouldBlockDueToTextTrigger != 0)
+										{
+											// Report block action because we have a response. Whenever we have a response in
+											// this context, it's our last chance to report on the transaction before
+											// it is terminated.
+											ReportRequestBlocked(request, response, shouldBlockDueToTextTrigger);
+											ReportInfo("Blocked by text trigger.");
+											return shouldBlockDueToTextTrigger;
+										}
 									}
 
-									// Pass over the content for classification.
-									uint8_t contentClassResult = m_onClassifyContent(payload.data(), payload.size(), contentTypeString.c_str(), contentTypeString.size());
-
-									if (contentClassResult != 0 && m_programOptions->GetIsHttpCategoryFiltered(contentClassResult))
+									// The very last thing we can check if we made it here, is to see if we have content
+									// that we can classify. Check if we have an external classification callback.
+									if (m_onClassifyContent)
 									{
-										// Report block action because we have a response. Whenever we have a response in
-										// this context, it's our last chance to report on the transaction before
-										// it is terminated.
-										ReportRequestBlocked(request, response, contentClassResult);
-										ReportInfo("Blocked by content classification.");
-										return contentClassResult;
+										//ReportInfo(u8"Checking for content classification.");
+										//ReportInfo(fullRequest);
+
+										// Default to an empty aka unknown string for content type;
+										std::string contentTypeString;
+										auto contentTypeHeader = response->GetHeader(util::http::headers::ContentType);
+
+										if (contentTypeHeader.first != contentTypeHeader.second)
+										{
+											contentTypeString = contentTypeHeader.first->second;
+										}
+
+										if (contentTypeString.size() == 0)
+										{
+											contentTypeString = std::string(u8"unknown");
+										}
+
+										// Pass over the content for classification.
+										uint8_t contentClassResult = m_onClassifyContent(payload.data(), payload.size(), contentTypeString.c_str(), contentTypeString.size());
+
+										if (contentClassResult != 0 && m_programOptions->GetIsHttpCategoryFiltered(contentClassResult))
+										{
+											// Report block action because we have a response. Whenever we have a response in
+											// this context, it's our last chance to report on the transaction before
+											// it is terminated.
+											ReportRequestBlocked(request, response, contentClassResult);
+											ReportInfo("Blocked by content classification.");
+											return contentClassResult;
+										}
 									}
-								}
 
-								// We're not blocking, so last thing to do is run selectors if payload is HTML.
-								// We'll only do this though if we actually have selectors. No sense in
-								// parsing the HTML if we don't.
-								if (response->IsPayloadHtml() && (m_inclusionSelectors.size() > 0 || m_exceptionSelectors.size() > 0))
-								{
-									// Payload is complete, it's HTML, and it was kept for further inspection. Let the CSS selectors
-									// rip through the HTML payload before returning.
-									auto processedHtmlString = this->ProcessHtmlResponse(request, response);
-
-									if (processedHtmlString.size() > 0)
+									// We're not blocking, so last thing to do is run selectors if payload is HTML.
+									// We'll only do this though if we actually have selectors. No sense in
+									// parsing the HTML if we don't.
+									if (response->IsPayloadHtml() && (m_inclusionSelectors.size() > 0 || m_exceptionSelectors.size() > 0))
 									{
-										std::vector<char> processedHtmlVector(processedHtmlString.begin(), processedHtmlString.end());
-										response->SetPayload(std::move(processedHtmlVector));
+										// Payload is complete, it's HTML, and it was kept for further inspection. Let the CSS selectors
+										// rip through the HTML payload before returning.
+										auto processedHtmlString = this->ProcessHtmlResponse(request, response);
+
+										if (processedHtmlString.size() > 0)
+										{
+											std::vector<char> processedHtmlVector(processedHtmlString.begin(), processedHtmlString.end());
+											response->SetPayload(std::move(processedHtmlVector));
+										}
 									}
 								}
 							}
@@ -843,7 +848,7 @@ namespace te
 					return 0;
 				}
 
-				uint8_t HttpFilteringEngine::ShouldBlockHost(boost::string_ref hostname)
+				const uint8_t HttpFilteringEngine::ShouldBlockHost(boost::string_ref hostname)
 				{
 					// XXX TODO - This can be improved later to factor in the full request
 					// string, but for now we're looking to block non-http requests by
@@ -878,7 +883,7 @@ namespace te
 					return 0;
 				}
 
-				bool HttpFilteringEngine::ProcessAbpFormattedRule(const std::string& rule, const uint8_t category)
+				const bool HttpFilteringEngine::ProcessAbpFormattedRule(const std::string& rule, const uint8_t category)
 				{
 					// Can't do much with an empty line, but this isn't an error.
 					if (rule.size() == 0)

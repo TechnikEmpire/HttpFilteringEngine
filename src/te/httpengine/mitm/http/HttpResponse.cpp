@@ -66,9 +66,13 @@ namespace te
 
 				HttpResponse::HttpResponse(const char* data, const size_t length) : HttpResponse()
 				{
+					/*
 					// Write the data into the header buffer and that's it.
 					std::ostream os(&m_headerBuffer);
 					os.write(data, length);
+					os.flush();
+					*/
+					std::copy(data, data + length, std::back_inserter(m_buffer));
 				}
 
 				HttpResponse::~HttpResponse()

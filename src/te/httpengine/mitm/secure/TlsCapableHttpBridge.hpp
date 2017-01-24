@@ -394,6 +394,8 @@ namespace te
 					/// </summary>
 					static constexpr size_t TlsPeekBufferSize = 16384;
 
+					static const std::string DoubleCRLF;
+
 					/// <summary>
 					/// The mechanism provided in openSSL for parsing the TLS client hello and
 					/// extracting the host name from the SNI extension is extraordinarily
@@ -651,6 +653,7 @@ namespace te
 
 								if (parser->upgrade == 1)
 								{
+									free(parser);
 									if (outHost.size() == 0)
 									{
 										// Most definitely should not be empty.
@@ -661,22 +664,25 @@ namespace te
 								}
 
 								if (parser->http_errno != 0)
-								{
+								{	
 									errorMessage = std::string(u8"In ParseResult::Parse(...) -Got http_parser error: ");
 									errorMessage.append(http_errno_description(HTTP_PARSER_ERRNO(parser)));									
 									
 									if (parser->http_errno == HPE_INVALID_METHOD || parser->http_errno == HPE_UNKNOWN)
 									{
+										free(parser);
 										return ParseResult::NotHttp;
 									}
 								}
 
 								if (outHost.size() == 0)
 								{
+									free(parser);
 									// Most definitely should not be empty.
 									return ParseResult::Failure;
 								}
 
+								free(parser);
 								return ParseResult::IsHttp;
 							}							
 					};
@@ -887,6 +893,25 @@ namespace te
 						{
 							if (m_response->Parse(bytesTransferred))
 							{
+								if (!m_response->HeadersComplete())
+								{
+									boost::asio::async_read(
+										m_upstreamSocket,
+										m_response->GetReadBuffer(),
+										boost::asio::transfer_at_least(1),
+										m_upstreamStrand.wrap(
+											std::bind(
+												&TlsCapableHttpBridge::OnUpstreamHeaders,
+												shared_from_this(),
+												std::placeholders::_1,
+												std::placeholders::_2
+											)
+										)
+									);
+
+									return;
+								}
+
 								auto blockResult = m_filteringEngine->ShouldBlock(m_request.get(), m_response.get(), std::is_same<BridgeSocketType, network::TlsSocket>::value);
 
 								if (blockResult != 0)
@@ -925,6 +950,9 @@ namespace te
 								// Ensure that nobody is advertising for QUIC support.
 								m_response->RemoveHeader(util::http::headers::AlternateProtocol);
 
+								// Sigh, also remove declaration of any alternative protocol
+								m_response->RemoveHeader(util::http::headers::AltSvc);
+
 								// Set m_keepAlive to what the server has specified. The client may have requested it, but
 								// ultimately it's up to the server how it's going to serve us.
 								auto connectionHeader = m_response->GetHeader(util::http::headers::Connection);
@@ -958,7 +986,7 @@ namespace te
 									// a constexpr in BaseHttpTransaction. 
 									try
 									{
-										auto readBuffer = m_response->GetPayloadReadBuffer();
+										auto readBuffer = m_response->GetReadBuffer();
 
 										SetStreamTimeout(5000);
 
@@ -1084,7 +1112,7 @@ namespace te
 
 									try
 									{
-										auto readBuffer = m_response->GetPayloadReadBuffer();
+										auto readBuffer = m_response->GetReadBuffer();
 
 										boost::asio::async_read(
 											m_upstreamSocket,
@@ -1178,7 +1206,7 @@ namespace te
 
 								try
 								{
-									auto readBuffer = m_request->GetPayloadReadBuffer();
+									auto readBuffer = m_request->GetReadBuffer();
 
 									boost::asio::async_read(
 										m_downstreamSocket,
@@ -1208,10 +1236,10 @@ namespace te
 								// Client is all done, get the response headers.
 
 								SetStreamTimeout(5000);								
-								boost::asio::async_read_until(
+								boost::asio::async_read(
 									m_upstreamSocket,
-									m_response->GetHeaderReadBuffer(), 
-									u8"\r\n\r\n",
+									m_response->GetReadBuffer(), 
+									boost::asio::transfer_at_least(1),
 									m_upstreamStrand.wrap(
 										std::bind(
 											&TlsCapableHttpBridge::OnUpstreamHeaders, 
@@ -1285,7 +1313,27 @@ namespace te
 						if ((!error || (error.value() == boost::asio::error::eof)) && bytesTransferred > 0)
 						{
 							if (m_request->Parse(bytesTransferred))
-							{								
+							{			
+
+								if (!m_request->HeadersComplete())
+								{
+									boost::asio::async_read(
+										m_downstreamSocket,
+										m_request->GetReadBuffer(),
+										boost::asio::transfer_at_least(1),
+										m_downstreamStrand.wrap(
+											std::bind(
+												&TlsCapableHttpBridge::OnDownstreamHeaders,
+												shared_from_this(),
+												std::placeholders::_1,
+												std::placeholders::_2
+											)
+										)
+									);
+
+									return;
+								}
+
 								auto requestBlockResult = m_filteringEngine->ShouldBlock(m_request.get(), nullptr, std::is_same<BridgeSocketType, network::TlsSocket>::value);
 								
 								if (requestBlockResult != 0)
@@ -1298,7 +1346,7 @@ namespace te
 								// want to be sure that we get normal, non-hipster encoded, non-organic smoothie
 								// encoded reponses that sane people can decompress. So we just always replace
 								// the Accept-Encoding header with this.
-								std::string standardEncoding(u8"gzip, deflate");
+								std::string standardEncoding(u8"gzip");
 								m_request->AddHeader(util::http::headers::AcceptEncoding, standardEncoding);
 
 								// Modifying content-encoding isn't enough for that sweet organic spraytanned
@@ -1310,6 +1358,9 @@ namespace te
 								
 								// Ensure that nobody is advertising for QUIC support.
 								m_request->RemoveHeader(util::http::headers::AlternateProtocol);
+
+								// Sigh, also remove declaration of any alternative protocol
+								m_request->RemoveHeader(util::http::headers::AltSvc);
 
 								auto hostHeader = m_request->GetHeader(util::http::headers::Host);
 
@@ -1466,7 +1517,7 @@ namespace te
 
 									try
 									{
-										auto readBuffer = m_request->GetPayloadReadBuffer();
+										auto readBuffer = m_request->GetReadBuffer();
 
 										boost::asio::async_read(
 											m_downstreamSocket,
@@ -1559,7 +1610,7 @@ namespace te
 
 								try
 								{
-									auto readBuffer = m_response->GetPayloadReadBuffer();
+									auto readBuffer = m_response->GetReadBuffer();
 
 									boost::asio::async_read(
 										m_upstreamSocket,
@@ -1612,7 +1663,6 @@ namespace te
 
 									try
 									{
-
 										m_request.reset(new http::HttpRequest());
 										m_response.reset(new http::HttpResponse());
 									}
@@ -1636,7 +1686,7 @@ namespace te
 									boost::asio::async_read_until(
 										m_downstreamSocket,
 										m_request->GetHeaderReadBuffer(),
-										u8"\r\n\r\n",
+										DoubleCRLF,
 										m_downstreamStrand.wrap(
 											std::bind(
 												&TlsCapableHttpBridge::OnDownstreamHeaders,
@@ -1822,7 +1872,7 @@ namespace te
 							boost::asio::async_read_until(
 								m_downstreamSocket, 
 								m_request->GetHeaderReadBuffer(), 
-								u8"\r\n\r\n", 
+								DoubleCRLF, 
 								m_downstreamStrand.wrap(
 									std::bind(
 										&TlsCapableHttpBridge::OnDownstreamHeaders,
@@ -2384,7 +2434,7 @@ namespace te
 
 							std::shared_ptr<std::array<char, TlsPeekBufferSize>> httpPeekBuffer = std::make_shared< std::array<char, TlsPeekBufferSize> >();
 
-							auto dataAvailable = SocketHasData(DownstreamSocket());
+							//auto dataAvailable = SocketHasData(DownstreamSocket());
 
 							boost::asio::async_read(
 								m_downstreamSocket,
@@ -2435,12 +2485,7 @@ namespace te
 								break;
 
 								case PreviewParser::ParseResult::IsHttp:
-								{
-									
-									ReportInfo(u8"Is normal HTTP.");
-									boost::string_ref peekedData(httpPeekBuffer->data(), bytesTransferred);
-									ReportInfo(peekedData);
-
+								{	
 									// Just go ahead and start officially reading the headers.
 
 									// Set the timeout to something reasonable.
@@ -2451,7 +2496,6 @@ namespace te
 										// Create a new request for this data and just jump to OnDownstreamHeaders.
 										try
 										{
-
 											m_request.reset(new http::HttpRequest(httpPeekBuffer->data(), bytesTransferred));											
 										}
 										catch (std::exception& e)
@@ -2475,7 +2519,7 @@ namespace te
 									boost::asio::async_read_until(
 										m_downstreamSocket,
 										m_request->GetHeaderReadBuffer(),
-										u8"\r\n\r\n",
+										DoubleCRLF,
 										m_downstreamStrand.wrap(
 											std::bind(
 												&TlsCapableHttpBridge::OnDownstreamHeaders,
