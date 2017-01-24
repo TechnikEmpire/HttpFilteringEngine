@@ -67,9 +67,7 @@ namespace te
 
 				const boost::string_ref BaseHttpTransaction::ContentTypeJavascript = u8"javascript";
 
-				BaseHttpTransaction::BaseHttpTransaction() 
-					: 
-					m_headerBuffer(MaxPayloadResize)
+				BaseHttpTransaction::BaseHttpTransaction()
 				{					
 					m_httpParserSettings.on_body = &OnBody;
 					m_httpParserSettings.on_chunk_complete = &OnChunkComplete;
@@ -174,235 +172,155 @@ namespace te
 
 				const bool BaseHttpTransaction::Parse(const size_t bytesReceived)
 				{
-					bool success = false;
+					auto nparsed = http_parser_execute(m_httpParser, &m_httpParserSettings, m_buffer.data(), bytesReceived);
 
-					if (!m_consumeAllBeforeSending)
+					if (m_httpParser->upgrade == 1)
 					{
-						// When we're not filling the buffer over potentially multiple reads, just
-						// clear it out every single time we're called to parse.
-						m_parsedTransactionData.clear();						
-						m_chunkedTransactionData.clear();
+						ReportError(u8"In BaseHttpTransaction::Parse(const size_t&) - Upgrade requested. Unsupported.");
+						return false;
 					}
 
-					// We reserve at minimum the same amount of data we got here, so that when we're
-					// copying out body data in the parser callbacks, we're not getting hammered with
-					// re-allocations.
-					m_parsedTransactionData.reserve(m_parsedTransactionData.size() + bytesReceived);
-
-					if (!m_headersComplete)
-					{	
-						std::string hdrString{ (std::istreambuf_iterator<char>(&m_headerBuffer)), std::istreambuf_iterator<char>() };
-
-						// Pull server requests for HTTP2 upgrade
-						if (hdrString.size() > 0)
-						{
-							auto http2 = boost::string_ref(u8"Upgrade: h2\r\n");
-							auto http2c = boost::string_ref(u8"Upgrade: h2c\r\n");
-							
-							boost::erase_all(hdrString, http2);
-							boost::erase_all(hdrString, http2c);
-						}
-						//
-
-						// Because boost::asio lies to us and reads more data into the header buffer than just headers, we cannot
-						// rely on the bytesReceived value here. We must look at the whole buffer.
-						auto bytesToParse = hdrString.size();
-
-						// The parser must ALWAYS be called first. The OnMessageBegin callback will reset the state
-						// of this object, clearing everything excluding the payload data.
-						auto nparsed = http_parser_execute(m_httpParser, &m_httpParserSettings, hdrString.c_str(), bytesToParse);
-
-						if (m_httpParser->http_errno != 0)
-						{	
-							std::string errMsg(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse headers. Got http_parser error: ");
-							errMsg.append(http_errno_description(HTTP_PARSER_ERRNO(m_httpParser)));
-							ReportError(errMsg);
-							ReportInfo(hdrString);
-							return false;
-						}
-
-						if (m_httpParser->upgrade == 1)
-						{		
-							ReportError(u8"In BaseHttpTransaction::Parse(const size_t&) - Upgrade requested. Unsupported.");
-							ReportInfo(hdrString);
-							return false;							
-						}
-
-						if (nparsed != bytesToParse)
-						{
-							ReportError(u8"In BaseHttpTransaction::Parse(const size_t&) - Not all bytes were parsed. Unknown error occurred.");
-							ReportInfo(hdrString);
-							return false;
-						}
-
-						success = true;
-					}
-					else 
-					{	
-						auto nparsed = http_parser_execute(m_httpParser, &m_httpParserSettings, m_payloadBuffer.data(), bytesReceived);
-						
-						if (m_httpParser->upgrade == 1)
-						{
-							ReportError(u8"In BaseHttpTransaction::Parse(const size_t&) - Upgrade requested. Unsupported.");							
-							return false;
-						}
-
-						if (m_httpParser->http_errno != 0)
-						{
-							std::string errMsg(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse payload. Got http_parser error: ");
-							errMsg.append(http_errno_description(HTTP_PARSER_ERRNO(m_httpParser)));
-							ReportError(errMsg);
-							return false;
-						}
-
-						if (nparsed != bytesReceived)
-						{
-							ReportError(u8"In BaseHttpTransaction::Parse(const size_t&) - Not all bytes were parsed. Unknown error occurred.");							
-							return false;
-						}
-
-						if (nparsed != bytesReceived)
-						{
-							ReportError(u8"In BaseHttpTransaction::Parse(const size_t&) - Not all bytes were parsed. Unknown error occurred.");							
-							return false;
-						}
-					}
-
-					// If the body is complete, then we need to provide some things which are guaranteed, such as
-					// automatic decompression when ::ConsumeAllBeforeSending() is true, and automatic conversion
-					// of chunked transfers to fixed-length/precalculated (content-length header defined) transfers.
-					if (m_payloadComplete && m_consumeAllBeforeSending)
-					{	
-						if (IsPayloadCompressed())
-						{
-							// If the payload is compressed, this will handle correctly decompressing and
-							// setting the Content-Length correctly.
-							if (!DecompressPayload())
-							{
-								return false;
-							}
-
-							success = true;
-						}
-						else
-						{
-							// If not compressed, then we need to ensure there are no transfer-encoding headers,
-							// because the parser handles this transparently, and then make sure we update our
-							// content-length header.
-							RemoveHeader(util::http::headers::TransferEncoding);
-							RemoveHeader(util::http::headers::ContentEncoding);
-							RemoveHeader(util::http::headers::ContentLength);
-							std::string length = std::to_string(m_parsedTransactionData.size());
-							AddHeader(util::http::headers::ContentLength, length);
-
-							success = true;
-						}
-					}
-					else
+					if (m_httpParser->http_errno != 0)
 					{
-						success = true;
+						std::string errMsg(u8"In BaseHttpTransaction::Parse(const size_t&) - Failed to parse payload. Got http_parser error: ");
+						errMsg.append(http_errno_description(HTTP_PARSER_ERRNO(m_httpParser)));
+						ReportError(errMsg);
+						return false;
 					}
 
-					return success;
+					if (nparsed != bytesReceived)
+					{
+						ReportError(u8"In BaseHttpTransaction::Parse(const size_t&) - Not all bytes were parsed. Unknown error occurred.");
+						return false;
+					}
+
+					return true;
 				}
 
-				boost::asio::streambuf& BaseHttpTransaction::GetHeaderReadBuffer()
-				{
-					if (m_headerBuffer.size() > 0)
+				boost::asio::mutable_buffers_1 BaseHttpTransaction::GetReadBuffer()
+				{	
+					if (m_buffer.size() < PayloadBufferReadSize)
 					{
-						// Ensure all data already in the buffer is cleared before initiating
-						// a new read.
-						m_headerBuffer.consume(m_headerBuffer.size() + 1);
+						m_buffer.resize(PayloadBufferReadSize);
 					}
 
-					return m_headerBuffer;
-				}
-
-				boost::asio::mutable_buffers_1 BaseHttpTransaction::GetPayloadReadBuffer()
-				{
-					if (m_payloadBuffer.size() < PayloadBufferReadSize)
+					if (m_headersComplete && !m_consumeAllBeforeSending)
 					{
-						m_payloadBuffer.resize(PayloadBufferReadSize);
+						m_payload.clear();
 					}
 
-					return boost::asio::mutable_buffers_1(m_payloadBuffer.data(), m_payloadBuffer.size());
+					return boost::asio::mutable_buffers_1(m_buffer.data(), PayloadBufferReadSize);
 				}
 
 				boost::asio::const_buffers_1 BaseHttpTransaction::GetWriteBuffer()
 				{
-					std::vector<char>& whichVec = m_parsedTransactionData;
-
-					if (!m_consumeAllBeforeSending && IsPayloadChunked() && m_chunkedTransactionData.size() > 0)
-					{
-						whichVec = m_chunkedTransactionData;
-					}
-
 					if (!m_headersSent)
 					{
 						auto headersVector = HeadersToVector();				
-						auto newSize = headersVector.size() + whichVec.size();
+						auto newSize = headersVector.size() + m_payload.size();
 						headersVector.reserve(newSize);
 
-						if (whichVec.size() > 0)
-						{
-							headersVector.insert(headersVector.end(), whichVec.begin(), whichVec.end());
+						if (m_payload.size() > 0)
+						{	
+							headersVector.insert(headersVector.end(), m_payload.begin(), m_payload.end());
 						}
 
-						m_parsedTransactionData = std::move(headersVector);
-
-						whichVec = m_parsedTransactionData;
+						m_payload = std::move(headersVector);
 
 						m_headersSent = true;
 					}
 
-					if (m_payloadComplete)
-					{
-						whichVec.push_back('\r');
-						whichVec.push_back('\n');
-						whichVec.push_back('\r');
-						whichVec.push_back('\n');
-					}
-
-					return boost::asio::const_buffers_1(whichVec.data(), whichVec.size());
+					return boost::asio::const_buffers_1(m_payload.data(), m_payload.size());
 				}
 
 				const std::vector<char>& BaseHttpTransaction::GetPayload() const
 				{
-					return m_parsedTransactionData;
+					return m_payload;
 				}
 
 				void BaseHttpTransaction::SetPayload(std::vector<char>&& payload)
 				{
 					// XXX TODO - Cleanup this code duplication.
 
-					m_parsedTransactionData = std::move(payload);
+					bool needsTerminatingCrlf = false;
+
+					if (payload.size() > 4)
+					{
+						if (
+							payload[payload.size() - 1] != '\n' &&
+							payload[payload.size() - 2] != '\r' &&
+							payload[payload.size() - 3] != '\n' &&
+							payload[payload.size() - 4] != '\r')
+						{
+							needsTerminatingCrlf = true;
+						}
+					}
+
+					m_payload = std::move(payload);
 					m_payloadComplete = true;
 										
 					RemoveHeader(util::http::headers::ContentLength);
 					RemoveHeader(util::http::headers::TransferEncoding);
 					RemoveHeader(util::http::headers::ContentEncoding);					
 
-					std::string length = std::to_string(m_parsedTransactionData.size());
+					auto finalSize = m_payload.size();
+					std::string length = std::to_string(finalSize);
 
 					RemoveHeader(util::http::headers::ContentLength);
 					AddHeader(util::http::headers::ContentLength, length);
+
+					/*
+					if (needsTerminatingCrlf)
+					{
+						m_payload.reserve(m_payload.size() + 4);
+						m_payload.push_back('\r');
+						m_payload.push_back('\n');
+						m_payload.push_back('\r');
+						m_payload.push_back('\n');
+					}
+					*/
 				}
 
 				void BaseHttpTransaction::SetPayload(const std::vector<char>& payload)
 				{
 					// XXX TODO - Cleanup this code duplication.
+					bool needsTerminatingCrlf = false;
 
-					m_parsedTransactionData = payload;
+					if (payload.size() > 4)
+					{
+						if (
+							payload[payload.size() - 1] != '\n' &&
+							payload[payload.size() - 2] != '\r' &&
+							payload[payload.size() - 3] != '\n' &&
+							payload[payload.size() - 4] != '\r')
+						{
+							needsTerminatingCrlf = true;
+						}
+					}
+
+					m_payload = payload;
 					m_payloadComplete = true;
 
 					RemoveHeader(util::http::headers::ContentLength);
 					RemoveHeader(util::http::headers::TransferEncoding);
 					RemoveHeader(util::http::headers::ContentEncoding);
 
-					std::string length = std::to_string(m_parsedTransactionData.size());
+					auto finalSize = m_payload.size();
+					std::string length = std::to_string(finalSize);
 
 					RemoveHeader(util::http::headers::ContentLength);
 					AddHeader(util::http::headers::ContentLength, length);
+
+					/*
+					if (needsTerminatingCrlf)
+					{
+						m_payload.reserve(m_payload.size() + 4);
+						m_payload.push_back('\r');
+						m_payload.push_back('\n');
+						m_payload.push_back('\r');
+						m_payload.push_back('\n');
+					}
+					*/
 				}
 
 				const bool BaseHttpTransaction::IsPayloadComplete() const
@@ -461,9 +379,10 @@ namespace te
 
 					std::string fs = os.str();
 
-					m_parsedTransactionData.clear();
+					m_payload.clear();
 
-					m_parsedTransactionData.assign(fs.begin(), fs.end());
+					m_payload.assign(fs.begin(), fs.end());
+
 					m_headersSent = true;
 					m_headersComplete = true;
 					m_payloadComplete = true;
@@ -591,9 +510,9 @@ namespace te
 
 				const bool BaseHttpTransaction::CompressGzip()
 				{
-					if (m_parsedTransactionData.size() == 0)
+					if (m_payload.size() == 0)
 					{
-						ReportError(u8"In BaseBridge::CompressDeflate() - There is no payload to compress.");
+						ReportWarning(u8"In BaseBridge::CompressDeflate() - There is no payload to compress.");
 						return false;
 					}
 
@@ -606,7 +525,7 @@ namespace te
 						os.push(boost::iostreams::gzip_compressor());
 						os.push(boost::iostreams::back_inserter(compressed));
 
-						boost::iostreams::write(os, m_parsedTransactionData.data(), m_parsedTransactionData.size());						
+						boost::iostreams::write(os, m_payload.data(), m_payload.size());
 					}
 					catch (std::exception &e)
 					{
@@ -627,9 +546,9 @@ namespace te
 
 				const bool BaseHttpTransaction::CompressDeflate()
 				{
-					if (m_parsedTransactionData.size() == 0)
+					if (m_payload.size() == 0)
 					{
-						ReportError(u8"In BaseBridge::CompressDeflate() - There is no payload to compress.");
+						ReportWarning(u8"In BaseBridge::CompressDeflate() - There is no payload to compress.");
 						return false;
 					}
 
@@ -642,7 +561,7 @@ namespace te
 						os.push(boost::iostreams::zlib_compressor());
 						os.push(boost::iostreams::back_inserter(compressed));
 
-						boost::iostreams::write(os, m_parsedTransactionData.data(), m_parsedTransactionData.size());
+						boost::iostreams::write(os, m_payload.data(), m_payload.size());
 					}
 					catch (std::exception &e)
 					{
@@ -742,14 +661,14 @@ namespace te
 
 				const bool BaseHttpTransaction::DecompressGzip()
 				{
-					if (m_parsedTransactionData.size() == 0)
+					if (m_payload.size() == 0)
 					{
 						ReportError(u8"In BaseBridge::DecompressGzip() - There is no payload to decompress.");
 						return false;
 					}
 
 					std::vector<char> decompressed;
-					decompressed.reserve(m_parsedTransactionData.size());
+					decompressed.reserve(m_payload.size());
 
 					try
 					{
@@ -758,7 +677,7 @@ namespace te
 						// not function correctly here. This code does.
 						boost::iostreams::back_insert_device< std::vector<char> > decompressorSnk(decompressed);
 						boost::iostreams::gzip_decompressor decomp(boost::iostreams::zlib::default_window_bits);
-						decomp.write(decompressorSnk, reinterpret_cast<const char*>(&m_parsedTransactionData[0]), m_parsedTransactionData.size());
+						decomp.write(decompressorSnk, m_payload.data(), m_payload.size());
 					}
 					catch (std::exception& e)
 					{
@@ -783,23 +702,33 @@ namespace te
 
 				const bool BaseHttpTransaction::DecompressDeflate()
 				{
-					if (m_parsedTransactionData.size() == 0)
+					if (m_payload.size() == 0)
 					{
 						ReportError(u8"In BaseBridge::DecompressDeflate() - There is no payload to decompress.");
 						return false;
 					}
 
 					std::vector<char> decompressed;
-					decompressed.reserve(m_parsedTransactionData.size());
+					decompressed.reserve(m_payload.size());
 
 					try
 					{
+						/*
+						boost::iostreams::filtering_ostream os;
+
+						os.push(boost::iostreams::zlib_decompressor());
+						os.push(std::back_inserter(decompressed));
+
+						boost::iostreams::write(os, m_payload.data(), m_payload.size());
+						*/
+						
 						// For some reason, all the example code that boost gives, and all the examples
 						// you'll find of "this works" in terms of using boost::asio::gzip streams do
 						// not function correctly here. This code does.
 						boost::iostreams::back_insert_device< std::vector<char> > decompressorSnk(decompressed);
 						boost::iostreams::zlib_decompressor decomp(boost::iostreams::zlib::default_window_bits);
-						decomp.write(decompressorSnk, reinterpret_cast<const char*>(&m_parsedTransactionData[0]), m_parsedTransactionData.size());
+						decomp.write(decompressorSnk, m_payload.data(), m_payload.size());
+						
 					}
 					catch (std::exception& e)
 					{
@@ -822,6 +751,117 @@ namespace te
 					return true;
 				}
 			
+				const bool BaseHttpTransaction::ConvertPayloadFromChunkedToFixedLength()
+				{
+					std::vector<char> parsedBody;
+					parsedBody.reserve(m_payload.size());
+
+					http_parser_settings parserSettings;
+
+					auto onDataGeneric = [](http_parser* parser, const char *at, size_t length)->int
+					{
+						// This is made to accept but ignore data callbacks we don't care about.
+						return 0;
+					};
+
+					auto onNotificationGeneric = [](http_parser* parser)->int
+					{
+						// This is made to accept but ignore notification callbacks we don't care about.
+						return 0;
+					};
+
+					auto onBody = [](http_parser* parser, const char *at, size_t length)->int
+					{
+						if (parser->data == nullptr)
+						{
+							return -1;
+						}
+
+						auto bodyContainer = static_cast<std::vector<char>*>(parser->data);
+						std::copy(at, at + length, std::back_inserter(*bodyContainer));
+						return 0;
+					};
+
+					parserSettings.on_body = onBody;
+					parserSettings.on_chunk_complete = onNotificationGeneric;
+					parserSettings.on_chunk_header = onNotificationGeneric;
+					parserSettings.on_headers_complete = onNotificationGeneric;
+					parserSettings.on_header_field = onDataGeneric;
+					parserSettings.on_header_value = onDataGeneric;
+					parserSettings.on_message_begin = onNotificationGeneric;
+					parserSettings.on_message_complete = onNotificationGeneric;
+					parserSettings.on_status = onDataGeneric;
+					parserSettings.on_url = onDataGeneric;					
+
+					http_parser* parser;
+					parser = static_cast<http_parser*>(malloc(sizeof(http_parser)));
+
+					if (!parser)
+					{
+						std::string error(u8"In BaseHttpTransaction::ConvertPayloadFromChunkedToFixedLength() - Failed to allocate memory for http-parser.");
+						ReportError(error);
+						return false;
+					}
+
+					http_parser_init(parser, HTTP_BOTH);
+
+					parser->data = &parsedBody;
+
+					std::vector<char> finalVec = HeadersToVector();
+					auto newSize = finalVec.size() + m_payload.size();
+					finalVec.reserve(newSize);
+
+					if (m_payload.size() > 0)
+					{
+						finalVec.insert(finalVec.end(), m_payload.begin(), m_payload.end());
+					}
+
+					auto nparsed = http_parser_execute(parser, &parserSettings, finalVec.data(), finalVec.size());
+
+					if (parser->http_errno != 0)
+					{
+						auto errorMessage = std::string(u8"In BaseHttpTransaction::ConvertPayloadFromChunkedToFixedLength() - Got http_parser error: ");
+						errorMessage.append(http_errno_description(HTTP_PARSER_ERRNO(parser)));
+						ReportError(errorMessage);						
+						free(parser);
+						return false;
+					}
+
+					if (parsedBody.size() <= 0)
+					{
+						std::string errorMessage(u8"In BaseHttpTransaction::ConvertPayloadFromChunkedToFixedLength() - Finalized payload is empty.");
+						ReportWarning(errorMessage);
+						free(parser);
+						return false;
+					}
+
+					// If the payload is not compressed, we can simply set the payload and it
+					// will adjust our headers properly to make it a fixed length transaction.
+					if (!IsPayloadCompressed())
+					{	
+						SetPayload(std::move(parsedBody));						
+					}
+					else
+					{
+						m_payload = std::move(parsedBody);
+
+						// If the payload is compressed, calling the decompress function
+						// will handle mutating our headers correctly to make it a fixed
+						// length transaction.
+						if (!DecompressPayload())
+						{
+							std::string errorMessage(u8"In BaseHttpTransaction::ConvertPayloadFromChunkedToFixedLength() - Failed to decompress payload.");
+							ReportError(errorMessage);							
+							free(parser);
+							return false;
+						}
+					}
+
+					ReportInfo(u8"success converting chunked to fixed.");
+					free(parser);
+					return true;
+				}
+
 				int BaseHttpTransaction::OnMessageBegin(http_parser* parser)
 				{
 					if (parser != nullptr)
@@ -840,6 +880,7 @@ namespace te
 						trans->m_headersSent = false;
 						trans->m_headersComplete = false;
 						trans->m_lastHeader = std::string("");
+						trans->m_lastHeaderFresh = false;
 						
 					}
 					else
@@ -892,6 +933,22 @@ namespace te
 
 						trans->m_payloadComplete = true;
 					
+						/*
+						if (trans->IsPayloadChunked())
+						{
+							trans->m_payload.push_back('\r');
+							trans->m_payload.push_back('\n');
+							trans->m_payload.push_back('0');
+						}
+						*/
+
+						// When the payload is complete, and we want to consume it all, we need to convert it
+						// from chunked encoding to a fixed length payload.
+						if (trans->GetConsumeAllBeforeSending())
+						{
+							trans->ReportInfo(u8"about to convert chunked to fixed.");
+							trans->ConvertPayloadFromChunkedToFixedLength();
+						}						
 					}
 					else
 					{
@@ -908,7 +965,7 @@ namespace te
 				{
 					// When on_chunk_header is called, the current chunk length is stored
 					// in parser->content_length.
-
+					
 					if (parser != nullptr)
 					{
 						BaseHttpTransaction* trans = static_cast<BaseHttpTransaction*>(parser->data);
@@ -918,14 +975,11 @@ namespace te
 							throw std::runtime_error(u8"In BaseHttpTransaction::OnChunkHeader() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
-						if (!trans->m_consumeAllBeforeSending)
-						{
-							std::stringstream chunkHeaderSs;
-							chunkHeaderSs << std::hex << parser->content_length;
-							chunkHeaderSs << u8"\r\n";
-							std::string chunkHeader(chunkHeaderSs.str());
-							trans->m_chunkedTransactionData.insert(trans->m_chunkedTransactionData.end(), chunkHeader.begin(), chunkHeader.end());
-						}
+						std::stringstream chunkHeaderSs;
+						chunkHeaderSs << std::hex << parser->content_length;
+						chunkHeaderSs << u8"\r\n";
+						std::string chunkHeader(chunkHeaderSs.str());
+						trans->m_payload.insert(trans->m_payload.end(), chunkHeader.begin(), chunkHeader.end());
 					}
 					else
 					{
@@ -934,12 +988,14 @@ namespace te
 							this callback, but if you're reading this, somehow it did. Welcome to the twilight zone. Nobody can wag \
 							their finger at me for not wrapping a raw pointer with a null check.");
 					}
-
+					
+					
 					return 0;
 				}
 
 				int BaseHttpTransaction::OnChunkComplete(http_parser* parser)
 				{
+					
 					if (parser != nullptr)
 					{
 						BaseHttpTransaction* trans = static_cast<BaseHttpTransaction*>(parser->data);
@@ -949,12 +1005,8 @@ namespace te
 							throw std::runtime_error(u8"In BaseHttpTransaction::OnChunkComplete() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
-						if (!trans->m_consumeAllBeforeSending)
-						{	
-							trans->m_chunkedTransactionData.push_back('\r');
-							trans->m_chunkedTransactionData.push_back('\n');
-						}
-
+						trans->m_payload.push_back('\r');
+						trans->m_payload.push_back('\n');
 					}
 					else
 					{
@@ -963,7 +1015,7 @@ namespace te
 							this callback, but if you're reading this, somehow it did. Welcome to the twilight zone. Nobody can wag \
 							their finger at me for not wrapping a raw pointer with a null check.");
 					}
-
+					
 					return 0;
 				}
 
@@ -979,6 +1031,7 @@ namespace te
 						}
 
 						trans->m_lastHeader = std::string(at, length);
+						trans->m_lastHeaderFresh = true;
 
 						if (length == 0)
 						{
@@ -1009,14 +1062,32 @@ namespace te
 						}
 
 						if (trans->m_lastHeader.length() > 0)
-						{							
-							std::string headerValue(at, length);
-							trans->AddHeader(trans->m_lastHeader, headerValue, false);
+						{	
+							if (trans->m_lastHeaderFresh)
+							{
+								std::string headerValue(at, length);
+								trans->AddHeader(trans->m_lastHeader, headerValue, false);			
+								trans->m_lastHeaderFresh = false;
+							}
+							else
+							{
+								// Since we're not guaranteed to be given all of our header data
+								// in one shot, we must assume that this data is meant to be appended
+								// to the last entered header.
+								auto range = trans->m_headers.equal_range(trans->m_lastHeader); 
+								
+								if (range.first != range.second)
+								{
+									auto appender = std::prev(range.second);
+									// Ordering is supposed to be guaranteed. This must be it.
+									appender->second.append(std::string(at, length));
+								}
+							}
 						}
 						else
 						{
 							trans->ReportError(std::string(u8"In BaseHttpTransaction::OnHeaderValue() - OnHeaderValue called while BaseHttpTransaction::m_lastHeader was empty."));
-							return -1;
+							return -1;							
 						}
 					}
 					else 
@@ -1032,6 +1103,7 @@ namespace te
 
 				int BaseHttpTransaction::OnBody(http_parser* parser, const char *at, size_t length)
 				{
+					
 					if (parser != nullptr)
 					{
 
@@ -1042,14 +1114,8 @@ namespace te
 							throw std::runtime_error(u8"In BaseHttpTransaction::OnBody() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
-						trans->m_parsedTransactionData.reserve(trans->m_parsedTransactionData.capacity() + length);
-						std::copy(at, at + length, std::back_inserter(trans->m_parsedTransactionData));
-
-						if (!trans->m_consumeAllBeforeSending && trans->IsPayloadChunked())
-						{
-							trans->m_chunkedTransactionData.reserve(trans->m_chunkedTransactionData.capacity() + length);
-							std::copy(at, at + length, std::back_inserter(trans->m_chunkedTransactionData));
-						}
+						trans->m_payload.reserve(trans->m_payload.capacity() + length);
+						std::copy(at, at + length, std::back_inserter(trans->m_payload));
 					}
 					else
 					{
@@ -1058,7 +1124,7 @@ namespace te
 							this callback, but if you're reading this, somehow it did. Welcome to the twilight zone. Nobody can wag \
 							their finger at me for not wrapping a raw pointer with a null check.");
 					}
-
+					
 					return 0;
 				}
 
