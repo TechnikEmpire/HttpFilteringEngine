@@ -2472,8 +2472,6 @@ namespace te
 							std::string parsedHost;
 							auto parseResult = p.Parse(httpPeekBuffer->data(), bytesTransferred, parsedHost);
 
-							ReportError(p.errorMessage);
-
 							switch (parseResult)
 							{
 								case PreviewParser::ParseResult::Failure:

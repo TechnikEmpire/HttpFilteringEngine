@@ -857,7 +857,6 @@ namespace te
 						}
 					}
 
-					ReportInfo(u8"success converting chunked to fixed.");
 					free(parser);
 					return true;
 				}
@@ -945,8 +944,7 @@ namespace te
 						// When the payload is complete, and we want to consume it all, we need to convert it
 						// from chunked encoding to a fixed length payload.
 						if (trans->GetConsumeAllBeforeSending())
-						{
-							trans->ReportInfo(u8"about to convert chunked to fixed.");
+						{	
 							trans->ConvertPayloadFromChunkedToFixedLength();
 						}						
 					}
