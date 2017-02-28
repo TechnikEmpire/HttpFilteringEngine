@@ -361,7 +361,9 @@ namespace te
 
 						auto hostStringRefHashed = util::string::Hash(hostStringRef);
 
-						if (m_domainRequestWhitelist.find(hostStringRefHashed) != m_domainRequestWhitelist.end())
+						auto wlSearch = m_domainRequestWhitelist.find(hostStringRefHashed);
+
+						if (wlSearch != m_domainRequestWhitelist.end() && m_programOptions->GetIsHttpCategoryFiltered(wlSearch->second))
 						{
 							// Whitelisted domain.
 							return 0;
@@ -375,9 +377,19 @@ namespace te
 						auto fullRequestHashed = util::string::Hash(boost::string_ref(fullRequest));
 						auto fullRequestNoSchemeHashed = util::string::Hash(boost::string_ref(fullRequestNoScheme));
 
-						if (m_domainRequestWhitelist.find(fullRequestNoSchemeHashed) != m_domainRequestWhitelist.end() || m_domainRequestWhitelist.find(fullRequestHashed) != m_domainRequestWhitelist.end())
+						wlSearch = m_domainRequestWhitelist.find(fullRequestNoSchemeHashed);
+
+						if (wlSearch != m_domainRequestWhitelist.end() && m_programOptions->GetIsHttpCategoryFiltered(wlSearch->second))
 						{
-							// Whitelisted request.
+							// Whitelisted full request with scheme removed.
+							return 0;
+						}
+
+						wlSearch = m_domainRequestWhitelist.find(fullRequestHashed);
+
+						if (wlSearch != m_domainRequestWhitelist.end() && m_programOptions->GetIsHttpCategoryFiltered(wlSearch->second))
+						{
+							// Whitelisted full request with scheme included.
 							return 0;
 						}
 
@@ -873,116 +885,49 @@ namespace te
 						return true;
 					}
 
-					// Check if the rule is a global selector
-					if (rule.size() >= 3 && (rule[0] == '#' && rule[2] == '#'))
-					{
-						// This is a global selector rule, not bound to a domain. Every single selector rule begins with a '#' 
-						// which is used strictly to indicate a selector rule, and the first '#' must be ignored.
-						// The second character indicates if the selector if an exception or not. If the second character is a
-						// the char '@', then the selector is meant for whitelisting. If the second character is a '#' char, then
-						// the rule is meant for blacklisting. The third character in the sequence should always be a '#' char,
-						// and all following characters are literal parts of the selector string. The fourth char may be a '.'
-						// in a class selector, or a '#' in an ID selector. If neither, then it's almost definitely a tag selector.
-						//
-						// Beyond this point, we don't need to concern ourselves. The selector engine will deal with that. We just
-						// need to trim off the special characters that the ABP syntax adds to the selectors.
+					// This is a filtering rule.
 
-						bool exception = (rule[1] == '@');
-						AddSelectorMultiDomain(m_globalRuleKey, rule.substr(2), category, exception);
+					std::string extractedRule = rule;
+
+					boost::trim(extractedRule);
+
+					if (extractedRule.size() > 0)
+					{
+						if (extractedRule[0] == '/' && extractedRule[extractedRule.size() - 1] == '/')
+						{
+							// This is a regex rule. We don't want these. I believe there's only one regex
+							// rule left inside of the ABP EasyList at the time of this writing.
+							return false;
+						}
+
+						try
+						{
+							if (extractedRule.size() > 2)
+							{	
+								if (extractedRule[0] == '@' && extractedRule[1] == '@')
+								{
+									extractedRule = extractedRule.substr(2);
+									m_domainRequestWhitelist[util::string::Hash(boost::string_ref(extractedRule))] = category;
+									return true;
+								}
+								else
+								{
+									m_domainRequestBlacklist[util::string::Hash(boost::string_ref(extractedRule))] = category;
+									return true;
+								}
+							}
+
+							return false;
+						}
+						catch (std::runtime_error& pErr)
+						{
+							std::string unhandledErrMsg(u8"In HttpFilteringEngine::ProcessAbpFormattedRule(const std::string&, const uint8_t) - Got error: ");
+							unhandledErrMsg.append(pErr.what());
+							ReportError(unhandledErrMsg);
+							return false;
+						}
+
 						return true;
-					}
-					else
-					{
-						// Note that this rule could still be a selector, but it would be bound to a specific domain. If
-						// either of these strings are found, then it is a selection filter and the text preceeding these
-						// matches is either a single domain or multiple domains separated by commas.
-						auto selectorStartPosition = rule.find(u8"##");	
-
-						if (selectorStartPosition == std::string::npos)
-						{
-							selectorStartPosition = rule.find(u8"#@");
-						}
-						
-						if (selectorStartPosition != std::string::npos && (selectorStartPosition + 3 < rule.size()))
-						{
-							boost::string_ref domains = boost::string_ref(rule.c_str(), selectorStartPosition);
-
-							// This is a selector rule with domain information attached.
-
-							if (rule[selectorStartPosition + 1] == '@')
-							{
-								// Exception selector that is domain specific. Note we cut at 3 here, instead of 2. This is
-								// because it's a domain-specific exception selector. Exception selectors that are domain
-								// specific employ a unique format, in that the "actual" selector string is preceeded by
-								// #@## instead of simply #@. So a class selector would look like #@#.
-								AddSelectorMultiDomain(m_globalRuleKey, rule.substr(selectorStartPosition + 3), category, true);
-								return true;
-							}
-							else if(rule[selectorStartPosition + 1] == '#')
-							{
-								// Inclusion selector that is domain specific. In constrast to the domain specific exception
-								// selectors, the inclusion selectors (elements that should be hidden) follow the same syntax
-								// as global selectors. That is, they are preceeded by only 2 padding characters, "##". So
-								// a domain specific class selector would look like ##.class, so we trim at pos 2.
-								AddSelectorMultiDomain(m_globalRuleKey, rule.substr(selectorStartPosition + 2), category);
-								return true;
-							}
-						}
-						else
-						{
-							// Means we got a selector rule but the bounds were not sufficient.
-							if (selectorStartPosition != std::string::npos)
-							{
-								ReportWarning(u8"In HttpFilteringEngine::ProcessAbpFormattedRule(const std::string&, const uint8_t) - Selector rule key '#' found but was at end of rule string bounds. Ignoring.");
-								return false;
-							}
-
-							// This is a filtering rule.
-
-							std::string extractedRule = rule;
-
-							boost::trim(extractedRule);
-
-							if (extractedRule.size() > 0)
-							{
-								if (extractedRule[0] == '/' && extractedRule[extractedRule.size() - 1] == '/')
-								{
-									// This is a regex rule. We don't want these. I believe there's only one regex
-									// rule left inside of the ABP EasyList at the time of this writing.
-									return false;
-								}
-
-								try
-								{
-									if (extractedRule.size() > 2)
-									{
-										std::transform(extractedRule.begin(), extractedRule.end(), extractedRule.begin(), ::tolower);
-										if (extractedRule[0] == '@' && extractedRule[1] == '@')
-										{
-											extractedRule = extractedRule.substr(2);											
-											m_domainRequestWhitelist[util::string::Hash(boost::string_ref(extractedRule))] = category;
-											return true;
-										}
-										else
-										{
-											m_domainRequestBlacklist[util::string::Hash(boost::string_ref(extractedRule))] = category;
-											return true;
-										}
-									}									
-								
-									return false;
-								}
-								catch (std::runtime_error& pErr)
-								{
-									std::string unhandledErrMsg(u8"In HttpFilteringEngine::ProcessAbpFormattedRule(const std::string&, const uint8_t) - Got error: ");
-									unhandledErrMsg.append(pErr.what());
-									ReportError(unhandledErrMsg);
-									return false;
-								}								
-
-								return true;
-							}
-						}
 					}
 
 					// How did we not handle this rule??

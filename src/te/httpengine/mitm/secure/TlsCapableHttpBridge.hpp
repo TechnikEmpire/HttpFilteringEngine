@@ -1211,7 +1211,8 @@ namespace te
 							{
 								// Client is all done, get the response headers.
 
-								SetStreamTimeout(5000);								
+								SetStreamTimeout(5000);		
+
 								boost::asio::async_read(
 									m_upstreamSocket,
 									m_response->GetReadBuffer(), 
@@ -2465,46 +2466,20 @@ namespace te
 									// Set the timeout to something reasonable.
 									SetStreamTimeout(5000);
 
-									if (p.HeadersComplete())
+									// Create a new request for this data and just jump to OnDownstreamHeaders.
+									try
 									{
-										// Create a new request for this data and just jump to OnDownstreamHeaders.
-										try
-										{
-											m_request.reset(new http::HttpRequest(httpPeekBuffer->data(), bytesTransferred));											
-										}
-										catch (std::exception& e)
-										{
-											ReportError(e.what());
-											Kill();
-											return;
-										}
-										
-										OnDownstreamHeaders(error, bytesTransferred);
-										return;
+										m_request.reset(new http::HttpRequest(httpPeekBuffer->data(), bytesTransferred));
 									}
-									else
+									catch (std::exception& e)
 									{
-										ReportError(u8"Is HTTP but headers incomplete!");
+										ReportError(e.what());
 										Kill();
 										return;
 									}
 
-									/*
-									boost::asio::async_read_until(
-										m_downstreamSocket,
-										m_request->GetHeaderReadBuffer(),
-										DoubleCRLF,
-										m_downstreamStrand.wrap(
-											std::bind(
-												&TlsCapableHttpBridge::OnDownstreamHeaders,
-												shared_from_this(),
-												std::placeholders::_1,
-												std::placeholders::_2
-											)
-										)
-									);
-									*/
-									
+									OnDownstreamHeaders(error, bytesTransferred);
+									return;									
 								}
 								break;
 
