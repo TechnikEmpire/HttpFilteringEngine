@@ -19,7 +19,6 @@ namespace te
 		{
 			namespace diversion
 			{
-
 				const uint32_t WinDiverter::StandardHttpPort = htons(80);
 				const uint32_t WinDiverter::StandardHttpsPort = htons(443);
 
@@ -28,13 +27,13 @@ namespace te
 					util::cb::MessageFunction onInfo,
 					util::cb::MessageFunction onWarning,
 					util::cb::MessageFunction onError
-					) :
+				) :
 					BaseDiverter(
 						firewallCheckCb,
 						onInfo,
 						onWarning,
 						onError
-						)
+					)
 				{
 					m_thisPid = GetCurrentProcessId();
 
@@ -46,7 +45,6 @@ namespace te
 
 				WinDiverter::~WinDiverter()
 				{
-
 				}
 
 				const uint16_t WinDiverter::GetHttpListenerPort() const
@@ -75,7 +73,6 @@ namespace te
 
 					if (m_running == false)
 					{
-
 						// Firefox does some trickery at startup, talking to itself over the local loopback
 						// address. WinDivert, the driver that powers this specific Diverter, can capture
 						// loopback traffic. If we screw with this traffic at all, in the case of FireFox that is,
@@ -149,7 +146,7 @@ namespace te
 							WinDivertClose(m_quicBlockHandle);
 							m_quicBlockHandle = INVALID_HANDLE_VALUE;
 						}
-					}					
+					}
 				}
 
 				const bool WinDiverter::IsRunning() const
@@ -176,21 +173,23 @@ namespace te
 					DWORD ipv4TcpTableSize = 0;
 
 					PMIB_TCP6TABLE2 ipv6TcpTable = nullptr;
-					DWORD ipv6TcpTableSize = 0;					
+					DWORD ipv6TcpTableSize = 0;
 
-					#ifdef HTTP_FILTERING_ENGINE_USE_EX
-						OVERLAPPED recvOverlapped;
-						HANDLE recvEvent = nullptr;
-						DWORD recvAsyncIoLen;
-					#endif
+					std::array<uint8_t, 4> ipv4Copy;
+
+#ifdef HTTP_FILTERING_ENGINE_USE_EX
+					OVERLAPPED recvOverlapped;
+					HANDLE recvEvent = nullptr;
+					DWORD recvAsyncIoLen;
+#endif
 
 					// Rather than creating a structures to be shared across all thread that track
 					// which apps have firewall permissions, we simple create one per-thread. We waste
-					// a little bit of space, but we avoid the headaches of synchronization. Note 
+					// a little bit of space, but we avoid the headaches of synchronization. Note
 					// however that this convenience will have to go once we implement things like
 					// port independent protocol mapping, and proper flow tracking, which is needed
-					// to ensure we supply filtering to traffic other than port 80 and 443.					
-					
+					// to ensure we supply filtering to traffic other than port 80 and 443.
+
 					// So presently, rather than doing proper flow tracking and such, we kind of just do
 					// a dirty little hack. We keep track of "flows" only by destination local port, then
 					// every couple of seconds we re-check the process ID bound to the port to make sure
@@ -211,276 +210,295 @@ namespace te
 
 						// WinDivert has a recv and send overload that uses overlapped IO to provide nonblocking
 						// recv and send functions that can be manually waited and timed out. These overloads
-						// have an "ex" suffix. 
+						// have an "ex" suffix.
 						//
 						// Enabling this is optional at compile time. While I much prefer the idea of being able
-						// to guarantee a thread is never going to be chocking indefinitely on a recv, I've 
+						// to guarantee a thread is never going to be chocking indefinitely on a recv, I've
 						// experienced... unstable results using the recvex function.
-						#ifdef HTTP_FILTERING_ENGINE_USE_EX
+#ifdef HTTP_FILTERING_ENGINE_USE_EX
 
-							recvAsyncIoLen = 0;
-							memset(&recvOverlapped, 0, sizeof(OVERLAPPED));
-							recvEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+						recvAsyncIoLen = 0;
+						memset(&recvOverlapped, 0, sizeof(OVERLAPPED));
+						recvEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
-							if (recvEvent == nullptr)
+						if (recvEvent == nullptr)
+						{
+							std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - While creating RecvEx event, got error:\t");
+							errMessage.append(std::to_string(GetLastError()));
+							ReportError(errMessage);
+							continue;
+						}
+
+						recvOverlapped.hEvent = recvEvent;
+
+						if (!WinDivertRecvEx(divertHandle, readBuffer.data(), PacketBufferLength, 0, &addr, &recvLength, &recvOverlapped))
+						{
+							auto err = GetLastError();
+							if (err != ERROR_IO_PENDING)
 							{
-								std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - While creating RecvEx event, got error:\t");
-								errMessage.append(std::to_string(GetLastError()));
+								std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, got error:\t");
+								errMessage.append(std::to_string(err));
 								ReportError(errMessage);
 								continue;
 							}
 
-							recvOverlapped.hEvent = recvEvent;
+							// XXX TODO - Had to set this timeout VERY high when I was diverting
+							// DNS once upon a time, perhaps this isn't the case since we're
+							// sticking to TCP. Never figured out why I had to do this in the
+							// first place.
+							auto result = WaitForSingleObject(recvEvent, 5000);
 
-							if (!WinDivertRecvEx(divertHandle, readBuffer.data(), PacketBufferLength, 0, &addr, &recvLength, &recvOverlapped))
+							if (result != WAIT_OBJECT_0)
 							{
-								auto err = GetLastError();
-								if (err != ERROR_IO_PENDING)
+								if (result != WAIT_TIMEOUT)
 								{
+									// We don't care if it's a timeout. Thread will resume.
 									std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, got error:\t");
-									errMessage.append(std::to_string(err));
-									ReportError(errMessage);
-									continue;
-								}
-
-								// XXX TODO - Had to set this timeout VERY high when I was diverting
-								// DNS once upon a time, perhaps this isn't the case since we're
-								// sticking to TCP. Never figured out why I had to do this in the
-								// first place.
-								auto result = WaitForSingleObject(recvEvent, 5000);
-
-								if (result != WAIT_OBJECT_0)
-								{
-									if (result != WAIT_TIMEOUT)
-									{
-										// We don't care if it's a timeout. Thread will resume.
-										std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, got error:\t");
-										errMessage.append(std::to_string(GetLastError()));
-										ReportError(errMessage);										
-									}
-									/*
-									else
-									{
-										ReportError(u8"In WinDiverter::RunDiversion(LPVOID) - Call to WinDivert RecvEx timed out.");
-									}
-									*/
-
-									CloseHandle(recvEvent);
-									continue;
-								}
-
-								if (!GetOverlappedResult(divertHandle, &recvOverlapped, &recvAsyncIoLen, TRUE))
-								{
-									std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, while fetching overlapped result, got error:\t");
 									errMessage.append(std::to_string(GetLastError()));
 									ReportError(errMessage);
-
-									CloseHandle(recvEvent);
-									continue;
 								}
+								/*
+								else
+								{
+									ReportError(u8"In WinDiverter::RunDiversion(LPVOID) - Call to WinDivert RecvEx timed out.");
+								}
+								*/
 
-								// Success at long last!
-								recvLength = recvAsyncIoLen;
 								CloseHandle(recvEvent);
-							}
-						#else						
-
-							if (!WinDivertRecv(divertHandle, readBuffer.data(), PacketBufferLength, &addr, &recvLength))
-							{
-								std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert Recv, got error:\t");
-								errMessage.append(std::to_string(GetLastError()));
-								ReportError(errMessage);
 								continue;
 							}
 
-						#endif // #ifdef HTTP_FILTERING_ENGINE_USE_EX
+							if (!GetOverlappedResult(divertHandle, &recvOverlapped, &recvAsyncIoLen, TRUE))
+							{
+								std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, while fetching overlapped result, got error:\t");
+								errMessage.append(std::to_string(GetLastError()));
+								ReportError(errMessage);
+
+								CloseHandle(recvEvent);
+								continue;
+							}
+
+							// Success at long last!
+							recvLength = recvAsyncIoLen;
+							CloseHandle(recvEvent);
+						}
+#else
+
+						if (!WinDivertRecv(divertHandle, readBuffer.data(), PacketBufferLength, &addr, &recvLength))
+						{
+							std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert Recv, got error:\t");
+							errMessage.append(std::to_string(GetLastError()));
+							ReportError(errMessage);
+							continue;
+						}
+
+#endif // #ifdef HTTP_FILTERING_ENGINE_USE_EX
 
 						// Since our filter is set to be outbound and TCP only, we don't really need to check this
 						// at all. But, in case the filter is modified later, it doesn't hurt.
 						if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND)
 						{
 							// We don't care what the return value is. False can be a valid return value
-							// according to the docs. So we just fire it and check the validity of our 
+							// according to the docs. So we just fire it and check the validity of our
 							// pointers after, and that's where we get our verification that this call
 							// succeeded.
 							WinDivertHelperParsePacket(readBuffer.data(), recvLength, &ipV4Header, &ipV6Header, nullptr, nullptr, &tcpHeader, nullptr, &payloadBuffer, &payloadLength);
-							
+
 							// I put the checks for ipv4 and ipv6 as a double if statement rather
 							// than an else if because I'm not sure how that would affect dual-mode
 							// sockets. Perhaps it's possible for both headers to be defined.
 							// Probably not, but since I don't know, I err on the side of awesome,
 							// or uhh, something like that.
 
+							// We check local packets for TOR/SOCKS packets here. However, if
+							// we don't find something we want to block on local addresses, then
+							// we want to skip these for the rest of the filtering and just
+							// let them through.
+							bool isLocalIpv4 = false;
 							if (ipV4Header != nullptr && tcpHeader != nullptr)
-							{		
-
-								if (payloadBuffer != nullptr)
-								{
-									if (IsSocksProxyConnect(static_cast<uint8_t*>(payloadBuffer), payloadLength))
-									{
-										// Skip past this packet all together. We refuse to allow
-										// any other proxy to function because this is our castle.
-										ReportInfo(u8"Blocking SOCKS proxy.");
-										payloadBuffer = nullptr;
-										payloadLength = 0;
-										continue;
-									}
-								}
-
-								if (tcpHeader->SrcPort == m_httpListenerPort || tcpHeader->SrcPort == m_httpsListenerPort)
-								{
-									// Means that the data is originating from our proxy in response
-									// to a client's request, which means it was originally meant to
-									// go somewhere else. We need to reorder the data such as the
-									// src and destination ports and addresses and divert it back
-									// inbound, so it appears to be an inbound response from the
-									// original external server.
-									// 
-									// In our case, this is very easy to figure out, because we are
-									// not yet doing any port independent protocol mapping and thus
-									// are only diverting port 80 traffic to m_httpListenerPort, and
-									// port 443 traffic to m_httpsListenerPort. However, XXX TODO -
-									// When we start doing these things, we'll need a mechanism by
-									// which to store the original port before we changed it. This
-									// would have to be part of a proper flow tracking system.
-
-									uint32_t dstAddr = ipV4Header->DstAddr;
-									ipV4Header->DstAddr = ipV4Header->SrcAddr;
-									ipV4Header->SrcAddr = dstAddr;
-
-									tcpHeader->SrcPort = (tcpHeader->SrcPort == m_httpListenerPort) ? StandardHttpPort : StandardHttpsPort;
-
-									addr.Direction = WINDIVERT_DIRECTION_INBOUND;
-								}
-								else if(tcpHeader->DstPort == StandardHttpPort || tcpHeader->DstPort == StandardHttpsPort)
-								{
-									// This means outbound traffic has been captured that we know for sure is
-									// not coming from our proxy in response to a client, but we don't know that it
-									// isn't the upstream portion of our proxy trying to fetch a response on behalf
-									// of a connected client. So, we need to check if we have a cached result for 
-									// information about the binary generating the outbound traffic for two reasons.
-									//
-									// First, we need to ensure that it's not us, obviously. Secondly, we need to
-									// ensure that the binary has been granted firewall access to generate outbound
-									// traffic.
-									//
-									// Then, whatever the results, if it wasn't cached, we'll cache it for a short
-									// period of time.
-
-									const auto& cached = tcpPidLastCheck.find(tcpHeader->SrcPort);
-									auto now = std::chrono::high_resolution_clock::now();
-
-									bool hasFirewallAccess = false;
-
-									unsigned long procPid = 0;
-
-									if (cached != tcpPidLastCheck.end() && (std::get<2>(cached->second) > now))
-									{
-										procPid = std::get<0>(cached->second);
-									}
-									else
-									{
-										procPid = GetPacketProcess(tcpHeader->SrcPort, ipV4Header->SrcAddr, &ipv4TcpTable, ipv4TcpTableSize);
-									}
-
-									now += std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(3));
-
-									// So we make sure that this packet doesn't belong to us (the
-									// proxy), we make sure that we also got a valid process
-									// (non-zero). If all these things pass, then we want to divert
-									// this packet to the proxy.
-									if (procPid != m_thisPid && procPid != 0)
-									{
-										auto processName = GetPacketProcessBinaryPath(procPid);
-
-										if (processName.size() > 0)
-										{
-											hasFirewallAccess = m_firewallCheckCb(processName.c_str(), processName.size());
-
-											tcpPidLastCheck[tcpHeader->SrcPort] = ProcessNfo{ procPid, hasFirewallAccess, now };
-										}
-
-										if (hasFirewallAccess)
-										{
-											// If the process was identified as a process that is permitted to access the
-											// internet, and is not a system process or ourselves, then we divert its packets
-											// back inbound to the local machine, changing the destination port appropriately.
-											uint32_t dstAddress = ipV4Header->DstAddr;
-											
-											ipV4Header->DstAddr = ipV4Header->SrcAddr;
-											ipV4Header->SrcAddr = dstAddress;
-
-											addr.Direction = WINDIVERT_DIRECTION_INBOUND;
-
-											tcpHeader->DstPort = (tcpHeader->DstPort == StandardHttpPort) ? m_httpListenerPort : m_httpsListenerPort;
-										}
-									}
-								}
-							}
-							
-							// The ipV6 version works exactly the same, just with larger storage for the larger
-							// addresses. Look at the ipv4 version notes for clarification on anything.
-							if (ipV6Header != nullptr && tcpHeader != nullptr)
 							{
-								if (tcpHeader->SrcPort == m_httpListenerPort || tcpHeader->SrcPort == m_httpsListenerPort)
+								ipv4Copy[0] = (ipV4Header->DstAddr >> 24) & 0xFF;
+								ipv4Copy[2] = (ipV4Header->DstAddr >> 16) & 0xFF;
+								ipv4Copy[3] = (ipV4Header->DstAddr >> 8) & 0xFF;
+								ipv4Copy[3] = ipV4Header->DstAddr & 0xFF;
+
+								isLocalIpv4 = IsV4AddressPrivate(ipv4Copy);
+
+								if (isLocalIpv4)
 								{
-									uint32_t dstAddr[4];
-
-									std::copy(ipV6Header->DstAddr, ipV6Header->DstAddr + 4, dstAddr);	
-									std::copy(ipV6Header->SrcAddr, ipV6Header->SrcAddr + 4, ipV6Header->DstAddr);
-									std::copy(dstAddr, dstAddr + 4, ipV6Header->SrcAddr);
-
-									tcpHeader->SrcPort = (tcpHeader->SrcPort == m_httpListenerPort) ? StandardHttpPort : StandardHttpsPort;
-
-									addr.Direction = WINDIVERT_DIRECTION_INBOUND;
-								}
-								else if (tcpHeader->DstPort == StandardHttpPort || tcpHeader->DstPort == StandardHttpsPort)
-								{
-
-									const auto& cached = tcpPidLastCheck.find(tcpHeader->SrcPort);
-									auto now = std::chrono::high_resolution_clock::now();
-
-									bool hasFirewallAccess = false;
-
-									unsigned long procPid = 0;
-
-									if (cached != tcpPidLastCheck.end() && (std::get<2>(cached->second) > now))
+									if (payloadBuffer != nullptr)
 									{
-										procPid = std::get<0>(cached->second);
-									}
-									else
-									{
-										procPid = GetPacketProcess(tcpHeader->SrcPort, ipV6Header->SrcAddr, &ipv6TcpTable, ipv6TcpTableSize);
-									}
-
-									now += std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(3));
-
-									if (procPid != m_thisPid && procPid != 0)
-									{
-										auto processName = GetPacketProcessBinaryPath(procPid);
-
-										if (processName.size() > 0)
+										if (IsSocksProxyConnect(static_cast<uint8_t*>(payloadBuffer), payloadLength))
 										{
-											hasFirewallAccess = m_firewallCheckCb(processName.c_str(), processName.size());
-
-											tcpPidLastCheck[tcpHeader->SrcPort] = ProcessNfo{ procPid, hasFirewallAccess, now };
-										}
-
-										if (hasFirewallAccess)
-										{
-											uint32_t dstAddr[4];
-
-											std::copy(ipV6Header->DstAddr, ipV6Header->DstAddr + 4, dstAddr);
-											std::copy(ipV6Header->SrcAddr, ipV6Header->SrcAddr + 4, ipV6Header->DstAddr);
-											std::copy(dstAddr, dstAddr + 4, ipV6Header->SrcAddr);
-
-											addr.Direction = WINDIVERT_DIRECTION_INBOUND;
-
-											tcpHeader->DstPort = (tcpHeader->DstPort == StandardHttpPort) ? m_httpListenerPort : m_httpsListenerPort;
+											// Skip past this packet all together. We refuse to allow
+											// any other proxy to function because this is our castle.
+											ReportInfo(u8"Blocking SOCKS proxy.");
+											payloadBuffer = nullptr;
+											payloadLength = 0;
+											continue;
 										}
 									}
 								}
 							}
+
+							if (!isLocalIpv4)
+							{
+								if (ipV4Header != nullptr && tcpHeader != nullptr)
+								{
+									if (tcpHeader->SrcPort == m_httpListenerPort || tcpHeader->SrcPort == m_httpsListenerPort)
+									{
+										// Means that the data is originating from our proxy in response
+										// to a client's request, which means it was originally meant to
+										// go somewhere else. We need to reorder the data such as the
+										// src and destination ports and addresses and divert it back
+										// inbound, so it appears to be an inbound response from the
+										// original external server.
+										//
+										// In our case, this is very easy to figure out, because we are
+										// not yet doing any port independent protocol mapping and thus
+										// are only diverting port 80 traffic to m_httpListenerPort, and
+										// port 443 traffic to m_httpsListenerPort. However, XXX TODO -
+										// When we start doing these things, we'll need a mechanism by
+										// which to store the original port before we changed it. This
+										// would have to be part of a proper flow tracking system.
+
+										uint32_t dstAddr = ipV4Header->DstAddr;
+										ipV4Header->DstAddr = ipV4Header->SrcAddr;
+										ipV4Header->SrcAddr = dstAddr;
+
+										tcpHeader->SrcPort = (tcpHeader->SrcPort == m_httpListenerPort) ? StandardHttpPort : StandardHttpsPort;
+
+										addr.Direction = WINDIVERT_DIRECTION_INBOUND;
+									}
+									else if (tcpHeader->DstPort == StandardHttpPort || tcpHeader->DstPort == StandardHttpsPort)
+									{
+										// This means outbound traffic has been captured that we know for sure is
+										// not coming from our proxy in response to a client, but we don't know that it
+										// isn't the upstream portion of our proxy trying to fetch a response on behalf
+										// of a connected client. So, we need to check if we have a cached result for
+										// information about the binary generating the outbound traffic for two reasons.
+										//
+										// First, we need to ensure that it's not us, obviously. Secondly, we need to
+										// ensure that the binary has been granted firewall access to generate outbound
+										// traffic.
+										//
+										// Then, whatever the results, if it wasn't cached, we'll cache it for a short
+										// period of time.
+
+										const auto& cached = tcpPidLastCheck.find(tcpHeader->SrcPort);
+										auto now = std::chrono::high_resolution_clock::now();
+
+										bool hasFirewallAccess = false;
+
+										unsigned long procPid = 0;
+
+										if (cached != tcpPidLastCheck.end() && (std::get<2>(cached->second) > now))
+										{
+											procPid = std::get<0>(cached->second);
+										}
+										else
+										{
+											procPid = GetPacketProcess(tcpHeader->SrcPort, ipV4Header->SrcAddr, &ipv4TcpTable, ipv4TcpTableSize);
+										}
+
+										now += std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(3));
+
+										// So we make sure that this packet doesn't belong to us (the
+										// proxy), we make sure that we also got a valid process
+										// (non-zero). If all these things pass, then we want to divert
+										// this packet to the proxy.
+										if (procPid != m_thisPid && procPid != 0)
+										{
+											auto processName = GetPacketProcessBinaryPath(procPid);
+
+											if (processName.size() > 0)
+											{
+												hasFirewallAccess = m_firewallCheckCb(processName.c_str(), processName.size());
+
+												tcpPidLastCheck[tcpHeader->SrcPort] = ProcessNfo{ procPid, hasFirewallAccess, now };
+											}
+
+											if (hasFirewallAccess)
+											{
+												// If the process was identified as a process that is permitted to access the
+												// internet, and is not a system process or ourselves, then we divert its packets
+												// back inbound to the local machine, changing the destination port appropriately.
+												uint32_t dstAddress = ipV4Header->DstAddr;
+
+												ipV4Header->DstAddr = ipV4Header->SrcAddr;
+												ipV4Header->SrcAddr = dstAddress;
+
+												addr.Direction = WINDIVERT_DIRECTION_INBOUND;
+
+												tcpHeader->DstPort = (tcpHeader->DstPort == StandardHttpPort) ? m_httpListenerPort : m_httpsListenerPort;
+											}
+										}
+									}
+								}
+
+								// The ipV6 version works exactly the same, just with larger storage for the larger
+								// addresses. Look at the ipv4 version notes for clarification on anything.
+								if (ipV6Header != nullptr && tcpHeader != nullptr)
+								{
+									if (tcpHeader->SrcPort == m_httpListenerPort || tcpHeader->SrcPort == m_httpsListenerPort)
+									{
+										uint32_t dstAddr[4];
+
+										std::copy(ipV6Header->DstAddr, ipV6Header->DstAddr + 4, dstAddr);
+										std::copy(ipV6Header->SrcAddr, ipV6Header->SrcAddr + 4, ipV6Header->DstAddr);
+										std::copy(dstAddr, dstAddr + 4, ipV6Header->SrcAddr);
+
+										tcpHeader->SrcPort = (tcpHeader->SrcPort == m_httpListenerPort) ? StandardHttpPort : StandardHttpsPort;
+
+										addr.Direction = WINDIVERT_DIRECTION_INBOUND;
+									}
+									else if (tcpHeader->DstPort == StandardHttpPort || tcpHeader->DstPort == StandardHttpsPort)
+									{
+										const auto& cached = tcpPidLastCheck.find(tcpHeader->SrcPort);
+										auto now = std::chrono::high_resolution_clock::now();
+
+										bool hasFirewallAccess = false;
+
+										unsigned long procPid = 0;
+
+										if (cached != tcpPidLastCheck.end() && (std::get<2>(cached->second) > now))
+										{
+											procPid = std::get<0>(cached->second);
+										}
+										else
+										{
+											procPid = GetPacketProcess(tcpHeader->SrcPort, ipV6Header->SrcAddr, &ipv6TcpTable, ipv6TcpTableSize);
+										}
+
+										now += std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::seconds(3));
+
+										if (procPid != m_thisPid && procPid != 0)
+										{
+											auto processName = GetPacketProcessBinaryPath(procPid);
+
+											if (processName.size() > 0)
+											{
+												hasFirewallAccess = m_firewallCheckCb(processName.c_str(), processName.size());
+
+												tcpPidLastCheck[tcpHeader->SrcPort] = ProcessNfo{ procPid, hasFirewallAccess, now };
+											}
+
+											if (hasFirewallAccess)
+											{
+												uint32_t dstAddr[4];
+
+												std::copy(ipV6Header->DstAddr, ipV6Header->DstAddr + 4, dstAddr);
+												std::copy(ipV6Header->SrcAddr, ipV6Header->SrcAddr + 4, ipV6Header->DstAddr);
+												std::copy(dstAddr, dstAddr + 4, ipV6Header->SrcAddr);
+
+												addr.Direction = WINDIVERT_DIRECTION_INBOUND;
+
+												tcpHeader->DstPort = (tcpHeader->DstPort == StandardHttpPort) ? m_httpListenerPort : m_httpsListenerPort;
+											}
+										}
+									}
+								}
+							} // if(!isLocalIpv4)
 						} // if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND)
 
 						payloadBuffer = nullptr;
@@ -498,7 +516,6 @@ namespace te
 							ReportError(errMessage);
 							continue;
 						}
-
 					}// while (m_running)
 
 					if (ipv4TcpTable != nullptr)
@@ -529,7 +546,7 @@ namespace te
 					{
 						DWORD resSize = MAX_PATH;
 						char filename[MAX_PATH];
-						
+
 						if (QueryFullProcessImageNameA(processHandle, 0, filename, &resSize) == 0)
 						{
 							ReportError(u8"In WinDiverter::GetPacketProcess(const unsigned long) - Failed to get binary path.");
@@ -558,7 +575,7 @@ namespace te
 					if (currentTableSize == 0)
 					{
 						currentTableSize = sizeof(MIB_TCPTABLE2);
-						*table = static_cast<PMIB_TCPTABLE2>(malloc(currentTableSize));						
+						*table = static_cast<PMIB_TCPTABLE2>(malloc(currentTableSize));
 					}
 
 					if (*table == nullptr)
@@ -610,7 +627,7 @@ namespace te
 						if (*table != nullptr)
 						{
 							free(*table);
-							*table = nullptr;							
+							*table = nullptr;
 						}
 
 						currentTableSize = 0;
@@ -677,19 +694,19 @@ namespace te
 						for (DWORD i = 0; i < (*table)->dwNumEntries; ++i)
 						{
 							uint64_t pp1 = (
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[0]) << 48) | 
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[1]) << 32) | 
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[2]) << 16) | 
+								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[0]) << 48) |
+								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[1]) << 32) |
+								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[2]) << 16) |
 								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[3]))
 								);
 
 							uint64_t pp2 = (
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[4]) << 48) | 
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[5]) << 32) | 
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[6]) << 16) | 
+								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[4]) << 48) |
+								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[5]) << 32) |
+								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[6]) << 16) |
 								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[7]))
 								);
-							
+
 							// The reason why we accept zero as the address is that it is equal to "[::]:PORT", so
 							// it counts.
 							if ((pp1 == 0 && pp2 == 0) || (pp1 == p1 && pp2 == p2))
@@ -716,9 +733,7 @@ namespace te
 
 					return 0;
 				}
-
 			} /* namespace diversion */
 		}/* namespace mitm */
 	}/* namespace httpengine */
 }/* namespace te */
-
