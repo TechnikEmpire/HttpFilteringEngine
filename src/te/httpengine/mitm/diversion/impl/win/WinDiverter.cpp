@@ -317,10 +317,10 @@ namespace te
 							bool isLocalIpv4 = false;
 							if (ipV4Header != nullptr && tcpHeader != nullptr)
 							{
-								ipv4Copy[0] = (ipV4Header->DstAddr >> 24) & 0xFF;
+								ipv4Copy[0] = ipV4Header->DstAddr & 0xFF; 
+								ipv4Copy[1] = (ipV4Header->DstAddr >> 8) & 0xFF; 
 								ipv4Copy[2] = (ipV4Header->DstAddr >> 16) & 0xFF;
-								ipv4Copy[3] = (ipV4Header->DstAddr >> 8) & 0xFF;
-								ipv4Copy[3] = ipV4Header->DstAddr & 0xFF;
+								ipv4Copy[3] = (ipV4Header->DstAddr >> 24) & 0xFF;
 
 								isLocalIpv4 = IsV4AddressPrivate(ipv4Copy);
 

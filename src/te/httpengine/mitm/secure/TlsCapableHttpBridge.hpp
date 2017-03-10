@@ -2064,7 +2064,6 @@ namespace te
 
 										if (hostnameLength > 0)
 										{
-
 											m_upstreamHost = hostName.to_string();
 
 											// XXX TODO - See notes in the version of ::OnResolve(...), specialized for TLS clients.
