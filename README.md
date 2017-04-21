@@ -44,12 +44,12 @@ dotnet run -X -D ..\..\HttpFilteringEngine
 # Run build again.
 dotnet run -C Release,Debug -A x86,x64 -D ..\..\HttpFilteringEngine
 ```
-####Notice  
+#### Notice  
 There is currently an issue with junctions that modular boost creates during the clean process. This may cause the clean process to fail the first time. Re-running the clean command on failure will resolve this issue. Windows for some reason may complain that access is denied on first attempt to delete the junction, but it will succeed the second time.
 
 Once this process succeeds, you can open up the Visual Studio solution and build at-will. 
 
-####Notice  
+#### Notice  
 This configuration process is only required once. You do not need to run it again once the project has been configured successfully.
 
 # What Is It & Future  
