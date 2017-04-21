@@ -16,6 +16,8 @@ BuildBot is designed to be cross platform, but currently the build scripts for H
    - Latest version for [Windows x64 host](https://dotnetcli.blob.core.windows.net/dotnet/preview/Installers/Latest/dotnet-win-x64.latest.exe).
    - Latest version for [Windows x86 host](https://dotnetcli.blob.core.windows.net/dotnet/preview/Installers/Latest/dotnet-win-x86.latest.exe).
    - You can find bleeding edge releases [here](https://github.com/dotnet/cli#installers-and-binaries).
+  - Dotnet tooling preview for VS2015.
+    - Latest version is [here](https://go.microsoft.com/fwlink/?LinkID=827546).
 
 Once you have those requirements installed, you can get all deps setup with the following commands:
 
