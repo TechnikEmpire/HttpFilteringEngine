@@ -16,6 +16,8 @@ BuildBot is designed to be cross platform, but currently the build scripts for H
    - Latest version for [Windows x64 host](https://dotnetcli.blob.core.windows.net/dotnet/preview/Installers/Latest/dotnet-win-x64.latest.exe).
    - Latest version for [Windows x86 host](https://dotnetcli.blob.core.windows.net/dotnet/preview/Installers/Latest/dotnet-win-x86.latest.exe).
    - You can find bleeding edge releases [here](https://github.com/dotnet/cli#installers-and-binaries).
+  - Dotnet tooling preview for VS2015.
+    - Latest version is [here](https://go.microsoft.com/fwlink/?LinkID=827546).
 
 Once you have those requirements installed, you can get all deps setup with the following commands:
 
@@ -44,12 +46,12 @@ dotnet run -X -D ..\..\HttpFilteringEngine
 # Run build again.
 dotnet run -C Release,Debug -A x86,x64 -D ..\..\HttpFilteringEngine
 ```
-####Notice  
+#### Notice  
 There is currently an issue with junctions that modular boost creates during the clean process. This may cause the clean process to fail the first time. Re-running the clean command on failure will resolve this issue. Windows for some reason may complain that access is denied on first attempt to delete the junction, but it will succeed the second time.
 
 Once this process succeeds, you can open up the Visual Studio solution and build at-will. 
 
-####Notice  
+#### Notice  
 This configuration process is only required once. You do not need to run it again once the project has been configured successfully.
 
 # What Is It & Future  
