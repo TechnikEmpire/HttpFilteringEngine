@@ -309,7 +309,7 @@ namespace te
 					/// the state of the transaction to complete, removes all headers about
 					/// compression, content length or transfer encoding, then injects a new
 					/// content-length header with the size of the supplied payload.
-					/// 
+					///
 					/// As such, this method assumes that the supplied payload is uncompressed. If
 					/// compression is required, pass uncompressed data here, then call the
 					/// ::CompressDeflate() or ::CompressGzip() members.
@@ -317,7 +317,13 @@ namespace te
 					/// <param name="payload">
 					/// The payload to be moved to the internal payload buffer.
 					/// </param>
-					void SetPayload(std::vector<char>&& payload);
+					/// <param name="includesHeaders">
+					/// If set to true, it will be assumed that headers are included in the supplied
+					/// payload. Note that the headers will not be parsed out. Rather, the internal
+					/// state will be irrevocably modified to force the headers to be read from the
+					/// payload only.
+					/// </param>
+					void SetPayload(std::vector<char>&& payload, const bool includesHeaders = false);
 
 					/// <summary>
 					/// Copies the supplied payload to the internal transaction payload buffer. Sets
@@ -332,7 +338,13 @@ namespace te
 					/// <param name="payload">
 					/// The payload to be copied to the internal payload buffer.
 					/// </param>
-					void SetPayload(const std::vector<char>& payload);
+					/// <param name="includesHeaders">
+					/// If set to true, it will be assumed that headers are included in the supplied
+					/// payload. Note that the headers will not be parsed out. Rather, the internal
+					/// state will be irrevocably modified to force the headers to be read from the
+					/// payload only.
+					/// </param>
+					void SetPayload(const std::vector<char>& payload, const bool includesHeaders = false);
 
 					/// <summary>
 					/// Check to see if the transaction payload has been fully received. This will

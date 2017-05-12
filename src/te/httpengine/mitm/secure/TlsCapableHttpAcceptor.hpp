@@ -26,14 +26,6 @@ namespace te
 				class BaseInMemoryCertificateStore;
 			} /* namespace secure */
 		} /* namespace mitm */
-
-		namespace filtering
-		{		
-			namespace http
-			{
-				class HttpFilteringEngine;
-			} /* namespace http */
-		} /* namespace filtering */
 	} /* namespace httpengine */
 } /* namespace te */
 
@@ -79,11 +71,6 @@ namespace te
 					/// <param name="service">
 					/// A valid pointer to the ::asio::io_service that will be driving the acceptor.
 					/// </param>
-					/// <param name="filteringEngine">
-					/// A valid pointer to the HttpFilteringEngine that will be provided to each
-					/// client, and used to filter client requests and data according to configured
-					/// options.
-					/// </param>
 					/// <param name="port">
 					/// The port number that the acceptor should listen on. Default value is zero,
 					/// which tells the OS to select an available port from the ephimeral port
@@ -121,23 +108,25 @@ namespace te
 					/// </param>
 					TlsCapableHttpAcceptor(
 						boost::asio::io_service* service,
-						filtering::http::HttpFilteringEngine* filteringEngine,
 						uint16_t port = 0,
 						const std::string& caBundleAbsPath = std::string(u8"none"),
 						BaseInMemoryCertificateStore* store = nullptr,
+						util::cb::HttpMessageBeginCheckFunction onMessageBegin = nullptr,
+						util::cb::HttpMessageEndCheckFunction onMessageEnd = nullptr,
 						util::cb::MessageFunction onInfoCb = nullptr,
 						util::cb::MessageFunction onWarnCb = nullptr,
 						util::cb::MessageFunction onErrorCb = nullptr
-						) 
+					)
 						:
 						util::cb::EventReporter(onInfoCb, onWarnCb, onErrorCb),
 						m_service(service),
-						m_engine(filteringEngine),
 						m_caBundleAbsolutePath(caBundleAbsPath),
 						m_store(store),
 						m_acceptor(*service, boost::asio::ip::tcp::endpoint(boost::asio::ip::address(), port)),
 						m_clientContext(*service, boost::asio::ssl::context::sslv23_client),
-						m_defaultServerContext(*service, boost::asio::ssl::context::tlsv12_server)
+						m_defaultServerContext(*service, boost::asio::ssl::context::tlsv12_server),
+						m_onMessageBegin(onMessageBegin),
+						m_onMessageEnd(onMessageEnd)
 					{
 
 						bool isTls = std::is_same<AcceptorType, network::TlsSocket>::value;
@@ -217,7 +206,7 @@ namespace te
 						{
 							try
 							{
-								SharedBridge session = std::make_shared<TlsCapableHttpBridge<AcceptorType>>(m_service, m_engine, m_store, &m_defaultServerContext, &m_clientContext, m_onInfo, m_onWarning, m_onError);
+								SharedBridge session = std::make_shared<TlsCapableHttpBridge<AcceptorType>>(m_service, m_store, &m_defaultServerContext, &m_clientContext, m_onMessageBegin, m_onMessageEnd, m_onInfo, m_onWarning, m_onError);
 
 								if (session == nullptr)
 								{
@@ -257,6 +246,9 @@ namespace te
 					}
 
 				private:
+
+					util::cb::HttpMessageBeginCheckFunction m_onMessageBegin;
+					util::cb::HttpMessageEndCheckFunction m_onMessageEnd;
 
 					/// <summary>
 					/// Initializes the default server and the client contexts, which are to be used
@@ -360,12 +352,6 @@ namespace te
 					/// Pointer to the io_service driving the acceptor.
 					/// </summary>
 					boost::asio::io_service* m_service = nullptr;
-					
-					/// <summary>
-					/// Pointer to the HttpFilteringEngine that is to be supplied to each client
-					/// bridge.
-					/// </summary>
-					filtering::http::HttpFilteringEngine* m_engine = nullptr;
 					
 					/// <summary>
 					/// Absolute path to a CA bundle to be loaded by the client context, in the

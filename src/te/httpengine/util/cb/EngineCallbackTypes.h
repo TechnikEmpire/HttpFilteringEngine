@@ -34,7 +34,7 @@ typedef bool(*FirewallCheckCallback)(const char* binaryAbsolutePath, const size_
 /// first two parameters, the content type declaration, as a UTF8 (hopefully) string of chars and the
 /// total number of bytes in that string make up the latter two parameters.
 /// </summary>
-typedef uint8_t(*ClassifyContentCallback)(const char* contentBytes, const size_t contentLength, const char* contentType, const size_t contentTypeLength);
+//typedef uint8_t(*ClassifyContentCallback)(const char* contentBytes, const size_t contentLength, const char* contentType, const size_t contentTypeLength);
 
 /// <summary>
 /// The Engine handles any error that occurs in situations related to external input. This is
@@ -57,7 +57,7 @@ typedef void(*ReportMessageCallback)(const char* message, const size_t messageLe
 /// If the filtering option to fetch and report the blocked payload size is disabled or if the
 /// payload is configured to be delivered as a chunked response, the size reported will be zero.
 /// </summary>
-typedef void(*ReportBlockedRequestCallback)(const uint8_t category, const uint32_t payloadSizeBlocked, const char* fullRequest, const size_t requestLength);
+//typedef void(*ReportBlockedRequestCallback)(const uint8_t category, const uint32_t payloadSizeBlocked, const char* fullRequest, const size_t requestLength);
 
 /// <summary>
 /// When the Engine removes elements from a specific web page, it will report information about
@@ -67,7 +67,11 @@ typedef void(*ReportBlockedRequestCallback)(const uint8_t category, const uint32
 /// from all categories are collectively used to remove multiple elements, unlike filters where
 /// a single filter is ultimately responsible for blocking or whitelisting a request.
 /// </summary>
-typedef void(*ReportBlockedElementsCallback)(const uint32_t numElementsRemoved, const char* fullRequest, const size_t requestLength);
+//typedef void(*ReportBlockedElementsCallback)(const uint32_t numElementsRemoved, const char* fullRequest, const size_t requestLength);
+
+typedef void(*HttpMessageBeginCallback)(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, const uint32_t* nextAction, char** customBlockResponse, const uint32_t* customBlockResponseLength);
+
+typedef void(*HttpMessageEndCallback)(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, const bool* nextAction, char** customBlockResponse, const uint32_t* customBlockResponseLength);
 
 #ifdef __cplusplus
 namespace te
@@ -81,9 +85,13 @@ namespace te
 				
 				using FirewallCheckFunction = std::function<bool(const char* binaryAbsolutePath, const size_t binaryAbsolutePathLength)>;
 				using MessageFunction = std::function<void(const char* message, const size_t messageLength)>;
-				using RequestBlockFunction = std::function<void(const uint8_t category, const uint32_t payloadSizeBlocked, const char* fullRequest, const size_t requestLength)>;
-				using ElementBlockFunction = std::function<void(const uint32_t numElementsRemoved, const char* fullRequest, const size_t requestLength)>;
-				using ContentClassificationFunction = std::function<uint8_t(const char* contentBytes, const size_t contentLength, const char* contentType, const size_t contentTypeLength)>;
+
+				using HttpMessageBeginCheckFunction = std::function<void(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength)>;
+				using HttpMessageEndCheckFunction = std::function<void(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength)>;
+
+				//using RequestBlockFunction = std::function<void(const uint8_t category, const uint32_t payloadSizeBlocked, const char* fullRequest, const size_t requestLength)>;
+				//using ElementBlockFunction = std::function<void(const uint32_t numElementsRemoved, const char* fullRequest, const size_t requestLength)>;
+				//using ContentClassificationFunction = std::function<uint8_t(const char* contentBytes, const size_t contentLength, const char* contentType, const size_t contentTypeLength)>;
 			
 			} /* namespace cb */
 		} /* namespace util */

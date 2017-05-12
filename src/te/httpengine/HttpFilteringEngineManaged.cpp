@@ -16,12 +16,12 @@ namespace Te {
 	namespace HttpFilteringEngine
 	{
 
-		Engine::Engine(FirewallCheckHandler^ firewallCheckFunc, ClassifyContentHandler^ classificationFunc, System::String^ caBundleAbsPath, System::String^ blockedHtmlPage, uint16_t httpListenerPort, uint16_t httpsListenerPort, uint32_t numThreads)
+		Engine::Engine(FirewallCheckHandler^ firewallCheckFunc, HttpMessageBeginHandler^ httpMessageBeginFunc, HttpMessageEndHandler^ httpMessageEndFunc, System::String^ caBundleAbsPath, uint16_t httpListenerPort, uint16_t httpsListenerPort, uint32_t numThreads)
 		{
 			m_onFirewallCallback = firewallCheckFunc;
-			m_onClassificationCallback = classificationFunc;
-			CaBundleAbsolutePath = caBundleAbsPath;
-			BlockedHtmlPage = blockedHtmlPage;
+			m_onHttpMessageBeginCallback = httpMessageBeginFunc;
+			m_onHttpMessageEndCallback = httpMessageEndFunc;
+			CaBundleAbsolutePath = caBundleAbsPath;			
 			HttpListenerPort = httpListenerPort;
 			HttpsListenerPort = httpsListenerPort;
 			m_numThreads = numThreads;
@@ -51,16 +51,6 @@ namespace Te {
 		void Engine::CaBundleAbsolutePath::set(System::String^ value)
 		{
 			m_caBundleAbsPath = value;
-		}
-
-		System::String^ Engine::BlockedHtmlPage::get()
-		{
-			return m_blockedHtmlPage;
-		}
-
-		void Engine::BlockedHtmlPage::set(System::String^ value)
-		{
-			m_blockedHtmlPage = value;
 		}
 
 		uint16_t Engine::HttpListenerPort::get()
@@ -123,205 +113,6 @@ namespace Te {
 			}
 		}
 
-		void Engine::LoadAbpFormattedFile(
-			System::String^ listFilePath, 
-			uint8_t listCategory,
-			bool flushExistingInCategory,
-			[Out] uint32_t% rulesLoaded,
-			[Out] uint32_t% rulesFailed
-			)
-		{
-			uint32_t succeeded = 0;
-			uint32_t failed = 0;
-
-			if (System::String::IsNullOrEmpty(listFilePath) || System::String::IsNullOrWhiteSpace(listFilePath))
-			{
-				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadAbpFormattedFile(System::String^, uint8_t, bool) - Provided list file path is either null or whitespace.");
-				throw err;
-			}
-
-			if (listCategory == 0)
-			{
-				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadAbpFormattedFile(System::String^, uint8_t, bool) - Cannot specify zero as the category. Zero is reserved to indicate \"Do not block\".");
-				throw err;
-			}
-
-			if (m_handle != nullptr)
-			{				
-				auto listPathStr = msclr::interop::marshal_as<std::string>(listFilePath);
-
-				fe_ctl_load_list_from_file(m_handle, listPathStr.c_str(), listPathStr.size(), listCategory, flushExistingInCategory, &succeeded, &failed);
-			}
-
-			rulesLoaded = succeeded;
-			rulesFailed = failed;
-		}
-
-		void Engine::LoadAbpFormattedString(
-			System::String^ list, 
-			uint8_t listCategory, 
-			bool flushExistingInCategory,
-			[Out] uint32_t% rulesLoaded,
-			[Out] uint32_t% rulesFailed
-			)
-		{
-			uint32_t succeeded = 0;
-			uint32_t failed = 0;
-
-			if (System::String::IsNullOrEmpty(list) || System::String::IsNullOrWhiteSpace(list))
-			{
-				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadAbpFormattedFile(System::String^, uint8_t, bool) - Provided list is either null or whitespace.");
-				throw err;
-			}
-
-			if (listCategory == 0)
-			{
-				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadAbpFormattedFile(System::String^, uint8_t, bool) - Cannot specify zero as the category. Zero is reserved to indicate \"Do not block\".");
-				throw err;
-			}
-
-			if (m_handle != nullptr)
-			{
-				auto listStr = msclr::interop::marshal_as<std::string>(list);				
-				fe_ctl_load_list_from_string(m_handle, listStr.c_str(), listStr.size(), listCategory, flushExistingInCategory, &succeeded, &failed);
-
-				System::GC::AddMemoryPressure(listStr.size());
-
-				listStr.clear();
-				listStr = std::string();
-				
-				//System::GC::RemoveMemoryPressure(listStr.size());
-				//System::GC::Collect();
-			}
-
-			rulesLoaded = succeeded;
-			rulesFailed = failed;
-		}
-
-		uint32_t Engine::LoadTextTriggersFromFile(
-			System::String^ filePath,
-			uint8_t category,
-			bool flushExistingInCategory
-			)
-		{
-			uint32_t loaded = 0;
-
-			if (System::String::IsNullOrEmpty(filePath) || System::String::IsNullOrWhiteSpace(filePath))
-			{
-				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadTextTriggersFromFile(System::String^, uint8_t, bool, [Out] uint32_t) - Provided list file path is either null or whitespace.");
-				throw err;
-			}
-
-			if (category == 0)
-			{
-				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadTextTriggersFromFile(System::String^, uint8_t, bool, [Out] uint32_t) - Cannot specify zero as the category. Zero is reserved to indicate \"Do not block\".");
-				throw err;
-			}
-
-			if (m_handle != nullptr)
-			{
-				auto listFilePath = msclr::interop::marshal_as<std::string>(filePath);
-
-				fe_ctl_load_text_triggers_from_file(m_handle, listFilePath.c_str(), listFilePath.size(), category, flushExistingInCategory, &loaded);
-			}
-
-			return loaded;
-		}
-
-		uint32_t Engine::LoadTextTriggersFromString(
-			System::String^ triggersString,
-			uint8_t category,
-			bool flushExistingInCategory
-			)
-		{
-			uint32_t loaded = 0;
-
-			if (System::String::IsNullOrEmpty(triggersString) || System::String::IsNullOrWhiteSpace(triggersString))
-			{
-				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadTextTriggersFromString(System::String^, uint8_t, bool, [Out] uint32_t) - Provided list is either null or whitespace.");
-				throw err;
-			}
-
-			if (category == 0)
-			{
-				System::Exception^ err = gcnew System::Exception(u8"In bool Engine::LoadTextTriggersFromString(System::String^, uint8_t, bool, [Out] uint32_t) - Cannot specify zero as the category. Zero is reserved to indicate \"Do not block\".");
-				throw err;
-			}
-
-			if (m_handle != nullptr)
-			{
-				auto listStr = msclr::interop::marshal_as<std::string>(triggersString);
-
-				fe_ctl_load_text_triggers_from_string(m_handle, listStr.c_str(), listStr.size(), category, flushExistingInCategory, &loaded);
-
-				System::GC::AddMemoryPressure(listStr.size());
-
-				listStr.clear();
-				listStr = std::string();
-				//System::GC::RemoveMemoryPressure(listStr.size());
-				//System::GC::Collect();
-			}
-
-			return loaded;
-		}
-		
-		void Engine::UnloadAllFilterRulesForCategory(const uint8_t category)
-		{
-			if (m_handle != nullptr)
-			{
-				fe_ctl_unload_rules_for_category(m_handle, category);
-			}
-		}
-
-		void Engine::UnloadAllTextTriggersForCategory(const uint8_t category)
-		{
-			if (m_handle != nullptr)
-			{
-				fe_ctl_unload_text_triggers_for_category(m_handle, category);
-			}
-		}
-
-		bool Engine::IsOptionEnabled(uint32_t option)
-		{
-			if (m_handle != nullptr)
-			{
-				return fe_ctl_get_option(m_handle, option);
-			}
-
-			return false;
-		}
-
-		void Engine::SetOptionEnabled(uint32_t option, bool enabled)
-		{
-			if (m_handle != nullptr)
-			{
-				return fe_ctl_set_option(m_handle, option, enabled);
-			}
-		}
-
-		bool Engine::IsCategoryEnabled(uint8_t category)
-		{
-			if (m_handle != nullptr)
-			{
-				return fe_ctl_get_category(m_handle, category);
-			}
-
-			return false;
-		}
-
-		void Engine::SetCategoryEnabled(uint8_t category, bool enabled)
-		{
-			if (category == 0)
-			{
-				return;
-			}
-
-			if (m_handle != nullptr)
-			{
-				return fe_ctl_set_category(m_handle, category, enabled);
-			}
-		}
-
 		array<System::Byte>^ Engine::GetRootCaPEM()
 		{
 			if (m_handle != nullptr)
@@ -356,51 +147,41 @@ namespace Te {
 				throw err;
 			}
 
-			m_unmanagedFirewallCheckCallback = gcnew UnmanagedFirewallCheckCallback(this, &Engine::UnmanagedFirewallCheck);
-			m_unmanagedContentClasificationCallback = gcnew UnmanagedClassifyContentCallback(this, &Engine::UnmanagedClassifyContent);
+			m_unmanagedFirewallCheckCallback = gcnew UnmanagedFirewallCheckCallback(this, &Engine::UnmanagedFirewallCheck);			
 			m_unmanagedOnInfoCallback = gcnew UnmanagedMessageCallback(this, &Engine::UnmanagedOnInfo);
 			m_unmanagedOnWarningCallback = gcnew UnmanagedMessageCallback(this, &Engine::UnmanagedOnWarning);
 			m_unmanagedOnErrorCallback = gcnew UnmanagedMessageCallback(this, &Engine::UnmanagedOnError);
-			m_unmanagedOnRequestBlockedCallback = gcnew UnmanagedReportRequestBlockedCallback(this, &Engine::UnmanagedOnRequestBlocked);
-			m_unmanagedOnElementsBlockedCallback = gcnew UnmanagedReportElementsBlockedCallback(this, &Engine::UnmanagedOnElementsBlocked);
+
+			m_unmanagedOnHttpMessageBeginCallback = gcnew UnmanagedOnHttpMessageBeginCallback(this, &Engine::UnmanagedHttpMessageBegin);
+			m_unmanagedOnHttpMessageEndCallback = gcnew UnmanagedOnHttpMessageEndCallback(this, &Engine::UnmanagedHttpMessageEnd);
 
 			auto firewallCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedFirewallCheckCallback);
-			auto classifyCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedContentClasificationCallback);
 			auto infoCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnInfoCallback);
 			auto warnCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnWarningCallback);
 			auto errorCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnErrorCallback);
-			auto blockedReqCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnRequestBlockedCallback);
-			auto blockedElmCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnElementsBlockedCallback);
+
+			auto httpBeginCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnHttpMessageBeginCallback);
+			auto httpEndCbPtr = Marshal::GetFunctionPointerForDelegate(m_unmanagedOnHttpMessageEndCallback);
 
 			std::string caBundlePathStr(u8"none");
-
-			std::string htmlBlockedPageStr;
 
 			if (!System::String::IsNullOrEmpty(CaBundleAbsolutePath) && !System::String::IsNullOrWhiteSpace(CaBundleAbsolutePath))
 			{
 				caBundlePathStr = msclr::interop::marshal_as<std::string>(CaBundleAbsolutePath);
 			}
 
-			if (!System::String::IsNullOrEmpty(m_blockedHtmlPage) && !System::String::IsNullOrWhiteSpace(m_blockedHtmlPage))
-			{
-				htmlBlockedPageStr = msclr::interop::marshal_as<std::string>(BlockedHtmlPage);
-			}
-
 			m_handle = fe_ctl_create(
 				static_cast<FirewallCheckCallback>(firewallCbPtr.ToPointer()),
 				caBundlePathStr.c_str(),
 				caBundlePathStr.size(),
-				htmlBlockedPageStr.c_str(),
-				htmlBlockedPageStr.size(),
 				HttpListenerPort,
 				HttpsListenerPort,
 				m_numThreads,
-				static_cast<ClassifyContentCallback>(classifyCbPtr.ToPointer()),
+				static_cast<HttpMessageBeginCallback>(httpBeginCbPtr.ToPointer()),
+				static_cast<HttpMessageEndCallback>(httpEndCbPtr.ToPointer()),
 				static_cast<ReportMessageCallback>(infoCbPtr.ToPointer()),
 				static_cast<ReportMessageCallback>(warnCbPtr.ToPointer()),
-				static_cast<ReportMessageCallback>(errorCbPtr.ToPointer()),
-				static_cast<ReportBlockedRequestCallback>(blockedReqCbPtr.ToPointer()),
-				static_cast<ReportBlockedElementsCallback>(blockedElmCbPtr.ToPointer())
+				static_cast<ReportMessageCallback>(errorCbPtr.ToPointer())
 				);
 
 			if (m_handle == nullptr)
@@ -419,20 +200,6 @@ namespace Te {
 			}
 
 			return false;
-		}
-
-		uint8_t Engine::UnmanagedClassifyContent(const char* contentBytes, const size_t contentLength, const char* contentType, const size_t contentTypeLength)
-		{
-			if (m_onClassificationCallback != nullptr && contentBytes != nullptr && contentType != nullptr)
-			{
-				System::String^ contentTypeString = gcnew System::String(contentType, 0, static_cast<int>(contentTypeLength));
-				array<System::Byte>^ managedBytes = gcnew array<System::Byte>(contentLength);
-				System::Runtime::InteropServices::Marshal::Copy(IntPtr((void *)contentBytes), managedBytes, 0, contentLength);
-
-				return m_onClassificationCallback(managedBytes, contentTypeString);
-			}
-
-			return 0;
 		}
 
 		void Engine::UnmanagedOnInfo(const char* message, const size_t messageLength)
@@ -462,36 +229,81 @@ namespace Te {
 			}			
 		}
 
-		void Engine::UnmanagedOnRequestBlocked(const uint8_t category, const uint32_t payloadSizeBlocked, const char* fullRequest, const size_t requestLength)
+		void Engine::UnmanagedHttpMessageBegin(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength)
 		{
-			System::String^ req = nullptr;
+			System::String^ headersMStr = System::String::Empty;
+			array<System::Byte>^ bodyArr = gcnew array<System::Byte>(0);
 
-			if (fullRequest != nullptr)
+			if (headers != nullptr)
 			{
-				req = gcnew System::String(fullRequest, 0, static_cast<int>(requestLength));
-			}
-			else
-			{
-				req = gcnew System::String(u8"No request provided.");
+				headersMStr = gcnew System::String(headers, 0, static_cast<int>(headersLength));
 			}
 
-			OnRequestBlocked(category, payloadSizeBlocked, req);
+			if (body != nullptr)
+			{
+				bodyArr = gcnew array<System::Byte>(bodyLength);
+				System::Runtime::InteropServices::Marshal::Copy(IntPtr((void *)body), bodyArr, 0, bodyLength);
+			}
+
+			ProxyNextAction nxt = ProxyNextAction::AllowAndIgnoreContent;
+			array<System::Byte>^ customBlockedResponseManaged = nullptr;
+
+			m_onHttpMessageBeginCallback(headersMStr, bodyArr, nxt, customBlockedResponseManaged);
+
+			(*customBlockResponseLength) = 0;
+
+			if (customBlockedResponseManaged != nullptr && customBlockedResponseManaged->Length > 0)
+			{	
+				*customBlockResponse = new char[customBlockedResponseManaged->Length];
+				pin_ptr<unsigned char> pinned = &customBlockedResponseManaged[0];
+				char* src = reinterpret_cast<char*>(pinned);
+				std::copy(src, src + customBlockedResponseManaged->Length, *customBlockResponse);
+				(*customBlockResponseLength) = customBlockedResponseManaged->Length;				
+			}
+
+			(*nextAction) = (*reinterpret_cast<uint32_t*>(&nxt));
 		}
 
-		void Engine::UnmanagedOnElementsBlocked(const uint32_t numElementsRemoved, const char* fullRequest, const size_t requestLength)
+		void Engine::UnmanagedHttpMessageEnd(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength)
 		{
-			System::String^ req = nullptr;
+			System::String^ headersMStr = System::String::Empty;
+			array<System::Byte>^ bodyArr = gcnew array<System::Byte>(0);
 
-			if (fullRequest != nullptr)
+			if (headers != nullptr)
 			{
-				req = gcnew System::String(fullRequest, 0, static_cast<int>(requestLength));
+				headersMStr = gcnew System::String(headers, 0, static_cast<int>(headersLength));
+			}
+
+			if (body != nullptr)
+			{
+				bodyArr = gcnew array<System::Byte>(bodyLength);
+				System::Runtime::InteropServices::Marshal::Copy(IntPtr((void *)body), bodyArr, 0, bodyLength);
+			}
+
+			bool shouldBlockManaged = false;
+			array<System::Byte>^ customBlockedResponseManaged = nullptr;
+
+			m_onHttpMessageEndCallback(headersMStr, bodyArr, shouldBlockManaged, customBlockedResponseManaged);
+
+			(*customBlockResponseLength) = 0;
+
+			if (customBlockedResponseManaged != nullptr && customBlockedResponseManaged->Length > 0)
+			{
+				*customBlockResponse = static_cast<char*>(new char[customBlockedResponseManaged->Length]);
+				pin_ptr<unsigned char> pinned = &customBlockedResponseManaged[0];
+				char* src = reinterpret_cast<char*>(pinned);
+				std::copy(src, src + customBlockedResponseManaged->Length, *customBlockResponse);
+				(*customBlockResponseLength) = customBlockedResponseManaged->Length;
+			}
+
+			if (shouldBlockManaged)
+			{
+				(*shouldBlock) = true;
 			}
 			else
 			{
-				req = gcnew System::String(u8"No request provided.");
+				(*shouldBlock) = false;
 			}
-
-			OnElementsBlocked(numElementsRemoved, req);
 		}
 	}
 }

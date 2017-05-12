@@ -9,6 +9,7 @@
 
 #include "HttpFilteringEngineCAPI.h"
 #include "HttpFilteringEngineControl.hpp"
+#include <iostream>
 
 #include <boost/predef.h>
 
@@ -21,17 +22,14 @@ PVOID fe_ctl_create(
 	FirewallCheckCallback firewallCb,
 	const char* caBundleAbsolutePath,
 	uint32_t caBundleAbsolutePathLength,
-	const char* blockedHtmlPage,
-	uint32_t blockedHtmlPageLength,
 	uint16_t httpListenerPort,
 	uint16_t httpsListenerPort,
-	uint32_t numThread,
-	ClassifyContentCallback onClassify,
+	uint32_t numThread,	
+	HttpMessageBeginCallback onMessageBegin,
+	HttpMessageEndCallback onMessageEnd,
 	ReportMessageCallback onInfo,
 	ReportMessageCallback onWarn,
-	ReportMessageCallback onError,
-	ReportBlockedRequestCallback onRequestBlocked,
-	ReportBlockedElementsCallback onElementsBlocked
+	ReportMessageCallback onError
 	)
 {
 
@@ -59,16 +57,9 @@ PVOID fe_ctl_create(
 
 	std::string caPath(u8"none");
 
-	std::string blockedHtmlPageStr;
-
 	if (caBundleAbsolutePathLength > 0 && caBundleAbsolutePath != nullptr)
 	{
 		caPath = std::string(caBundleAbsolutePath, static_cast<size_t>(caBundleAbsolutePathLength));
-	}
-
-	if (blockedHtmlPageLength > 0 && blockedHtmlPage != nullptr)
-	{
-		blockedHtmlPageStr = std::string(blockedHtmlPage, static_cast<size_t>(blockedHtmlPageLength));
 	}
 
 	PVOID inst = nullptr;
@@ -79,16 +70,14 @@ PVOID fe_ctl_create(
 		inst = static_cast<PVOID>(new te::httpengine::HttpFilteringEngineControl(
 			firewallCb,
 			caPath,
-			blockedHtmlPageStr,
 			httpListenerPort,
 			httpsListenerPort,
 			numThread,
-			onClassify,
+			onMessageBegin,
+			onMessageEnd,
 			onInfo,
 			onWarn,
-			onError,
-			onRequestBlocked,
-			onElementsBlocked
+			onError
 			));		
 
 		#ifndef NDEBUG
@@ -271,255 +260,6 @@ uint16_t fe_ctl_get_https_listener_port(PVOID ptr)
 	return 0;
 }
 
-const bool fe_ctl_get_option(PVOID ptr, const uint32_t optionId)
-{
-	#ifndef NDEBUG
-		assert(ptr != nullptr && u8"In fe_ctl_get_option(PVOID, const uint32_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
-	#endif
-
-	bool success = false;
-
-	bool callSuccess = false;
-
-	try
-	{
-		if (ptr != nullptr)
-		{
-			success = static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->GetOptionEnabled(optionId);
-			callSuccess = true;
-		}
-	}
-	catch (std::exception& e)
-	{
-		static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
-	}
-
-	assert(callSuccess == true && u8"In fe_ctl_get_option(PVOID) - Caught exception and failed to get option.");
-
-	return success;
-}
-
-void fe_ctl_set_option(PVOID ptr, const uint32_t optionId, const bool val)
-{
-	#ifndef NDEBUG
-		assert(ptr != nullptr && u8"In fe_ctl_set_option(PVOID, const uint32_t, const bool) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
-	#endif
-
-	bool callSuccess = false;
-
-	try
-	{
-		if (ptr != nullptr)
-		{
-			static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->SetOptionEnabled(optionId, val);
-			callSuccess = true;
-		}
-	}
-	catch (std::exception& e)
-	{
-		static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
-	}
-
-	assert(callSuccess == true && u8"In fe_ctl_set_option(PVOID) - Caught exception and failed to set option.");
-}
-
-const bool fe_ctl_get_category(PVOID ptr, const uint8_t categoryId)
-{
-	#ifndef NDEBUG
-		assert(ptr != nullptr && u8"In fe_ctl_get_category(PVOID, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
-	#endif
-
-	bool success = false;
-	bool callSuccess = false;
-
-	try
-	{
-		if (ptr != nullptr)
-		{
-			success = static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->GetCategoryEnabled(categoryId);
-			callSuccess = true;
-		}
-	}
-	catch (std::exception& e)
-	{
-		static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
-	}
-
-	assert(callSuccess == true && u8"In fe_ctl_get_category(PVOID) - Caught exception and failed to get category.");
-
-	return success;
-}
-
-void fe_ctl_set_category(PVOID ptr, const uint8_t categoryId, const bool val)
-{
-	#ifndef NDEBUG
-		assert(ptr != nullptr && u8"In fe_ctl_set_category(PVOID, const uint8_t, const bool) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
-	#endif
-
-	bool callSuccess = false;
-
-	try
-	{
-		if (ptr != nullptr)
-		{
-			static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->SetCategoryEnabled(categoryId, val);
-			callSuccess = true;
-		}
-	}
-	catch (std::exception& e)
-	{
-		static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
-	}
-
-	assert(callSuccess == true && u8"In fe_ctl_set_category(PVOID) - Caught exception and failed to set category.");
-}
-
-void fe_ctl_load_list_from_file(
-	PVOID ptr,
-	const char* filePath,
-	const size_t filePathLength,
-	const uint8_t listCategory,
-	const bool flushExisting,
-	uint32_t* rulesLoaded,
-	uint32_t* rulesFailed
-	)
-{
-	#ifndef NDEBUG
-		assert(ptr != nullptr && u8"In fe_ctl_load_list_from_file(PVOID, const char*, const size_t, const uint8_t) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
-		assert(filePath != nullptr && u8"In fe_ctl_load_list_from_file(PVOID, const char*, const size_t, const uint8_t) - Supplied file path ptr is nullptr!");
-	#endif
-
-	bool callSuccess = false;
-
-	try
-	{
-		if (ptr != nullptr && filePath != nullptr)
-		{
-			std::string filePathStr(filePath, filePathLength);			
-			static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->LoadFilteringListFromFile(filePathStr, listCategory, flushExisting, rulesLoaded, rulesFailed);
-			callSuccess = true;
-		}
-	}
-	catch (std::exception& e)
-	{
-		static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
-	}
-
-	assert(callSuccess == true && u8"In fe_ctl_load_list_from_file(...) - Caught exception and failed to set category.");
-}
-
-void fe_ctl_load_list_from_string(
-	PVOID ptr,
-	const char* listString,
-	const size_t listStringLength,
-	const uint8_t listCategory,
-	const bool flushExisting,
-	uint32_t* rulesLoaded,
-	uint32_t* rulesFailed
-	)
-{
-	#ifndef NDEBUG
-		assert(ptr != nullptr && u8"In fe_ctl_load_list_from_file(...) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
-		assert(listString != nullptr && u8"In fe_ctl_load_list_from_file(...) - Supplied list string ptr is nullptr!");
-	#endif
-
-	bool callSuccess = false;
-
-	try
-	{
-		if (ptr != nullptr && listString != nullptr)
-		{
-			std::string fileString(listString, listStringLength);
-			static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->LoadFilteringListFromString(fileString, listCategory, flushExisting, rulesLoaded, rulesFailed);
-			callSuccess = true;
-		}
-	}
-	catch (std::exception& e)
-	{
-		static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
-	}
-
-	assert(callSuccess == true && u8"In fe_ctl_load_list_from_string(...) - Caught exception and failed to set category.");
-}
-
-void fe_ctl_load_text_triggers_from_file(
-	PVOID ptr,
-	const char* filePath,
-	const size_t filePathLength,
-	const uint8_t category,
-	const bool flushExisting,
-	uint32_t* rulesLoaded
-	)
-{
-	#ifndef NDEBUG
-		assert(ptr != nullptr && u8"In fe_ctl_load_text_triggers_from_file(...) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
-		assert(filePath != nullptr && u8"In fe_ctl_load_text_triggers_from_file(...) - Supplied file path string ptr is nullptr!");
-	#endif
-
-	bool callSuccess = false;
-
-	try
-	{
-		if (ptr != nullptr && filePath != nullptr)
-		{
-			std::string filePath(filePath, filePathLength);
-			auto totalLoaded = static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->LoadTextTriggersFromFile(filePath, category, flushExisting);			
-
-			if (rulesLoaded)
-			{
-				*rulesLoaded = totalLoaded;
-			}
-
-			callSuccess = true;
-		}
-	}
-	catch (std::exception& e)
-	{
-		static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
-	}
-
-	assert(callSuccess == true && u8"In fe_ctl_load_text_triggers_from_file(...) - Caught exception and failed to set category.");
-}
-
-void fe_ctl_load_text_triggers_from_string(
-	PVOID ptr,
-	const char* triggersString,
-	const size_t triggersStringLength,
-	const uint8_t category,
-	const bool flushExisting,
-	uint32_t* rulesLoaded
-	)
-{
-	#ifndef NDEBUG
-		assert(ptr != nullptr && u8"In fe_ctl_load_text_triggers_from_string(...) - Supplied HttpFilteringEngineCtl ptr is nullptr!");
-		assert(triggersString != nullptr && u8"In fe_ctl_load_text_triggers_from_string(...) - Supplied list string ptr is nullptr!");
-	#endif
-
-	bool callSuccess = false;
-
-	try
-	{
-		if (ptr != nullptr && triggersString != nullptr)
-		{
-			std::string filePath(triggersString, triggersStringLength);
-			auto totalLoaded = static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->LoadTextTriggersFromString(filePath, category, flushExisting);
-
-			if (rulesLoaded)
-			{
-				*rulesLoaded = totalLoaded;
-			}
-
-			callSuccess = true;
-		}
-}
-	catch (std::exception& e)
-	{
-		static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
-	}
-
-	assert(callSuccess == true && u8"In fe_ctl_load_text_triggers_from_string(...) - Caught exception and failed to set category.");
-}
-
 void fe_ctl_get_rootca_pem(PVOID ptr, char** bufferPP, size_t* bufferSize)
 {
 	#ifndef NDEBUG
@@ -554,52 +294,4 @@ void fe_ctl_get_rootca_pem(PVOID ptr, char** bufferPP, size_t* bufferSize)
 	}
 
 	assert(callSuccess == true && u8"In fe_ctl_get_rootca_pem(...) - Caught exception and failed to fetch root CA certificate.");
-}
-
-void fe_ctl_unload_rules_for_category(PVOID ptr, const uint8_t category)
-{
-	#ifndef NDEBUG
-		assert(ptr != nullptr && u8"In fe_ctl_unload_rules_for_category(char**, size_t*) - Supplied PVOID ptr is nullptr!");
-	#endif
-
-	bool callSuccess = false;
-
-	try
-	{
-		if (ptr != nullptr)
-		{
-			static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->UnloadRulesForCategory(category);
-			callSuccess = true;
-		}
-	}
-	catch (std::exception& e)
-	{
-		static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
-	}
-
-	assert(callSuccess == true && u8"In fe_ctl_get_rootca_pem(...) - Caught exception and failed to unload rules for category.");
-}
-
-void fe_ctl_unload_text_triggers_for_category(PVOID ptr, const uint8_t category)
-{
-#ifndef NDEBUG
-	assert(ptr != nullptr && u8"In fe_ctl_unload_rules_for_category(char**, size_t*) - Supplied PVOID ptr is nullptr!");
-#endif
-
-	bool callSuccess = false;
-
-	try
-	{
-		if (ptr != nullptr)
-		{
-			static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->UnloadTextTriggersForCategory(category);
-			callSuccess = true;
-		}
-	}
-	catch (std::exception& e)
-	{
-		static_cast<te::httpengine::HttpFilteringEngineControl*>(ptr)->ReportError(e.what());
-	}
-
-	assert(callSuccess == true && u8"In fe_ctl_get_rootca_pem(...) - Caught exception and failed to unload rules for category.");
 }

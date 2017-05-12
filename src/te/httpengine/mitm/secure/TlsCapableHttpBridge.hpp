@@ -10,9 +10,9 @@
 #include <boost/predef/architecture.h>
 #include <boost/predef/os.h>
 #include <boost/predef/compiler.h>
+#include <boost/algorithm/string.hpp>
 #include "../../network/SocketTypes.hpp"
 #include "BaseInMemoryCertificateStore.hpp"
-#include "../../filtering/http/HttpFilteringEngine.hpp"
 #include "../http/HttpRequest.hpp"
 #include "../http/HttpResponse.hpp"
 #include "../../util/cb/EventReporter.hpp"
@@ -177,10 +177,6 @@ namespace te
 					/// A valid pointer to the boost::asio::io_service that will drive the member
 					/// sockets, resolver, strands and timer.
 					/// </param>
-					/// <param name="filteringEngine">
-					/// A valid pointer to the filtering::http::HttpFilteringEngine object that will
-					/// be used to filter HTTP transactions and payloads.
-					/// </param>
 					/// <param name="certStore">
 					/// A pointer to the in-memory certificate store responsible for spoofing
 					/// certificates and corresponding server SSL contexts on demand. Not required
@@ -239,11 +235,12 @@ namespace te
 					/// Consumers can inspect or log such events. Must be thread safe.
 					/// </param>
 					TlsCapableHttpBridge(
-						boost::asio::io_service* service,
-						filtering::http::HttpFilteringEngine* filteringEngine,
+						boost::asio::io_service* service,						
 						BaseInMemoryCertificateStore* certStore = nullptr,
 						boost::asio::ssl::context* defaultServerContext = nullptr,
 						boost::asio::ssl::context* clientContext = nullptr,
+						util::cb::HttpMessageBeginCheckFunction onMessageBegin = nullptr,
+						util::cb::HttpMessageEndCheckFunction onMessageEnd = nullptr,
 						util::cb::MessageFunction onInfoCb = nullptr,
 						util::cb::MessageFunction onWarnCb = nullptr,
 						util::cb::MessageFunction onErrorCb = nullptr
@@ -317,17 +314,14 @@ namespace te
 					boost::asio::deadline_timer m_streamTimer;					
 
 					/// <summary>
-					/// Every bridge requires a valid pointer to a filtering engine which may or may
-					/// not be shared, for subjecting HTTP requests and responses to filtering.
-					/// </summary>
-					filtering::http::HttpFilteringEngine* m_filteringEngine = nullptr;
-
-					/// <summary>
 					/// Pointer to the in memory certificate store that is required for TLS
 					/// connections, to fetch and or generate certificates and corresponding server
 					/// contexts as needed.
 					/// </summary>
 					BaseInMemoryCertificateStore* m_certStore;
+
+					util::cb::HttpMessageBeginCheckFunction m_onMessageBegin;
+					util::cb::HttpMessageEndCheckFunction m_onMessageEnd;
 
 					/// <summary>
 					/// Member that is to be set whenever the upstream certificate verification
@@ -888,18 +882,11 @@ namespace te
 									return;
 								}
 
-								auto blockResult = m_filteringEngine->ShouldBlock(m_request.get(), m_response.get(), std::is_same<BridgeSocketType, network::TlsSocket>::value);
+								auto shouldBlockResponse = ShouldBlockRequest(m_response.get());
 
-								if (blockResult != 0)
+								if (shouldBlockResponse)
 								{
-									// By setting ShouldBlock to a non-zero value, this adjusts the internal
-									// state of the response to be "complete", meaning that as far as this
-									// bridge is concerned, this transaction is finished. Setting shouldblock
-									// **does not** make the response payload a correct blocked response. 
-									// This needs to be done explicitly.
-									m_response->SetShouldBlock(blockResult);
-									m_filteringEngine->FinalizeBlockedResponse(m_response.get());
-
+									m_request->SetShouldBlock(1);
 									auto responseBuffer = m_response->GetWriteBuffer();
 
 									boost::asio::async_write(
@@ -1064,21 +1051,30 @@ namespace te
 						{
 							if (m_response->Parse(bytesTransferred))
 							{
-								
 								if (m_response->IsPayloadComplete() && m_response->GetConsumeAllBeforeSending())
 								{
 									// Response was flagged for further inspection. Supply to ShouldBlock...
-									auto blockResult = m_filteringEngine->ShouldBlock(m_request.get(), m_response.get(), std::is_same<BridgeSocketType, network::TlsSocket>::value);
+									auto shouldBlock = ShouldBlockRequest(m_response.get());
 
-									if (blockResult != 0)
-									{
-										// By setting ShouldBlock to a non-zero value, this adjusts the internal
-										// state of the response to be "complete", meaning that as far as this
-										// bridge is concerned, this transaction is finished. Setting shouldblock
-										// **does not** make the response payload a correct blocked response. 
-										// This needs to be done explicitly.
-										m_response->SetShouldBlock(blockResult);
-										m_filteringEngine->FinalizeBlockedResponse(m_response.get());										
+									if (shouldBlock)
+									{	
+										m_request->SetShouldBlock(1);
+										auto responseBuffer = m_response->GetWriteBuffer();
+
+										boost::asio::async_write(
+											m_downstreamSocket,
+											responseBuffer,
+											boost::asio::transfer_all(),
+											m_downstreamStrand.wrap(
+												std::bind(
+													&TlsCapableHttpBridge::OnDownstreamWrite,
+													shared_from_this(),
+													std::placeholders::_1
+												)
+											)
+										);
+
+										return;
 									}
 								}
 								
@@ -1311,11 +1307,29 @@ namespace te
 									return;
 								}
 
-								auto requestBlockResult = m_filteringEngine->ShouldBlock(m_request.get(), nullptr, std::is_same<BridgeSocketType, network::TlsSocket>::value);
-								
-								if (requestBlockResult != 0)
+								auto shouldBlockRequest = ShouldBlockRequest(m_request.get());
+
+								if (shouldBlockRequest)
 								{
-									m_request->SetShouldBlock(requestBlockResult);
+									// If should-block was set here, then that means the request 
+									// has already been set externally with a response buffer for
+									// the request, because it was blocked immediately. Just go
+									// ahead and write this back down to the client and then exit.
+									auto responseBuffer = m_request->GetWriteBuffer();
+
+									boost::asio::async_write(
+										m_downstreamSocket,
+										responseBuffer,
+										boost::asio::transfer_all(),
+										m_downstreamStrand.wrap(
+											std::bind(
+												&TlsCapableHttpBridge::OnDownstreamWrite,
+												shared_from_this(),
+												std::placeholders::_1
+											)
+										)
+									);
+									return;
 								}
 
 								// This little business is for dealing with browsers like Chrome, who just have
@@ -1336,7 +1350,7 @@ namespace te
 								// Ensure that nobody is advertising for QUIC support.
 								m_request->RemoveHeader(util::http::headers::AlternateProtocol);
 
-								// Sigh, also remove declaration of any alternative protocol
+								// Sigh, also remove declaration of any alternative protocol.
 								m_request->RemoveHeader(util::http::headers::AltSvc);
 
 								auto hostHeader = m_request->GetHeader(util::http::headers::Host);
@@ -1574,12 +1588,25 @@ namespace te
 						ReportInfo(u8"TlsCapableHttpBridge::OnDownstreamWrite");
 						#endif // !NDEBUG
 
+						if (m_request && m_request->GetShouldBlock() > 0)
+						{
+							Kill();
+							return;
+						}
+
+						if (m_response && m_response->GetShouldBlock() > 0)
+						{
+							Kill();
+							return;
+						}
+
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
 						if (!error)
-						{
-							if (m_response->IsPayloadComplete() == false)
+						{	
+
+							if (m_response && m_response->IsPayloadComplete() == false)
 							{
 								// The server has more to write.
 
@@ -2343,7 +2370,6 @@ namespace te
 							
 							return;
 						}
-
 						
 						Kill();
 					}
@@ -2442,7 +2468,6 @@ namespace te
 							// Cancel the stream timeout mechanism before entering starting this process. We're going to need
 							// to possibly leave this cancelled if we're handling a passthrough connection.
 							SetStreamTimeout(-1);
-
 							
 							PreviewParser p;
 							std::string parsedHost;
@@ -2486,7 +2511,6 @@ namespace te
 								{
 									ReportInfo(u8"HTTP with upgrade.");
 									boost::string_ref peekedData(httpPeekBuffer->data(), bytesTransferred);
-									ReportInfo(peekedData);
 
 									// If it's non-TLS, then we need to resolve the host and connect to it
 									// as well. If it is TLS, then we don't care because this is done
@@ -2534,12 +2558,14 @@ namespace te
 											}
 										}
 
+										/*
 										if (m_filteringEngine->ShouldBlockHost(parsedHost))
 										{
 											// This host is filtered.
 											Kill();
 											return;
 										}
+										*/
 
 										boost::asio::ip::tcp::resolver::query query(parsedHost, std::is_same<BridgeSocketType, network::TlsSocket>::value ? "https" : "http");
 
@@ -2598,12 +2624,14 @@ namespace te
 										// extracted via SNI extension parsing.
 										if (m_upstreamHost.size() > 0)
 										{
+											/*
 											if (m_filteringEngine->ShouldBlockHost(m_upstreamHost))
 											{
 												// This host is filtered.
 												Kill();
 												return;
 											}
+											*/
 										}
 
 										// We're already connected as HTTPS so just do the volley.
@@ -2634,12 +2662,14 @@ namespace te
 										// extracted via SNI extension parsing.
 										if (m_upstreamHost.size() > 0)
 										{
+											/*
 											if (m_filteringEngine->ShouldBlockHost(m_upstreamHost))
 											{
 												// This host is filtered.
 												Kill();
 												return;
 											}
+											*/
 										}
 
 										// We're already connected as HTTPS so just do the volley.
@@ -2746,6 +2776,86 @@ namespace te
 						std::size_t bytes_readable = command.get();
 
 						return bytes_readable > 0;
+					}
+
+					const bool ShouldBlockRequest(http::BaseHttpTransaction* transaction)
+					{
+						auto headers = transaction->HeadersToString();						
+						const std::vector<char>* payload = nullptr;
+						uint32_t payloadSize = 0;
+						uint32_t nextAction = 0;
+						char* customBlockResponse = nullptr;
+						bool shouldBlock = false;
+						uint32_t customBlockResponseLen = 0;
+
+						if (transaction->GetConsumeAllBeforeSending() && transaction->IsPayloadComplete())
+						{
+							payload = &transaction->GetPayload();
+							payloadSize = payload->size();
+
+							m_onMessageEnd(headers.c_str(), headers.size(), payload != nullptr ? payload->data() : nullptr, payloadSize, &shouldBlock, &customBlockResponse, &customBlockResponseLen);
+
+							if (shouldBlock)
+							{
+								if (customBlockResponse != nullptr)
+								{	
+									std::vector<char> customPayloadVec(customBlockResponse, customBlockResponse + customBlockResponseLen);
+									delete[] customBlockResponse;									
+									transaction->SetPayload(customPayloadVec, true);
+									return true;
+								}
+								else
+								{	
+									transaction->Make204();
+								}
+
+								transaction->SetShouldBlock(1);
+								
+								return true;
+							}
+						}
+						else
+						{
+							m_onMessageBegin(headers.c_str(), headers.size(), payload != nullptr ? payload->data() : nullptr, payloadSize, &nextAction, &customBlockResponse, &customBlockResponseLen);
+
+							switch (nextAction)
+							{
+								case 0:
+								{
+									// Allow without inspection.
+									return false;
+								}
+								break;
+
+								case 1:
+								{
+									// Allow but want to inspect payload.
+									transaction->GetConsumeAllBeforeSending();
+									return false;
+								}
+								break;
+
+								case 2:
+								{
+									// Block.
+									if (customBlockResponse != nullptr)
+									{	
+										std::vector<char> customPayloadVec(customBlockResponse, customBlockResponse + customBlockResponseLen);
+										delete[] customBlockResponse;
+										transaction->SetPayload(customPayloadVec, true);
+										return true;
+									}
+									else
+									{	
+										transaction->Make204();
+									}
+
+									transaction->SetShouldBlock(1);
+									return true;
+								}
+								break;
+							}
+						}
 					}
 				};				
 

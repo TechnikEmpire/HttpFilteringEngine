@@ -538,10 +538,6 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\CategorizedCssSelector.hpp" />
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpFilteringEngine.hpp" />
-    <ClInclude Include="..\..\src\te\httpengine\filtering\options\HttpFilteringOptions.hpp" />
-    <ClInclude Include="..\..\src\te\httpengine\filtering\options\ProgramWideOptions.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineControl.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineCAPI.h" />
     <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.hpp" />
@@ -564,9 +560,6 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\deps\http-parser\http_parser.c" />
-    <ClCompile Include="..\..\src\te\httpengine\filtering\http\CategorizedCssSelector.cpp" />
-    <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpFilteringEngine.cpp" />
-    <ClCompile Include="..\..\src\te\httpengine\filtering\options\ProgramWideOptions.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineControl.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineCAPI.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x64|Win32'">false</CompileAsManaged>

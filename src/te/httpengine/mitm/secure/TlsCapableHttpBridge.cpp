@@ -20,11 +20,12 @@ namespace te
 				const std::string TlsCapableHttpBridge<T>::DoubleCRLF = u8"\r\n\r\n";
 
 				TlsCapableHttpBridge<network::TcpSocket>::TlsCapableHttpBridge(
-					boost::asio::io_service* service,					
-					filtering::http::HttpFilteringEngine* filteringEngine,
+					boost::asio::io_service* service,
 					BaseInMemoryCertificateStore* certStore,
 					boost::asio::ssl::context* defaultServerContext,
 					boost::asio::ssl::context* clientContext,
+					util::cb::HttpMessageBeginCheckFunction onMessageBegin,
+					util::cb::HttpMessageEndCheckFunction onMessageEnd,
 					util::cb::MessageFunction onInfoCb,
 					util::cb::MessageFunction onWarnCb,
 					util::cb::MessageFunction onErrorCb
@@ -39,19 +40,11 @@ namespace te
 					m_upstreamStrand(*service),
 					m_downstreamStrand(*service),
 					m_resolver(*service),
-					m_streamTimer(*service),				
-					m_filteringEngine(filteringEngine),
-					m_certStore(certStore)				
-				{
-					#ifndef NDEBUG						
-						assert(m_filteringEngine != nullptr && u8"In TlsCapableHttpBridge<network::TcpSocket>::TlsCapableHttpBridge(... args) - Supplied filtering engine pointer is nullptr!");
-					#else
-						if (m_filteringEngine == nullptr)
-						{
-							throw std::runtime_error(u8"In TlsCapableHttpBridge<network::TcpSocket>::TlsCapableHttpBridge(... args) - Supplied filtering engine pointer is nullptr!");
-						}
-					#endif
-					
+					m_streamTimer(*service),
+					m_certStore(certStore),
+					m_onMessageBegin(onMessageBegin),
+					m_onMessageEnd(onMessageEnd)
+				{	
 
 					// We purposely don't catch here. We want the acceptor to catch.
 					m_request.reset(new http::HttpRequest());
@@ -69,11 +62,12 @@ namespace te
 				}
 				
 				TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(
-					boost::asio::io_service* service,					
-					filtering::http::HttpFilteringEngine* filteringEngine,
+					boost::asio::io_service* service,
 					BaseInMemoryCertificateStore* certStore,
 					boost::asio::ssl::context* defaultServerContext,
 					boost::asio::ssl::context* clientContext,
+					util::cb::HttpMessageBeginCheckFunction onMessageBegin,
+					util::cb::HttpMessageEndCheckFunction onMessageEnd,
 					util::cb::MessageFunction onInfoCb,
 					util::cb::MessageFunction onWarnCb,
 					util::cb::MessageFunction onErrorCb
@@ -89,19 +83,14 @@ namespace te
 					m_upstreamStrand(*service),
 					m_downstreamStrand(*service),
 					m_resolver(*service),
-					m_streamTimer(*service),					
-					m_filteringEngine(filteringEngine),
-					m_certStore(certStore)
+					m_streamTimer(*service),
+					m_certStore(certStore),
+					m_onMessageBegin(onMessageBegin),
+					m_onMessageEnd(onMessageEnd)
 				{
-					#ifndef NDEBUG					
-						assert(m_filteringEngine != nullptr && u8"In TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(... args) - Supplied certificate store is nullptr!");
+					#ifndef NDEBUG
 						assert(m_certStore != nullptr && u8"In TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(... args) - Supplied certificate store is nullptr!");						
 					#else
-						if (m_filteringEngine == nullptr)
-						{
-							throw std::runtime_error(u8"In TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(... args) - Supplied filtering engine pointer is nullptr!");
-						}
-
 						if (m_certStore == nullptr)
 						{
 							throw std::runtime_error(u8"In TlsCapableHttpBridge<network::TlsSocket>::TlsCapableHttpBridge(... args) - Supplied certificate store is nullptr!");

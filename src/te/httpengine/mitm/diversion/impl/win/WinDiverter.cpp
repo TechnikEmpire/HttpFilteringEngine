@@ -83,7 +83,7 @@ namespace te
 						// we're also blowing away loopback traffic. Now that's just rude.
 
 						//  and (ip.DstAddr != 127.0.0.1 and ip.SrcAddr != 127.0.0.1)
-						m_diversionHandle = WinDivertOpen(u8"outbound and tcp", WINDIVERT_LAYER_NETWORK, -1000, WINDIVERT_FLAG_NO_CHECKSUM);
+						m_diversionHandle = WinDivertOpen(u8"outbound and tcp and (ip.DstAddr != 127.0.0.1 and ip.SrcAddr != 127.0.0.1)", WINDIVERT_LAYER_NETWORK, -1000, WINDIVERT_FLAG_NO_CHECKSUM);
 
 						m_quicBlockHandle = WinDivertOpen(u8"udp and (udp.DstPort == 80 || udp.DstPort == 443)", WINDIVERT_LAYER_NETWORK, 0, WINDIVERT_FLAG_NO_CHECKSUM | WINDIVERT_FLAG_DROP);
 
@@ -613,7 +613,9 @@ namespace te
 							// it counts.
 							if ((*table)->table[i].dwLocalAddr == 0 || (*table)->table[i].dwLocalAddr == localV4Address)
 							{
-								if ((*table)->table[i].dwLocalPort == localPort)
+								// See https://msdn.microsoft.com/en-us/library/windows/desktop/aa366909(v=vs.85).aspx
+								// Upper bits may contain junk data.
+								if (((*table)->table[i].dwLocalPort & 0xFFFF) == localPort)
 								{
 									return (*table)->table[i].dwOwningPid;
 								}
@@ -711,7 +713,9 @@ namespace te
 							// it counts.
 							if ((pp1 == 0 && pp2 == 0) || (pp1 == p1 && pp2 == p2))
 							{
-								if ((*table)->table[i].dwLocalPort == localPort)
+								// See https://msdn.microsoft.com/en-us/library/windows/desktop/aa366909(v=vs.85).aspx
+								// Upper bits may contain junk data.
+								if (((*table)->table[i].dwLocalPort & 0xFFFF) == localPort)
 								{
 									return (*table)->table[i].dwOwningPid;
 								}

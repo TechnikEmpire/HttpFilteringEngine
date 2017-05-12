@@ -19,9 +19,6 @@
     <Filter Include="Header Files\te\httpengine">
       <UniqueIdentifier>{16263cd8-3df0-4958-a475-d8c5fc60ebce}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\te\httpengine\filtering">
-      <UniqueIdentifier>{e44368bc-543c-43c9-882d-f5687635ab18}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\te\httpengine\mitm">
       <UniqueIdentifier>{dd6582fd-244f-4551-a439-e54a4aebf1ed}</UniqueIdentifier>
     </Filter>
@@ -30,12 +27,6 @@
     </Filter>
     <Filter Include="Header Files\te\httpengine\util">
       <UniqueIdentifier>{9b399964-c3d2-46c9-ba9d-1be512dbcf25}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\te\httpengine\filtering\http">
-      <UniqueIdentifier>{efe0e1aa-4bac-4b22-a973-2d380f916ae4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\te\httpengine\filtering\network">
-      <UniqueIdentifier>{bd60437f-27d7-42ce-bb9b-cdfcdc59c8db}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\te\httpengine\mitm\diversion">
       <UniqueIdentifier>{db9527f7-90aa-4658-abdf-e51ea99853e3}</UniqueIdentifier>
@@ -67,9 +58,6 @@
     <Filter Include="Source Files\te\httpengine">
       <UniqueIdentifier>{dbf5fdf8-f54d-41ef-a448-89c5a97e04d9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\te\httpengine\filtering">
-      <UniqueIdentifier>{68eb6a51-d941-4c94-8d54-4afbcacd47fc}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\te\httpengine\mitm">
       <UniqueIdentifier>{9e8d0530-7d6f-40cc-b9f0-ded5dd7ffac5}</UniqueIdentifier>
     </Filter>
@@ -78,12 +66,6 @@
     </Filter>
     <Filter Include="Source Files\te\httpengine\util">
       <UniqueIdentifier>{6d80804a-f452-41b5-8238-d0defc412262}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\te\httpengine\filtering\http">
-      <UniqueIdentifier>{323c9586-dead-44c0-8839-63f0fc6d0780}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\te\httpengine\filtering\network">
-      <UniqueIdentifier>{39af7c9f-d0a4-447e-836f-2a0c8a7dd5e5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\te\httpengine\mitm\diversion">
       <UniqueIdentifier>{c5b3cb05-10ff-4f0c-93e9-f814ca23db57}</UniqueIdentifier>
@@ -118,12 +100,6 @@
     <Filter Include="Header Files\te\httpengine\util\cb">
       <UniqueIdentifier>{8db7b7dc-b6cf-44f8-9eb1-b39d51cd1a72}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\te\httpengine\filtering\options">
-      <UniqueIdentifier>{d76ef698-4f08-49fe-a288-66ced10d4430}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\te\httpengine\filtering\options">
-      <UniqueIdentifier>{cc8b4585-f0a7-4ba1-8bf7-c4060030796d}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\te\httpengine\util\html">
       <UniqueIdentifier>{a4d860c7-90a5-4834-8474-258ac22250b1}</UniqueIdentifier>
     </Filter>
@@ -150,9 +126,6 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\HttpFilteringEngine.hpp">
-      <Filter>Header Files\te\httpengine\filtering\http</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\mitm\http\BaseHttpTransaction.hpp">
       <Filter>Header Files\te\httpengine\mitm\http</Filter>
     </ClInclude>
@@ -161,15 +134,6 @@
     </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\mitm\http\HttpResponse.hpp">
       <Filter>Header Files\te\httpengine\mitm\http</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\filtering\options\ProgramWideOptions.hpp">
-      <Filter>Header Files\te\httpengine\filtering\options</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\filtering\options\HttpFilteringOptions.hpp">
-      <Filter>Header Files\te\httpengine\filtering\options</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\filtering\http\CategorizedCssSelector.hpp">
-      <Filter>Header Files\te\httpengine\filtering\http</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\te\util\http\KnownHttpHeaders.hpp">
       <Filter>Header Files\te\util\http</Filter>
@@ -221,9 +185,6 @@
     <ClCompile Include="AssemblyInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\te\httpengine\filtering\http\HttpFilteringEngine.cpp">
-      <Filter>Source Files\te\httpengine\filtering\http</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\http\BaseHttpTransaction.cpp">
       <Filter>Source Files\te\httpengine\mitm\http</Filter>
     </ClCompile>
@@ -232,12 +193,6 @@
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\http\HttpResponse.cpp">
       <Filter>Source Files\te\httpengine\mitm\http</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\te\httpengine\filtering\options\ProgramWideOptions.cpp">
-      <Filter>Source Files\te\httpengine\filtering\options</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\te\httpengine\filtering\http\CategorizedCssSelector.cpp">
-      <Filter>Source Files\te\httpengine\filtering\http</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpBridge.cpp">
       <Filter>Source Files\te\httpengine\mitm\secure</Filter>

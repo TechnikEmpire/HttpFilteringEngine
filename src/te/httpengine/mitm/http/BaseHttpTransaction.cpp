@@ -214,89 +214,54 @@ namespace te
 					return m_payload;
 				}
 
-				void BaseHttpTransaction::SetPayload(std::vector<char>&& payload)
+				void BaseHttpTransaction::SetPayload(std::vector<char>&& payload, const bool includesHeaders)
 				{
-					// XXX TODO - Cleanup this code duplication.
-
-					bool needsTerminatingCrlf = false;
-
-					if (payload.size() > 4)
-					{
-						if (
-							payload[payload.size() - 1] != '\n' &&
-							payload[payload.size() - 2] != '\r' &&
-							payload[payload.size() - 3] != '\n' &&
-							payload[payload.size() - 4] != '\r')
-						{
-							needsTerminatingCrlf = true;
-						}
-					}
-
 					m_payload = std::move(payload);
 					m_payloadComplete = true;
-										
-					RemoveHeader(util::http::headers::ContentLength);
-					RemoveHeader(util::http::headers::TransferEncoding);
-					RemoveHeader(util::http::headers::ContentEncoding);					
 
-					auto finalSize = m_payload.size();
-					std::string length = std::to_string(finalSize);
-
-					RemoveHeader(util::http::headers::ContentLength);
-					AddHeader(util::http::headers::ContentLength, length);
-
-					/*
-					if (needsTerminatingCrlf)
+					if (includesHeaders)
 					{
-						m_payload.reserve(m_payload.size() + 4);
-						m_payload.push_back('\r');
-						m_payload.push_back('\n');
-						m_payload.push_back('\r');
-						m_payload.push_back('\n');
+						m_headers.clear();
+						m_headersSent = true;
+						m_headersComplete = true;
 					}
-					*/
+					else
+					{
+						RemoveHeader(util::http::headers::ContentLength);
+						RemoveHeader(util::http::headers::TransferEncoding);
+						RemoveHeader(util::http::headers::ContentEncoding);
+
+						auto finalSize = m_payload.size();
+						std::string length = std::to_string(finalSize);
+
+						RemoveHeader(util::http::headers::ContentLength);
+						AddHeader(util::http::headers::ContentLength, length);
+					}
 				}
 
-				void BaseHttpTransaction::SetPayload(const std::vector<char>& payload)
+				void BaseHttpTransaction::SetPayload(const std::vector<char>& payload, const bool includesHeaders)
 				{
-					// XXX TODO - Cleanup this code duplication.
-					bool needsTerminatingCrlf = false;
-
-					if (payload.size() > 4)
-					{
-						if (
-							payload[payload.size() - 1] != '\n' &&
-							payload[payload.size() - 2] != '\r' &&
-							payload[payload.size() - 3] != '\n' &&
-							payload[payload.size() - 4] != '\r')
-						{
-							needsTerminatingCrlf = true;
-						}
-					}
-
 					m_payload = payload;
 					m_payloadComplete = true;
 
-					RemoveHeader(util::http::headers::ContentLength);
-					RemoveHeader(util::http::headers::TransferEncoding);
-					RemoveHeader(util::http::headers::ContentEncoding);
-
-					auto finalSize = m_payload.size();
-					std::string length = std::to_string(finalSize);
-
-					RemoveHeader(util::http::headers::ContentLength);
-					AddHeader(util::http::headers::ContentLength, length);
-
-					/*
-					if (needsTerminatingCrlf)
+					if (includesHeaders)
 					{
-						m_payload.reserve(m_payload.size() + 4);
-						m_payload.push_back('\r');
-						m_payload.push_back('\n');
-						m_payload.push_back('\r');
-						m_payload.push_back('\n');
+						m_headers.clear();
+						m_headersSent = true;
+						m_headersComplete = true;
 					}
-					*/
+					else
+					{
+						RemoveHeader(util::http::headers::ContentLength);
+						RemoveHeader(util::http::headers::TransferEncoding);
+						RemoveHeader(util::http::headers::ContentEncoding);
+
+						auto finalSize = m_payload.size();
+						std::string length = std::to_string(finalSize);
+
+						RemoveHeader(util::http::headers::ContentLength);
+						AddHeader(util::http::headers::ContentLength, length);
+					}
 				}
 
 				const bool BaseHttpTransaction::IsPayloadComplete() const
@@ -340,6 +305,7 @@ namespace te
 
 						default:
 							os << u8"1.1";
+						break;
 					}
 
 					os << u8" 204 No Content\r\nDate: ";
@@ -358,6 +324,8 @@ namespace te
 					m_payload.clear();
 
 					m_payload.assign(fs.begin(), fs.end());
+
+					m_headers.clear();
 
 					m_headersSent = true;
 					m_headersComplete = true;
@@ -851,7 +819,7 @@ namespace te
 						trans->m_payloadComplete = false;						
 						trans->m_consumeAllBeforeSending = false;
 						trans->m_shouldBlock = 0;
-						trans->m_headers.clear();						
+						trans->m_headers.clear();
 						trans->m_headersSent = false;
 						trans->m_headersComplete = false;
 						trans->m_lastHeader = std::string("");
@@ -913,7 +881,17 @@ namespace te
 						if (trans->GetConsumeAllBeforeSending())
 						{	
 							trans->ConvertPayloadFromChunkedToFixedLength();
-						}						
+							/*
+							if (trans->IsPayloadChunked())
+							{
+								trans->ConvertPayloadFromChunkedToFixedLength();
+							}
+							else if (trans->IsPayloadCompressed())
+							{
+								trans->DecompressPayload();
+							}
+							*/
+						}
 					}
 					else
 					{

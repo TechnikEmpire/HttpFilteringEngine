@@ -32,6 +32,13 @@ namespace Te {
 			
 		public:
 
+			enum class ProxyNextAction : UInt32
+			{
+				AllowAndIgnoreContent = 0,
+				AllowButRequestContentInspection = 1,
+				DropConnection = 2
+			};
+
 			/// <summary>
 			/// Callback that is designed to verify if the binary at the supplied absolute path has
 			/// firewall permission to access the internet.
@@ -39,25 +46,14 @@ namespace Te {
 			delegate bool FirewallCheckHandler(System::String^ binaryAbsolutePath);
 
 			/// <summary>
-			/// Callback used to classify content.
-			/// </summary>			
-			delegate uint8_t ClassifyContentHandler(array<System::Byte>^ data, System::String^ contentType);
-
-			/// <summary>
 			/// Callback for receiving informational messages.
 			/// </summary>
 			delegate void MessageHandler(System::String^ message);
 
-			/// <summary>
-			/// Callback for receiving information about blocked requests.
-			/// </summary>
-			delegate void ReportRequestBlockedHandler(uint8_t category, uint32_t payloadSizeBlocked, System::String^ fullRequest);
+			delegate void HttpMessageBeginHandler(System::String^ headers, array<System::Byte>^ data, [Out] ProxyNextAction% nextAction, [Out] array<System::Byte>^% customBlockResponseData);
 
-			/// <summary>
-			/// Callback for receiving information about removed HTML elements from HTML payloads.
-			/// </summary>
-			delegate void ReportElementsBlockedHandler(uint32_t numElementsRemoved, System::String^ fullRequest);
-
+			delegate void HttpMessageEndHandler(System::String^ headers, array<System::Byte>^ data, [Out] bool% shouldBlock, [Out] array<System::Byte>^% customBlockResponseData);
+			
 			/// <summary>
 			/// Constructs a new Engine.
 			/// </summary>
@@ -93,7 +89,7 @@ namespace Te {
 			/// Be advised that these are the same threads responsible for running the filtering
 			/// code.
 			/// </param>
-			Engine(FirewallCheckHandler^ firewallCheckFunc, ClassifyContentHandler^ classificationFunc, System::String^ caBundleAbsPath, System::String^ blockedHtmlPage, uint16_t httpListenerPort, uint16_t httpsListenerPort, uint32_t numThreads);
+			Engine(FirewallCheckHandler^ firewallCheckFunc, HttpMessageBeginHandler^ httpMessageBeginFunc, HttpMessageEndHandler^ httpMessageEndFunc, System::String^ caBundleAbsPath, uint16_t httpListenerPort, uint16_t httpsListenerPort, uint32_t numThreads);
 
 			/// <summary>
 			/// Destructor, invokes finalizer as per docs here
@@ -112,20 +108,6 @@ namespace Te {
 			property System::String^ CaBundleAbsolutePath
 			{
 			
-			public:
-				System::String^ get();
-
-			private:
-				void set(System::String^ value);
-
-			}
-
-			/// <summary>
-			/// HTML to display when a HTML payload is blocked.
-			/// </summary>
-			property System::String^ BlockedHtmlPage
-			{
-
 			public:
 				System::String^ get();
 
@@ -195,16 +177,6 @@ namespace Te {
 			event MessageHandler^ OnError;
 
 			/// <summary>
-			/// Called whenever a request is reported as having been blocked.
-			/// </summary>
-			event ReportRequestBlockedHandler^ OnRequestBlocked;
-
-			/// <summary>
-			/// Called whenever HTML elements are removed from an HTML payload.
-			/// </summary>
-			event ReportElementsBlockedHandler^ OnElementsBlocked;
-
-			/// <summary>
 			/// Starts the Engine, which begins diverting plain TCP HTTP and secure HTTP clients
 			/// through the proxy. It is recommended that, from a UI, this method be called from a
 			/// BackgroundWorker.
@@ -218,193 +190,6 @@ namespace Te {
 			/// operation can hang for a handful of seconds.
 			/// </summary>
 			void Stop();
-
-			/// <summary>
-			/// Attempts to load an file containing Adblock Plus formatted filters and CSS
-			/// selectors.
-			/// </summary>
-			/// <param name="listFilePath">
-			/// The absolute path to the filter list.
-			/// </param>
-			/// <param name="listCategory">
-			/// The category to assign to the rules loaded from the list. User defined, but must be
-			/// non-zero.
-			/// </param>
-			/// <param name="flushExistingInCategory">
-			/// Whether or not to flush rules that have the same category set the one supplied
-			/// before loading the new rules from the supplied filter list.
-			/// </param>
-			/// <param name="rulesLoaded">
-			/// The total number of rules successfully loaded and parsed from the source.
-			/// </param>
-			/// <param name="rulesFailed">
-			/// The total number of rules that failed to load and or be parsed from the source.
-			/// </param>
-			void LoadAbpFormattedFile(
-				System::String^ listFilePath, 
-				uint8_t listCategory, 
-				bool flushExistingInCategory,
-				[Out] uint32_t% rulesLoaded,
-				[Out] uint32_t% rulesFailed
-				);
-
-			/// <summary>
-			/// Attempts to load Adblock Plus formatted filters and CSS selectors from the supplied
-			/// list string.
-			/// </summary>
-			/// <param name="list">
-			/// The filter list string.
-			/// </param>
-			/// <param name="listCategory">
-			/// The category to assign to the rules loaded from the list. User defined, but must be
-			/// non-zero.
-			/// </param>
-			/// <param name="flushExistingInCategory">
-			/// Whether or not to flush rules that have the same category set the one supplied
-			/// before loading the new rules from the supplied filter list.
-			/// </param>
-			/// <param name="rulesLoaded">
-			/// The total number of rules successfully loaded and parsed from the source.
-			/// </param>
-			/// <param name="rulesFailed">
-			/// The total number of rules that failed to load and or be parsed from the source.
-			/// </param>
-			void LoadAbpFormattedString(
-				System::String^ list, 
-				uint8_t listCategory, 
-				bool flushExistingInCategory,
-				[Out] uint32_t% rulesLoaded,
-				[Out] uint32_t% rulesFailed
-				);
-
-			/// <summary>
-			/// Attempts to load text triggers, separated by newline, from the supplied file path.
-			/// </summary>
-			/// <param name="filePath">
-			/// A string containing the path to the text triggers file to load.
-			/// </param>
-			/// <param name="category">
-			/// The category that the rules loaded from the list should be classified as belonging
-			/// to. This is entirely user specified and the Engine is **mostly** agnostic to the
-			/// meaning of these values. The value zero is reserved to represent the "unfiltered"
-			/// category. Aside from this, whatever other value these categories are are has no
-			/// bearing on internal functionality.
-			/// </param>
-			/// <param name="flushExistingInCategory">
-			/// Whether or not to flush the existing entries in the category before loading new
-			/// entries.
-			/// </param>
-			/// <param name="rulesLoaded">
-			/// The total number of rules loaded.
-			/// </param>
-			uint32_t LoadTextTriggersFromFile(
-				System::String^ filePath,
-				uint8_t category,
-				bool flushExistingInCategory
-			);
-
-			/// <summary>
-			/// Attempts to load text triggers, separated by newline, from the supplied string.
-			/// </summary>
-			/// <param name="triggersString">
-			/// A string containing newline deliminted text triggers.
-			/// </param>
-			/// <param name="category">
-			/// The category that the rules loaded from the list should be classified as belonging
-			/// to. This is entirely user specified and the Engine is **mostly** agnostic to the
-			/// meaning of these values. The value zero is reserved to represent the "unfiltered"
-			/// category. Aside from this, whatever other value these categories are are has no
-			/// bearing on internal functionality.
-			/// </param>
-			/// <param name="flushExistingInCategory">
-			/// Whether or not to flush the existing entries in the category before loading new
-			/// entries.
-			/// </param>
-			/// <param name="rulesLoaded">
-			/// The total number of rules loaded.
-			/// </param>
-			uint32_t LoadTextTriggersFromString(
-				System::String^ triggersString,
-				uint8_t category,
-				bool flushExistingInCategory
-			);
-
-			/// <summary>
-			/// Unloads any and all rules assigned to the given category.
-			/// </summary>
-			/// <param name="category">
-			/// The category for which to unload all rules.
-			/// </param>
-			void UnloadAllFilterRulesForCategory(const uint8_t category);
-
-			/// <summary>
-			/// Unloads any and all text triggers assigned to the given category.
-			/// </summary>
-			/// <param name="category">
-			/// The category for which to unload all text triggers.
-			/// </param>
-			void UnloadAllTextTriggersForCategory(const uint8_t category);
-
-			/// <summary>
-			/// Checks if the specified option is enabled.
-			/// </summary>
-			/// <param name="option">
-			/// The option, represented by a 32 bit unsigned integer. If there are any options for
-			/// your platform, a header with an enum class specifying available options would have
-			/// been provided. Note that available options do not span the max size of the supplied
-			/// integer value. If an option outside the preset size of total available options is
-			/// supplied, return value will always be false.
-			/// </param>
-			/// <returns>
-			/// True of the specified option is enabled, false otherwise.
-			/// </returns>
-			bool IsOptionEnabled(uint32_t option);
-
-			/// <summary>
-			/// Sets whether the supplied option is enabled or not.
-			/// </summary>
-			/// <param name="option">
-			/// The option, represented by a 32 bit unsigned integer. If there are any options for
-			/// your platform, a header with an enum class specifying available options would have
-			/// been provided. Note that available options do not span the max size of the supplied
-			/// integer value. If an option outside the preset size of total available options is
-			/// supplied, call will silently ignore it.
-			/// </param>
-			/// <param name="enabled">
-			/// A bool which sets the enabled state of the supplied option.
-			/// </param>
-			void SetOptionEnabled(uint32_t option, bool enabled);
-
-			/// <summary>
-			/// Checks if the specified filtering category is enabled.
-			/// </summary>
-			/// <param name="category">
-			/// The category, represented by an unsigned 8 bit integer. The underlying Engine is
-			/// largely agnostic to the meaning attached to specified values, with the sole
-			/// exception being the value zero. Zero is reserved to indicate "Do not filter". Aside
-			/// from that, the total number of available categories that the user may employ spans
-			/// from one to the upper numeric limits of the unsigned 8 bit integer.
-			/// </param>
-			/// <returns>
-			/// True if the specified filtering category is enabled, false otherwise.
-			/// </returns>
-			bool IsCategoryEnabled(uint8_t category);
-
-			/// <summary>
-			/// Sets whether the supplied filtering category is enabled or not.
-			/// </summary>
-			/// <param name="category">
-			/// The category, represented by an unsigned 8 bit integer. The underlying Engine is
-			/// largely agnostic to the meaning attached to specified values, with the sole
-			/// exception being the value zero. Zero is reserved to indicate "Do not filter". Aside
-			/// from that, the total number of available categories that the user may employ spans
-			/// from one to the upper numeric limits of the unsigned 8 bit integer. Supplying a
-			/// value of zero here will result in the call being silently ignored.
-			/// </param>
-			/// <param name="enabled">
-			/// A bool which sets the enabled state of the supplied filtering category.
-			/// </param>
-			void SetCategoryEnabled(uint8_t category, bool enabled);			
 
 			/// <summary>
 			/// Gets the bytes for the current root CA, if any, in PEM format.
@@ -431,41 +216,21 @@ namespace Te {
 
 			/// <summary>
 			/// See notes on UnmanagedFirewallCheckCallback. This is the managed, unmanaged callback
-			/// delegate for content classification.
-			/// </summary>
-			[UnmanagedFunctionPointer(CallingConvention::Cdecl)]
-			delegate uint8_t UnmanagedClassifyContentCallback(const char* contentBytes, const size_t contentLength, const char* contentType, const size_t contentTypeLength);
-
-			/// <summary>
-			/// See notes on UnmanagedFirewallCheckCallback. This is the managed, unmanaged callback
 			/// delegate for onInfo, onWarn and onError.
 			/// </summary>
 			[UnmanagedFunctionPointer(CallingConvention::Cdecl)]
 			delegate void UnmanagedMessageCallback(const char* message, const size_t messageLength);
 
-			/// <summary>
-			/// See notes on UnmanagedFirewallCheckCallback. This is the managed, unmanaged callback
-			/// for information about blocked requests.
-			/// </summary>
 			[UnmanagedFunctionPointer(CallingConvention::Cdecl)]
-			delegate void UnmanagedReportRequestBlockedCallback(const uint8_t category, const uint32_t payloadSizeBlocked, const char* host, const size_t hostLength);
+			delegate void UnmanagedOnHttpMessageBeginCallback(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength);
 
-			/// <summary>
-			/// See notes on UnmanagedFirewallCheckCallback. This is the managed, unmanaged callback
-			/// for information about HTML elements removed from HTML payloads.
-			/// </summary>
 			[UnmanagedFunctionPointer(CallingConvention::Cdecl)]
-			delegate void UnmanagedReportElementsBlockedCallback(const uint32_t numElementsRemoved, const char* fullRequest, const size_t requestLength);					
+			delegate void UnmanagedOnHttpMessageEndCallback(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength);
 
 			/// <summary>
 			/// Firewall check callback to supply to the unmanaged side.
 			/// </summary>
 			UnmanagedFirewallCheckCallback^ m_unmanagedFirewallCheckCallback = nullptr;
-
-			/// <summary>
-			/// Content classification callback to supply to the umanaged side.
-			/// </summary>
-			UnmanagedClassifyContentCallback^ m_unmanagedContentClasificationCallback = nullptr;
 
 			/// <summary>
 			/// OnInfo callback to supply to the unmanaged side.
@@ -483,15 +248,15 @@ namespace Te {
 			UnmanagedMessageCallback^ m_unmanagedOnErrorCallback = nullptr;
 
 			/// <summary>
-			/// OnRequestBlocked callback to supply to the unmanaged side.
+			/// Http message begin callback for unmanaged side.
 			/// </summary>
-			UnmanagedReportRequestBlockedCallback^ m_unmanagedOnRequestBlockedCallback = nullptr;
+			UnmanagedOnHttpMessageBeginCallback^ m_unmanagedOnHttpMessageBeginCallback = nullptr;
 
 			/// <summary>
-			/// OnElementsBlocked callback to supply to the unmanaged side.
+			/// Http message end callback for unmanaged side.
 			/// </summary>
-			UnmanagedReportElementsBlockedCallback^ m_unmanagedOnElementsBlockedCallback = nullptr;
-			
+			UnmanagedOnHttpMessageEndCallback^ m_unmanagedOnHttpMessageEndCallback = nullptr;
+
 			/// <summary>
 			/// Pointer to the unmanaged Engine structure.
 			/// </summary>
@@ -501,11 +266,6 @@ namespace Te {
 			/// Absolute path to the CA bundle to be used, supplied at construction.
 			/// </summary>
 			System::String^ m_caBundleAbsPath = nullptr;
-
-			/// <summary>
-			/// HTML to display when a HTML payload is blocked.
-			/// </summary>
-			System::String^ m_blockedHtmlPage = nullptr;
 
 			/// <summary>
 			/// Port on which the proxy should list for HTTP clients. Supplied at construction,
@@ -529,10 +289,9 @@ namespace Te {
 			/// </summary>
 			FirewallCheckHandler^ m_onFirewallCallback = nullptr;
 
-			/// <summary>
-			/// The callback used to classify a transaction payload.
-			/// </summary>
-			ClassifyContentHandler^ m_onClassificationCallback = nullptr;
+			HttpMessageBeginHandler^ m_onHttpMessageBeginCallback = nullptr;
+
+			HttpMessageEndHandler^ m_onHttpMessageEndCallback = nullptr;
 
 			/// <summary>
 			/// Initializes the unmanaged structure, configures callbacks.
@@ -548,17 +307,15 @@ namespace Te {
 
 			bool UnmanagedFirewallCheck(const char* binaryAbsolutePath, const size_t binaryAbsolutePathLength);
 
-			uint8_t UnmanagedClassifyContent(const char* contentBytes, const size_t contentLength, const char* contentType, const size_t contentTypeLength);
-
 			void UnmanagedOnInfo(const char* message, const size_t messageLength);
 
 			void UnmanagedOnWarning(const char* message, const size_t messageLength);
 
 			void UnmanagedOnError(const char* message, const size_t messageLength);
+			
+			void UnmanagedHttpMessageBegin(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength);
 
-			void UnmanagedOnRequestBlocked(const uint8_t category, const uint32_t payloadSizeBlocked, const char* fullRequest, const size_t requestLength);
-
-			void UnmanagedOnElementsBlocked(const uint32_t numElementsRemoved, const char* fullRequest, const size_t requestLength);
+			void UnmanagedHttpMessageEnd(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength);
 
 		};
 
