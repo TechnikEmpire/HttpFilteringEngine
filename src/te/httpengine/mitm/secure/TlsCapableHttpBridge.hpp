@@ -2830,7 +2830,7 @@ namespace te
 								case 1:
 								{
 									// Allow but want to inspect payload.
-									transaction->GetConsumeAllBeforeSending();
+									transaction->SetConsumeAllBeforeSending(true);
 									return false;
 								}
 								break;
