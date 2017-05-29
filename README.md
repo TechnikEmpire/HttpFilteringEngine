@@ -21,6 +21,11 @@ BuildBot is designed to be cross platform, but currently the build scripts for H
 
 Once you have those requirements installed, you can get all deps setup with the following commands:
 
+# NOTICE
+Do not use PowerShell to run BuildBot. Microsoft has crammed PowerShell as the default shell down our throat since Windows 10 Creators Update. Do not use it. Use CMD. If you use PowerShell, files called 'NUL' will get created in submodules, and they cannot be removed, unless you use an arcane command. If this happens to you, remove these 'NUL' files with:
+
+`Del \\?\C:\path\to\NUL`, or from within the current directory: `Del \\?\%CD%\NUL`.
+
 ```bash
 # Clone BuildBot
 git clone --recursive https://github.com/TechnikEmpire/BuildBot.git
