@@ -373,7 +373,7 @@ namespace te
 					/// A non-zero value if the transaction has been marked for blocking, zero if
 					/// the transaction is not marked for blocking.
 					/// </returns>
-					const uint8_t GetShouldBlock() const;
+					const int32_t GetShouldBlock() const;
 
 					/// <summary>
 					/// Set the value of ShouldBlock if it has been determined externally that the
@@ -406,7 +406,7 @@ namespace te
 					/// determined to belong to and as such marked for blocking, or zero to indicate
 					/// that the transaction should not be blocked.
 					/// </param>
-					void SetShouldBlock(const uint8_t category);
+					void SetShouldBlock(const int32_t category);
 
 					/// <summary>
 					/// Convenience function for internally modifying the transaction headers and
@@ -715,12 +715,13 @@ namespace te
 					bool m_payloadComplete = false;
 
 					/// <summary>
-					/// Flag used to determine if the transaction should be blocked. Any non-zero
-					/// value represents a filtering category, and as such, any non-zero value
-					/// indicates that the request should indeed be blocked, which zero indicates
-					/// that the transaction should be blocked.
+					/// Flag used to determine if the transaction should be blocked. Any
+					/// greater-than-zero value represents a filtering category, and as such, any
+					/// greater-than-zero value indicates that the request should indeed be blocked,
+					/// which zero indicates that the transaction should be blocked. A negative value
+					/// indicates that the transaction is whitelisted.
 					/// </summary>
-					uint8_t m_shouldBlock = 0;
+					int32_t m_shouldBlock = 0;
 
 					/// <summary>
 					/// Flag used to determine if the entire transaction headers and payload (body)

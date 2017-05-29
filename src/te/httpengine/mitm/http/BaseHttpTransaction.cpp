@@ -269,19 +269,14 @@ namespace te
 					return m_payloadComplete;
 				}
 
-				const uint8_t BaseHttpTransaction::GetShouldBlock() const
+				const int32_t BaseHttpTransaction::GetShouldBlock() const
 				{
 					return m_shouldBlock;
 				}
 
-				void BaseHttpTransaction::SetShouldBlock(const uint8_t category)
+				void BaseHttpTransaction::SetShouldBlock(const int32_t category)
 				{
 					m_shouldBlock = category;
-
-					if (category > 0)
-					{
-						m_payloadComplete = true;
-					}					
 				}
 
 				void BaseHttpTransaction::Make204()

@@ -29,14 +29,6 @@
 typedef bool(*FirewallCheckCallback)(const char* binaryAbsolutePath, const size_t binaryAbsolutePathLength);
 
 /// <summary>
-/// A callback that, if supplied, will be called for the purpose of classifying intercepted content.
-/// This may be text, an image, etc. The bytes and the total number of bytes for the data make up the
-/// first two parameters, the content type declaration, as a UTF8 (hopefully) string of chars and the
-/// total number of bytes in that string make up the latter two parameters.
-/// </summary>
-//typedef uint8_t(*ClassifyContentCallback)(const char* contentBytes, const size_t contentLength, const char* contentType, const size_t contentTypeLength);
-
-/// <summary>
 /// The Engine handles any error that occurs in situations related to external input. This is
 /// because the very nature of the Engine is to deal with unpredictable external input. However,
 /// to prevent some insight and feedback to users, various callbacks are used for errors,
@@ -47,31 +39,17 @@ typedef bool(*FirewallCheckCallback)(const char* binaryAbsolutePath, const size_
 /// </summary>
 typedef void(*ReportMessageCallback)(const char* message, const size_t messageLength);
 
-/// <summary>
-/// When the Engine blocks a request, it will report information about the blocking event, if a
-/// callback is provided to do so. This information includes the category that the filter
-/// responsible for the block belongs to, the size of the payload which would have been
-/// transferred if the request were not blocked (only if this option is enabled), and the host
-/// of the blocked request.
-/// 
-/// If the filtering option to fetch and report the blocked payload size is disabled or if the
-/// payload is configured to be delivered as a chunked response, the size reported will be zero.
-/// </summary>
-//typedef void(*ReportBlockedRequestCallback)(const uint8_t category, const uint32_t payloadSizeBlocked, const char* fullRequest, const size_t requestLength);
+typedef void(*HttpMessageBeginCallback)(
+	const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength, 
+	const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
+	const uint32_t* nextAction, char** customBlockResponse, const uint32_t* customBlockResponseLength
+			);
 
-/// <summary>
-/// When the Engine removes elements from a specific web page, it will report information about
-/// that event, if a callback is provided to do so. This information is simply the number of
-/// elements removed and the full request that contained the returned HTML on which the
-/// selectors were run. Category information is unfortunately not available, since selectors
-/// from all categories are collectively used to remove multiple elements, unlike filters where
-/// a single filter is ultimately responsible for blocking or whitelisting a request.
-/// </summary>
-//typedef void(*ReportBlockedElementsCallback)(const uint32_t numElementsRemoved, const char* fullRequest, const size_t requestLength);
-
-typedef void(*HttpMessageBeginCallback)(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, const uint32_t* nextAction, char** customBlockResponse, const uint32_t* customBlockResponseLength);
-
-typedef void(*HttpMessageEndCallback)(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, const bool* nextAction, char** customBlockResponse, const uint32_t* customBlockResponseLength);
+typedef void(*HttpMessageEndCallback)(
+	const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength, 
+	const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
+	bool* shouldBlock, char** customBlockResponse, const uint32_t* customBlockResponseLength
+	);
 
 #ifdef __cplusplus
 namespace te
@@ -86,13 +64,18 @@ namespace te
 				using FirewallCheckFunction = std::function<bool(const char* binaryAbsolutePath, const size_t binaryAbsolutePathLength)>;
 				using MessageFunction = std::function<void(const char* message, const size_t messageLength)>;
 
-				using HttpMessageBeginCheckFunction = std::function<void(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength)>;
-				using HttpMessageEndCheckFunction = std::function<void(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength)>;
+				using HttpMessageBeginCheckFunction = std::function<void(
+					const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
+					const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
+					uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength
+					)>;
 
-				//using RequestBlockFunction = std::function<void(const uint8_t category, const uint32_t payloadSizeBlocked, const char* fullRequest, const size_t requestLength)>;
-				//using ElementBlockFunction = std::function<void(const uint32_t numElementsRemoved, const char* fullRequest, const size_t requestLength)>;
-				//using ContentClassificationFunction = std::function<uint8_t(const char* contentBytes, const size_t contentLength, const char* contentType, const size_t contentTypeLength)>;
-			
+				using HttpMessageEndCheckFunction = std::function<void(
+					const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
+					const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
+					bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength
+					)>;
+
 			} /* namespace cb */
 		} /* namespace util */
 	} /* namespace httpengine */

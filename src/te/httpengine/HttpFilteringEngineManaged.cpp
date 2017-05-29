@@ -229,26 +229,44 @@ namespace Te {
 			}			
 		}
 
-		void Engine::UnmanagedHttpMessageBegin(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength)
+		void Engine::UnmanagedHttpMessageBegin(
+			const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
+			const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
+			uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength
+		)
 		{
-			System::String^ headersMStr = System::String::Empty;
-			array<System::Byte>^ bodyArr = gcnew array<System::Byte>(0);
+			System::String^ requestHeadersMStr = System::String::Empty;
+			System::String^ responseHeadersMStr = System::String::Empty;
 
-			if (headers != nullptr)
+			array<System::Byte>^ requestBodyArr = gcnew array<System::Byte>(0);
+			array<System::Byte>^ responseBodyArr = gcnew array<System::Byte>(0);
+
+			if (requestHeaders != nullptr)
 			{
-				headersMStr = gcnew System::String(headers, 0, static_cast<int>(headersLength));
+				requestHeadersMStr = gcnew System::String(requestHeaders, 0, static_cast<int>(requestHeadersLength));
 			}
 
-			if (body != nullptr)
+			if (responseHeaders != nullptr)
 			{
-				bodyArr = gcnew array<System::Byte>(bodyLength);
-				System::Runtime::InteropServices::Marshal::Copy(IntPtr((void *)body), bodyArr, 0, bodyLength);
+				responseHeadersMStr = gcnew System::String(responseHeaders, 0, static_cast<int>(responseHeadersLength));
+			}
+
+			if (requestBody != nullptr)
+			{
+				requestBodyArr = gcnew array<System::Byte>(requestBodyLength);
+				System::Runtime::InteropServices::Marshal::Copy(IntPtr((void *)requestBody), requestBodyArr, 0, requestBodyLength);
+			}
+
+			if (responseBody != nullptr)
+			{
+				responseBodyArr = gcnew array<System::Byte>(responseBodyLength);
+				System::Runtime::InteropServices::Marshal::Copy(IntPtr((void *)responseBody), responseBodyArr, 0, responseBodyLength);
 			}
 
 			ProxyNextAction nxt = ProxyNextAction::AllowAndIgnoreContent;
 			array<System::Byte>^ customBlockedResponseManaged = nullptr;
 
-			m_onHttpMessageBeginCallback(headersMStr, bodyArr, nxt, customBlockedResponseManaged);
+			m_onHttpMessageBeginCallback(requestHeadersMStr, requestBodyArr, responseHeadersMStr, responseBodyArr, nxt, customBlockedResponseManaged);
 
 			(*customBlockResponseLength) = 0;
 
@@ -264,26 +282,44 @@ namespace Te {
 			(*nextAction) = (*reinterpret_cast<uint32_t*>(&nxt));
 		}
 
-		void Engine::UnmanagedHttpMessageEnd(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength)
+		void Engine::UnmanagedHttpMessageEnd(
+			const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
+			const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
+			bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength
+		)
 		{
-			System::String^ headersMStr = System::String::Empty;
-			array<System::Byte>^ bodyArr = gcnew array<System::Byte>(0);
+			System::String^ requestHeadersMStr = System::String::Empty;
+			System::String^ responseHeadersMStr = System::String::Empty;
 
-			if (headers != nullptr)
+			array<System::Byte>^ requestBodyArr = gcnew array<System::Byte>(0);
+			array<System::Byte>^ responseBodyArr = gcnew array<System::Byte>(0);
+
+			if (requestHeaders != nullptr)
 			{
-				headersMStr = gcnew System::String(headers, 0, static_cast<int>(headersLength));
+				requestHeadersMStr = gcnew System::String(requestHeaders, 0, static_cast<int>(requestHeadersLength));
 			}
 
-			if (body != nullptr)
+			if (responseHeaders != nullptr)
 			{
-				bodyArr = gcnew array<System::Byte>(bodyLength);
-				System::Runtime::InteropServices::Marshal::Copy(IntPtr((void *)body), bodyArr, 0, bodyLength);
+				responseHeadersMStr = gcnew System::String(responseHeaders, 0, static_cast<int>(responseHeadersLength));
+			}
+
+			if (requestBody != nullptr)
+			{
+				requestBodyArr = gcnew array<System::Byte>(requestBodyLength);
+				System::Runtime::InteropServices::Marshal::Copy(IntPtr((void *)requestBody), requestBodyArr, 0, requestBodyLength);
+			}
+
+			if (responseBody != nullptr)
+			{
+				responseBodyArr = gcnew array<System::Byte>(responseBodyLength);
+				System::Runtime::InteropServices::Marshal::Copy(IntPtr((void *)responseBody), responseBodyArr, 0, responseBodyLength);
 			}
 
 			bool shouldBlockManaged = false;
 			array<System::Byte>^ customBlockedResponseManaged = nullptr;
 
-			m_onHttpMessageEndCallback(headersMStr, bodyArr, shouldBlockManaged, customBlockedResponseManaged);
+			m_onHttpMessageEndCallback(requestHeadersMStr, requestBodyArr, responseHeadersMStr, responseBodyArr, shouldBlockManaged, customBlockedResponseManaged);
 
 			(*customBlockResponseLength) = 0;
 

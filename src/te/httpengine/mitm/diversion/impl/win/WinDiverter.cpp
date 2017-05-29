@@ -82,8 +82,11 @@ namespace te
 						// the filter to ignore all loopback sourced or destined packets. Slow startup aside,
 						// we're also blowing away loopback traffic. Now that's just rude.
 
-						//  and (ip.DstAddr != 127.0.0.1 and ip.SrcAddr != 127.0.0.1)
-						m_diversionHandle = WinDivertOpen(u8"outbound and tcp and (ip.DstAddr != 127.0.0.1 and ip.SrcAddr != 127.0.0.1)", WINDIVERT_LAYER_NETWORK, -1000, WINDIVERT_FLAG_NO_CHECKSUM);
+						#ifdef HTTP_FE_BLOCK_TOR
+							m_diversionHandle = WinDivertOpen(u8"outbound and tcp", WINDIVERT_LAYER_NETWORK, -1000, WINDIVERT_FLAG_NO_CHECKSUM);
+						#else
+							m_diversionHandle = WinDivertOpen(u8"outbound and tcp and (ip.DstAddr != 127.0.0.1 and ip.SrcAddr != 127.0.0.1)", WINDIVERT_LAYER_NETWORK, -1000, WINDIVERT_FLAG_NO_CHECKSUM);
+						#endif
 
 						m_quicBlockHandle = WinDivertOpen(u8"udp and (udp.DstPort == 80 || udp.DstPort == 443)", WINDIVERT_LAYER_NETWORK, 0, WINDIVERT_FLAG_NO_CHECKSUM | WINDIVERT_FLAG_DROP);
 
@@ -314,7 +317,9 @@ namespace te
 							// we don't find something we want to block on local addresses, then
 							// we want to skip these for the rest of the filtering and just
 							// let them through.
+							#ifdef HTTP_FE_BLOCK_TOR
 							bool isLocalIpv4 = false;
+							
 							if (ipV4Header != nullptr && tcpHeader != nullptr)
 							{
 								ipv4Copy[0] = ipV4Header->DstAddr & 0xFF; 
@@ -340,8 +345,10 @@ namespace te
 									}
 								}
 							}
+							
 
 							if (!isLocalIpv4)
+							#endif
 							{
 								if (ipV4Header != nullptr && tcpHeader != nullptr)
 								{

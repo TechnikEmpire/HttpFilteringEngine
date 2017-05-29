@@ -271,9 +271,17 @@ namespace te
 			util::cb::HttpMessageBeginCheckFunction m_onMessageBegin;
 			util::cb::HttpMessageEndCheckFunction m_onMessageEnd;
 
-			static void DummyOnMessageBeginCallback(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength);
+			static void DummyOnMessageBeginCallback(
+				const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
+				const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
+				uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength
+			);
 
-			static void DummyOnMessageEndCallback(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength);
+			static void DummyOnMessageEndCallback(
+				const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
+				const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
+				bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength
+			);
 
 		};
 

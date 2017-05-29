@@ -36,7 +36,8 @@ namespace Te {
 			{
 				AllowAndIgnoreContent = 0,
 				AllowButRequestContentInspection = 1,
-				DropConnection = 2
+				DropConnection = 2,
+				AllowAndIgnoreContentAndResponse = 3
 			};
 
 			/// <summary>
@@ -50,9 +51,15 @@ namespace Te {
 			/// </summary>
 			delegate void MessageHandler(System::String^ message);
 
-			delegate void HttpMessageBeginHandler(System::String^ headers, array<System::Byte>^ data, [Out] ProxyNextAction% nextAction, [Out] array<System::Byte>^% customBlockResponseData);
+			delegate void HttpMessageBeginHandler(
+				System::String^ requestHeaders, array<System::Byte>^ requestBody,
+				System::String^ responseHeaders, array<System::Byte>^ responseBody,
+				[Out] ProxyNextAction% nextAction, [Out] array<System::Byte>^% customBlockResponseData);
 
-			delegate void HttpMessageEndHandler(System::String^ headers, array<System::Byte>^ data, [Out] bool% shouldBlock, [Out] array<System::Byte>^% customBlockResponseData);
+			delegate void HttpMessageEndHandler(
+				System::String^ requestHeaders, array<System::Byte>^ requestBody,
+				System::String^ responseHeaders, array<System::Byte>^ responseBody,
+				[Out] bool% shouldBlock, [Out] array<System::Byte>^% customBlockResponseData);
 			
 			/// <summary>
 			/// Constructs a new Engine.
@@ -222,10 +229,18 @@ namespace Te {
 			delegate void UnmanagedMessageCallback(const char* message, const size_t messageLength);
 
 			[UnmanagedFunctionPointer(CallingConvention::Cdecl)]
-			delegate void UnmanagedOnHttpMessageBeginCallback(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength);
+			delegate void UnmanagedOnHttpMessageBeginCallback(
+				const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
+				const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
+				uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength
+			);
 
 			[UnmanagedFunctionPointer(CallingConvention::Cdecl)]
-			delegate void UnmanagedOnHttpMessageEndCallback(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength);
+			delegate void UnmanagedOnHttpMessageEndCallback(
+				const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
+				const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
+				bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength
+			);
 
 			/// <summary>
 			/// Firewall check callback to supply to the unmanaged side.
@@ -313,9 +328,17 @@ namespace Te {
 
 			void UnmanagedOnError(const char* message, const size_t messageLength);
 			
-			void UnmanagedHttpMessageBegin(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength);
+			void UnmanagedHttpMessageBegin(
+				const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
+				const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
+				uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength
+			);
 
-			void UnmanagedHttpMessageEnd(const char* headers, const uint32_t headersLength, const char* body, const uint32_t bodyLength, bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength);
+			void UnmanagedHttpMessageEnd(
+				const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
+				const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
+				bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength
+			);
 
 		};
 

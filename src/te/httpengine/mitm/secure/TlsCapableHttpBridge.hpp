@@ -882,27 +882,32 @@ namespace te
 									return;
 								}
 
-								auto shouldBlockResponse = ShouldBlockRequest(m_response.get());
-
-								if (shouldBlockResponse)
+								// We only bother to check if the response should be blocked
+								// if the request has not been whitelisted.
+								if (m_request->GetShouldBlock() > -1)
 								{
-									m_request->SetShouldBlock(1);
-									auto responseBuffer = m_response->GetWriteBuffer();
+									auto shouldBlockResponse = ShouldBlockTransaction(m_request.get(), m_response.get());
 
-									boost::asio::async_write(
-										m_downstreamSocket, 
-										responseBuffer,
-										boost::asio::transfer_all(), 
-										m_downstreamStrand.wrap(
-											std::bind(
-												&TlsCapableHttpBridge::OnDownstreamWrite, 
-												shared_from_this(), 
-												std::placeholders::_1
+									if (shouldBlockResponse)
+									{
+										m_request->SetShouldBlock(1);
+										auto responseBuffer = m_request->GetWriteBuffer();
+
+										boost::asio::async_write(
+											m_downstreamSocket,
+											responseBuffer,
+											boost::asio::transfer_all(),
+											m_downstreamStrand.wrap(
+												std::bind(
+													&TlsCapableHttpBridge::OnDownstreamWrite,
+													shared_from_this(),
+													std::placeholders::_1
 												)
 											)
 										);
 
-									return;
+										return;
+									}
 								}
 
 								// We want to remove any header that has to do with Google's SDHC
@@ -1054,12 +1059,12 @@ namespace te
 								if (m_response->IsPayloadComplete() && m_response->GetConsumeAllBeforeSending())
 								{
 									// Response was flagged for further inspection. Supply to ShouldBlock...
-									auto shouldBlock = ShouldBlockRequest(m_response.get());
+									auto shouldBlock = ShouldBlockTransaction(m_request.get(), m_response.get());
 
 									if (shouldBlock)
 									{	
 										m_request->SetShouldBlock(1);
-										auto responseBuffer = m_response->GetWriteBuffer();
+										auto responseBuffer = m_request->GetWriteBuffer();
 
 										boost::asio::async_write(
 											m_downstreamSocket,
@@ -1307,7 +1312,7 @@ namespace te
 									return;
 								}
 
-								auto shouldBlockRequest = ShouldBlockRequest(m_request.get());
+								auto shouldBlockRequest = ShouldBlockTransaction(m_request.get());
 
 								if (shouldBlockRequest)
 								{
@@ -2778,22 +2783,40 @@ namespace te
 						return bytes_readable > 0;
 					}
 
-					const bool ShouldBlockRequest(http::BaseHttpTransaction* transaction)
+					const bool ShouldBlockTransaction(http::BaseHttpTransaction* request, http::BaseHttpTransaction* response = nullptr)
 					{
-						auto headers = transaction->HeadersToString();						
-						const std::vector<char>* payload = nullptr;
-						uint32_t payloadSize = 0;
+						auto requestHeaders = request->HeadersToString();
+						auto responseHeaders = response != nullptr ? response->HeadersToString() : std::string();
+						
+						const char* requestPayload = nullptr;
+						uint32_t requestPayloadSize = 0;
+
+						const char* responsePayload = nullptr;
+						uint32_t responsePayloadSize = 0;
+
+
 						uint32_t nextAction = 0;
 						char* customBlockResponse = nullptr;
 						bool shouldBlock = false;
 						uint32_t customBlockResponseLen = 0;
 
-						if (transaction->GetConsumeAllBeforeSending() && transaction->IsPayloadComplete())
-						{
-							payload = &transaction->GetPayload();
-							payloadSize = payload->size();
+						bool inspectRequest = request->GetConsumeAllBeforeSending() && request->IsPayloadComplete();
+						bool inspectResponse = (response != nullptr && response->GetConsumeAllBeforeSending() && response->IsPayloadComplete());
 
-							m_onMessageEnd(headers.c_str(), headers.size(), payload != nullptr ? payload->data() : nullptr, payloadSize, &shouldBlock, &customBlockResponse, &customBlockResponseLen);
+						if (inspectRequest || inspectResponse)
+						{
+							requestPayload = inspectRequest ? request->GetPayload().data() : nullptr;
+							requestPayloadSize = inspectRequest ? request->GetPayload().size() : 0;
+
+							responsePayload = inspectResponse ? response->GetPayload().data() : nullptr;
+							responsePayloadSize = inspectResponse ? response->GetPayload().size() : 0;
+
+							m_onMessageEnd(
+								requestHeaders.c_str(), requestHeaders.size(),
+								requestPayload, requestPayloadSize,
+								responseHeaders.c_str(), responseHeaders.size(),
+								responsePayload, responsePayloadSize,
+								&shouldBlock, &customBlockResponse, &customBlockResponseLen);
 
 							if (shouldBlock)
 							{
@@ -2801,28 +2824,44 @@ namespace te
 								{	
 									std::vector<char> customPayloadVec(customBlockResponse, customBlockResponse + customBlockResponseLen);
 									delete[] customBlockResponse;									
-									transaction->SetPayload(customPayloadVec, true);
+									request->SetPayload(customPayloadVec, true);
 									return true;
 								}
 								else
 								{	
-									transaction->Make204();
+									request->Make204();
 								}
 
-								transaction->SetShouldBlock(1);
+								request->SetShouldBlock(1);
 								
 								return true;
 							}
 						}
 						else
 						{
-							m_onMessageBegin(headers.c_str(), headers.size(), payload != nullptr ? payload->data() : nullptr, payloadSize, &nextAction, &customBlockResponse, &customBlockResponseLen);
+							m_onMessageBegin(
+								requestHeaders.c_str(), requestHeaders.size(),
+								nullptr, 0, 
+								responseHeaders.c_str(), responseHeaders.size(),
+								nullptr, 0,
+								&nextAction, &customBlockResponse, &customBlockResponseLen
+							);
 
 							switch (nextAction)
 							{
 								case 0:
 								{
-									// Allow without inspection.
+									// Allow without inspection, but if a response
+									// comes, it is still wanted.
+									request->SetShouldBlock(0);
+									request->SetConsumeAllBeforeSending(false);
+
+									if (response)
+									{
+										response->SetShouldBlock(0);
+										response->SetConsumeAllBeforeSending(false);
+									}
+
 									return false;
 								}
 								break;
@@ -2830,7 +2869,14 @@ namespace te
 								case 1:
 								{
 									// Allow but want to inspect payload.
-									transaction->SetConsumeAllBeforeSending(true);
+									request->SetShouldBlock(0);
+									request->SetConsumeAllBeforeSending(true);
+
+									if (response)
+									{
+										response->SetShouldBlock(0);
+										response->SetConsumeAllBeforeSending(true);
+									}
 									return false;
 								}
 								break;
@@ -2842,20 +2888,43 @@ namespace te
 									{	
 										std::vector<char> customPayloadVec(customBlockResponse, customBlockResponse + customBlockResponseLen);
 										delete[] customBlockResponse;
-										transaction->SetPayload(customPayloadVec, true);
-										return true;
+										request->SetPayload(customPayloadVec, true);										
 									}
 									else
 									{	
-										transaction->Make204();
+										request->Make204();
 									}
 
-									transaction->SetShouldBlock(1);
+									request->SetShouldBlock(1);
+
+									if (response)
+									{
+										response->SetShouldBlock(1);										
+									}
 									return true;
+								}
+								break;
+
+								case 3:
+								{
+									// Allow without inspection, for both request and a response.									
+									// Setting to -1 will whitelist the rest of this transaction, 
+									// including the response.
+									request->SetShouldBlock(-1);
+									request->SetConsumeAllBeforeSending(false);
+
+									if (response)
+									{
+										response->SetShouldBlock(-1);
+										response->SetConsumeAllBeforeSending(false);
+									}
+									return false;
 								}
 								break;
 							}
 						}
+
+						return false;
 					}
 				};				
 
