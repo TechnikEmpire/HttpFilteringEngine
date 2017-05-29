@@ -141,7 +141,7 @@ namespace HttpFilteringEngine
 
             var fullGitPath = m_gitDir + Path.DirectorySeparatorChar + "git.exe";
 
-            if (RunProcess(WorkingDirectory, fullGitPath, new List<string>(new[] { "submodule update --init --force --remote" })) == 0)
+            if (RunProcess(WorkingDirectory, fullGitPath, new List<string>(new[] { "submodule update --init" })) == 0)
             {
                 return true;
             }
@@ -169,7 +169,7 @@ namespace HttpFilteringEngine
 			
 			WriteLineToConsole("Initializing submodules ...");
 
-            if (RunProcess(WorkingDirectory, fullGitPath, new List<string>(new[] { "submodule update --init --force --remote"})) != 0)
+            if (RunProcess(WorkingDirectory, fullGitPath, new List<string>(new[] { "submodule update --init"})) != 0)
             {				
 				WriteLineToConsole("Failed to initialize submodules."); 
 				return false;
@@ -200,7 +200,7 @@ namespace HttpFilteringEngine
 
                 WriteLineToConsole(string.Format("Initializing submodule {0} ...", submoduleIdentifier));
 
-                if (RunProcess(WorkingDirectory, fullGitPath, new List<string>(new[] { "submodule update --init --force --remote " + checkoutCommand })) == 0)
+                if (RunProcess(WorkingDirectory, fullGitPath, new List<string>(new[] { "submodule update --init " + checkoutCommand })) == 0)
                 {
                     ++successfulCheckouts;
                     WriteLineToConsole(string.Format("Submodule {0} successfully initialized.", submoduleIdentifier));
