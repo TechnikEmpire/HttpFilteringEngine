@@ -28,7 +28,7 @@ Transparent filtering TLS proxy that exposes a simple API for filtering of HTTP/
  
  - Ability to actively select which applications should have their traffic pushed through the filter. Every packet flow is checked to have the originating binary identified by full system path, so you can choose what programs have their traffic filtered. You can operate in a binary mode where you either whitelist one or more applications from being filtered, or blacklist one or more applications so only their traffic is filtered. Or, you can simply pass all traffic from every application through.
  
- - Ability to detect and block Tor running on the local machine. This same functionality also blocks all SOCKS4 and SOCKS5 proxies that are running on the local machine. As such, Tor, Tor browser and similar software cannot be used to bypass the filter. By default, the engine is capturing all traffic destined for port 80 or port 443. Users must build upon this library to detect user searches or navigation to proxy sites. 
+ - Ability to detect and block Tor running on the local machine (enabled by preprocessor argument during compilation). This same functionality also blocks all SOCKS4 and SOCKS5 proxies that are running on the local machine. As such, Tor, Tor browser and similar software cannot be used to bypass the filter. By default, the engine is capturing all traffic destined for port 80 or port 443. Users must build upon this library to detect user searches or navigation to proxy sites. 
  
  
 # Building  
