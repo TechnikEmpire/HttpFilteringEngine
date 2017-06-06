@@ -6,7 +6,7 @@ Transparent filtering TLS proxy that exposes a simple API for filtering of HTTP/
  
  - Management of trusted root certificates.
  
- - Automatic establishment of trust with the host OS. The engine will generate and install a one-session-use root CA, holding the private key in memory until the application exits, at which time the root CA is rendered useless. This avoids common pitfalls with other similar technology, where improper management or use of trusted self-signed CA's becomes a security risk.
+ - Automatic establishment of trust with the host OS. The engine will generate and install a one-session-use root CA, holding the randomly generated, elliptic curve based keypair in memory until the application exits, at which time the key is forever lost and the root CA is rendered useless. This avoids common pitfalls with other similar technology, where improper management or use of trusted self-signed CA's becomes a security risk.
  
  - Automatic rejection of TLS certificates where the issue could not be verified as a genuine trusted CA. This functions best when you supply the Mozilla CA-Bundle on startup (see point about management of trusted root CA's). The option is not even given to the user to accept a potentially malicious certificate, the connection is simply refused.
  
