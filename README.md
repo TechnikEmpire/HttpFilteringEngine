@@ -35,9 +35,9 @@ Transparent filtering TLS proxy that exposes a simple API for filtering of HTTP/
 
 HttpFilteringEngine has a lot of dependencies that are complex to build and stage for the project. Some of these dependencies also require third party tools to be installed, making the initial setup process very difficult.
 
-To remove this burden, [BuildBot](https://github.com/TechnikEmpire/BuildBot) was created. This repository contains scripts will be read and processed by BuildBot, and when executed, they fully automate the process of collecting, compiling and staging the project dependencies. They will also fetch temporary, portable copies of required third-party software such as perl and git if they're not installed on your system.
+To remove this burden, [BuildBot](https://github.com/TechnikEmpire/BuildBot) was created. This repository contains scripts that will be read and processed by BuildBot, and when executed, they fully automate the process of collecting, compiling and staging the project dependencies. They will also fetch temporary, portable copies of required third-party software such as perl and git if they're not installed on your system.
 
-BuildBot is designed to be cross platform, but currently the build scripts for HttpFilteringEngine only support compiling under Windows with Visual Studio 2015.
+BuildBot is designed to be cross platform, but currently the build scripts for HttpFilteringEngine only support compiling under Windows with Visual Studio 2015. Also, BuiltBot is a work in progress, that is currently only sufficiently complete for the purpose of automatic the build of this project on Windows.
 
 ### To build HttpFilteringEngine with BuildBot you will need:
 
