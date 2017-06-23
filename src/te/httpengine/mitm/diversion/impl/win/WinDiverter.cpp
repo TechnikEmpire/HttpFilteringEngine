@@ -82,10 +82,22 @@ namespace te
 						// the filter to ignore all loopback sourced or destined packets. Slow startup aside,
 						// we're also blowing away loopback traffic. Now that's just rude.
 
+						static const char* FILTER_STRING = u8"outbound and tcp and ((ip and ip.SrcAddr != 127.0.0.1) or (ipv6 and ipv6.SrcAddr != ::1))";
+
 						#ifdef HTTP_FE_BLOCK_TOR
 							m_diversionHandle = WinDivertOpen(u8"outbound and tcp", WINDIVERT_LAYER_NETWORK, -1000, WINDIVERT_FLAG_NO_CHECKSUM);
 						#else
-							m_diversionHandle = WinDivertOpen(u8"outbound and tcp and (ip.DstAddr != 127.0.0.1 and ip.SrcAddr != 127.0.0.1)", WINDIVERT_LAYER_NETWORK, -1000, WINDIVERT_FLAG_NO_CHECKSUM);
+							const char* errorStr;
+							uint32_t errorPos;
+							if (!WinDivertHelperCheckFilter(FILTER_STRING, WINDIVERT_LAYER_NETWORK, &errorStr, &errorPos))
+							{
+								ReportError(errorStr);
+								std::string errzzz(u8"at pos");
+								errzzz.append(std::to_string(errorPos));
+								ReportError(errzzz);
+							}
+
+							m_diversionHandle = WinDivertOpen(FILTER_STRING, WINDIVERT_LAYER_NETWORK, -1000, WINDIVERT_FLAG_NO_CHECKSUM);
 						#endif
 
 						m_quicBlockHandle = WinDivertOpen(u8"udp and (udp.DstPort == 80 || udp.DstPort == 443)", WINDIVERT_LAYER_NETWORK, 0, WINDIVERT_FLAG_NO_CHECKSUM | WINDIVERT_FLAG_DROP);
@@ -204,7 +216,8 @@ namespace te
 					// which contain process information about ports, just to avoid accidently intercepting our
 					// own traffic. Just by caching for a second or two, we cut CPU usage down to nil. Without
 					// it, you'll see the CPU get eaten alive while streaming video or something.
-					std::unordered_map<uint16_t, ProcessNfo> tcpPidLastCheck;
+					std::unordered_map<uint16_t, ProcessNfo> tcpIPv4PidLastCheck;
+					std::unordered_map<uint16_t, ProcessNfo> tcpIPv6PidLastCheck;
 
 					while (m_running)
 					{
@@ -392,14 +405,14 @@ namespace te
 										// Then, whatever the results, if it wasn't cached, we'll cache it for a short
 										// period of time.
 
-										const auto& cached = tcpPidLastCheck.find(tcpHeader->SrcPort);
+										const auto& cached = tcpIPv4PidLastCheck.find(tcpHeader->SrcPort);
 										auto now = std::chrono::high_resolution_clock::now();
 
 										bool hasFirewallAccess = false;
 
 										unsigned long procPid = 0;
 
-										if (cached != tcpPidLastCheck.end() && (std::get<2>(cached->second) > now))
+										if (cached != tcpIPv4PidLastCheck.end() && (std::get<2>(cached->second) > now))
 										{
 											procPid = std::get<0>(cached->second);
 										}
@@ -422,7 +435,12 @@ namespace te
 											{
 												hasFirewallAccess = m_firewallCheckCb(processName.c_str(), processName.size());
 
-												tcpPidLastCheck[tcpHeader->SrcPort] = ProcessNfo{ procPid, hasFirewallAccess, now };
+												tcpIPv4PidLastCheck[tcpHeader->SrcPort] = ProcessNfo{ procPid, hasFirewallAccess, now };
+											}
+											else
+											{
+												// We have to do this.
+												hasFirewallAccess = true;
 											}
 
 											if (hasFirewallAccess)
@@ -450,10 +468,20 @@ namespace te
 									if (tcpHeader->SrcPort == m_httpListenerPort || tcpHeader->SrcPort == m_httpsListenerPort)
 									{
 										uint32_t dstAddr[4];
+										dstAddr[0] = ipV6Header->DstAddr[0];
+										dstAddr[1] = ipV6Header->DstAddr[1];
+										dstAddr[2] = ipV6Header->DstAddr[2];
+										dstAddr[3] = ipV6Header->DstAddr[3];
 
-										std::copy(ipV6Header->DstAddr, ipV6Header->DstAddr + 4, dstAddr);
-										std::copy(ipV6Header->SrcAddr, ipV6Header->SrcAddr + 4, ipV6Header->DstAddr);
-										std::copy(dstAddr, dstAddr + 4, ipV6Header->SrcAddr);
+										ipV6Header->DstAddr[0] = ipV6Header->SrcAddr[0];
+										ipV6Header->DstAddr[1] = ipV6Header->SrcAddr[1];
+										ipV6Header->DstAddr[2] = ipV6Header->SrcAddr[2];
+										ipV6Header->DstAddr[3] = ipV6Header->SrcAddr[3];
+
+										ipV6Header->SrcAddr[0] = dstAddr[0];
+										ipV6Header->SrcAddr[1] = dstAddr[1];
+										ipV6Header->SrcAddr[2] = dstAddr[2];
+										ipV6Header->SrcAddr[3] = dstAddr[3];
 
 										tcpHeader->SrcPort = (tcpHeader->SrcPort == m_httpListenerPort) ? StandardHttpPort : StandardHttpsPort;
 
@@ -461,14 +489,14 @@ namespace te
 									}
 									else if (tcpHeader->DstPort == StandardHttpPort || tcpHeader->DstPort == StandardHttpsPort)
 									{
-										const auto& cached = tcpPidLastCheck.find(tcpHeader->SrcPort);
+										const auto& cached = tcpIPv6PidLastCheck.find(tcpHeader->SrcPort);
 										auto now = std::chrono::high_resolution_clock::now();
 
 										bool hasFirewallAccess = false;
 
 										unsigned long procPid = 0;
 
-										if (cached != tcpPidLastCheck.end() && (std::get<2>(cached->second) > now))
+										if (cached != tcpIPv6PidLastCheck.end() && (std::get<2>(cached->second) > now))
 										{
 											procPid = std::get<0>(cached->second);
 										}
@@ -487,17 +515,32 @@ namespace te
 											{
 												hasFirewallAccess = m_firewallCheckCb(processName.c_str(), processName.size());
 
-												tcpPidLastCheck[tcpHeader->SrcPort] = ProcessNfo{ procPid, hasFirewallAccess, now };
+												tcpIPv6PidLastCheck[tcpHeader->SrcPort] = ProcessNfo{ procPid, hasFirewallAccess, now };
+											}
+											else
+											{
+												hasFirewallAccess = true;
 											}
 
 											if (hasFirewallAccess)
 											{
 												uint32_t dstAddr[4];
 
-												std::copy(ipV6Header->DstAddr, ipV6Header->DstAddr + 4, dstAddr);
-												std::copy(ipV6Header->SrcAddr, ipV6Header->SrcAddr + 4, ipV6Header->DstAddr);
-												std::copy(dstAddr, dstAddr + 4, ipV6Header->SrcAddr);
+												dstAddr[0] = ipV6Header->DstAddr[0];
+												dstAddr[1] = ipV6Header->DstAddr[1];
+												dstAddr[2] = ipV6Header->DstAddr[2];
+												dstAddr[3] = ipV6Header->DstAddr[3];
 
+												ipV6Header->DstAddr[0] = ipV6Header->SrcAddr[0];
+												ipV6Header->DstAddr[1] = ipV6Header->SrcAddr[1];
+												ipV6Header->DstAddr[2] = ipV6Header->SrcAddr[2];
+												ipV6Header->DstAddr[3] = ipV6Header->SrcAddr[3];
+
+												ipV6Header->SrcAddr[0] = dstAddr[0];
+												ipV6Header->SrcAddr[1] = dstAddr[1];
+												ipV6Header->SrcAddr[2] = dstAddr[2];
+												ipV6Header->SrcAddr[3] = dstAddr[3];
+												
 												addr.Direction = WINDIVERT_DIRECTION_INBOUND;
 
 												tcpHeader->DstPort = (tcpHeader->DstPort == StandardHttpPort) ? m_httpListenerPort : m_httpsListenerPort;

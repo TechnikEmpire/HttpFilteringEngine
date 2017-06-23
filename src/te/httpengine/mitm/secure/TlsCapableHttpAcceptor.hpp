@@ -13,6 +13,7 @@
 #include <boost/asio.hpp>
 #include <type_traits>
 #include <memory>
+#include <boost/predef/os.h>
 #include <stdexcept>
 
 namespace te
@@ -122,13 +123,12 @@ namespace te
 						m_service(service),
 						m_caBundleAbsolutePath(caBundleAbsPath),
 						m_store(store),
-						m_acceptor(*service, boost::asio::ip::tcp::endpoint(boost::asio::ip::address(), port)),
+						m_acceptor(*service), // Don't use a ctor here that auto opens and binds the listener!
 						m_clientContext(*service, boost::asio::ssl::context::sslv23_client),
 						m_defaultServerContext(*service, boost::asio::ssl::context::tlsv12_server),
 						m_onMessageBegin(onMessageBegin),
 						m_onMessageEnd(onMessageEnd)
-					{
-
+					{	
 						bool isTls = std::is_same<AcceptorType, network::TlsSocket>::value;
 						#ifndef NDEBUG
 							assert((isTls == (m_store != nullptr)) &&
@@ -147,8 +147,18 @@ namespace te
 							}
 						#endif
 
+						boost::asio::ip::tcp::endpoint listenerEndpoint(boost::asio::ip::tcp::v6(), port);
+						m_acceptor.open(listenerEndpoint.protocol());
+
+						// Clear the V6 only flag so we get a dual-mode socket. Should work most places we care about.
+						boost::asio::ip::v6_only v6OnlyOption(false);
+						m_acceptor.set_option(v6OnlyOption);
+
 						boost::system::error_code reuseAddrEc;
 						m_acceptor.set_option(boost::asio::socket_base::reuse_address(true), reuseAddrEc);
+
+						m_acceptor.bind(listenerEndpoint);
+						m_acceptor.listen();
 
 						if (reuseAddrEc)
 						{

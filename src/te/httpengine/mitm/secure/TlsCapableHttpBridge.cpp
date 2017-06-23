@@ -15,10 +15,7 @@ namespace te
 		namespace mitm
 		{
 			namespace secure
-			{					
-				template<typename T>
-				const std::string TlsCapableHttpBridge<T>::DoubleCRLF = u8"\r\n\r\n";
-
+			{	
 				TlsCapableHttpBridge<network::TcpSocket>::TlsCapableHttpBridge(
 					boost::asio::io_service* service,
 					BaseInMemoryCertificateStore* certStore,
@@ -123,23 +120,7 @@ namespace te
 					try
 					{
 						SetStreamTimeout(10000);
-
-						/*
-						// We start off by simply reading the client request headers.
-						boost::asio::async_read_until(
-							m_downstreamSocket, 
-							m_request->GetHeaderReadBuffer(), 
-							u8"\r\n\r\n",
-							m_downstreamStrand.wrap(
-								std::bind(
-									&TlsCapableHttpBridge::OnDownstreamHeaders, 
-									shared_from_this(), 
-									std::placeholders::_1, 
-									std::placeholders::_2
-									)
-								)
-							);
-						*/
+	
 						TryInitiateHttpTransaction();
 						return;
 					}
@@ -164,7 +145,7 @@ namespace te
 						// SNI hostname in the handler without screwing up the pending handshake.
 						m_downstreamSocket.next_layer().async_receive(
 							boost::asio::buffer(*m_tlsPeekBuffer.get(), m_tlsPeekBuffer->size()), 
-							boost::asio::ip::tcp::socket::message_peek, 
+							boost::asio::ip::tcp::socket::message_peek,
 							m_downstreamStrand.wrap(
 								std::bind(&TlsCapableHttpBridge::OnTlsPeek, 
 									shared_from_this(), 
@@ -295,7 +276,7 @@ namespace te
 
 					if (!error)
 					{						
-						SetStreamTimeout(5000);
+						SetStreamTimeout(20000);
 
 						m_upstreamSocket.set_verify_mode(boost::asio::ssl::verify_peer | boost::asio::ssl::verify_fail_if_no_peer_cert);
 

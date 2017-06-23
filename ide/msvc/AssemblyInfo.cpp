@@ -20,11 +20,11 @@ using namespace System::Security::Permissions;
 // associated with an assembly.
 //
 [assembly:AssemblyTitleAttribute(L"HttpFilteringEngine")];
-[assembly:AssemblyDescriptionAttribute(L"")];
+[assembly:AssemblyDescriptionAttribute(L"HTTP/S Content Filtering Library")];
 [assembly:AssemblyConfigurationAttribute(L"")];
-[assembly:AssemblyCompanyAttribute(L"")];
-[assembly:AssemblyProductAttribute(L"libHttpFilteringEngine")];
-[assembly:AssemblyCopyrightAttribute(L"Copyright (c)  2017")];
+[assembly:AssemblyCompanyAttribute(L"Technik Empire")];
+[assembly:AssemblyProductAttribute(L"HttpFilteringEngine")];
+[assembly:AssemblyCopyrightAttribute(L"Copyright © 2017 Jesse Nicholson, Licensed under the Mozilla Public License V2.0")];
 [assembly:AssemblyTrademarkAttribute(L"")];
 [assembly:AssemblyCultureAttribute(L"")];
 
@@ -39,7 +39,7 @@ using namespace System::Security::Permissions;
 // You can specify all the value or you can default the Revision and Build Numbers
 // by using the '*' as shown below:
 
-[assembly:AssemblyVersionAttribute("1.0.*")];
+[assembly:AssemblyVersionAttribute("0.1.2")];
 
 [assembly:ComVisible(false)];
 

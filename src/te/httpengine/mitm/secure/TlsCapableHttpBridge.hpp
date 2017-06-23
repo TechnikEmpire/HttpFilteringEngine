@@ -132,7 +132,7 @@ namespace te
 				/// (verified), requesting the supplied in memory store to spoof and generate a
 				/// context that this bridge can use.
 				/// 
-				/// Since this class encorces TLS when serving a secure client, and parsing SNI is
+				/// Since this class enforces TLS when serving a secure client, and parsing SNI is
 				/// required in order to know which host to seek upstream so that its certificate
 				/// might be verified and spoofed, so we have generated contexts to serve secure
 				/// clients, this class needs to be able to parse the SNI extension of TLS client
@@ -263,6 +263,8 @@ namespace te
 
 				private:
 
+					bool m_shouldTerminate = false;
+
 					/// <summary>
 					/// HTTP request object which is read from the connected client and written to
 					/// the upstream host.
@@ -364,7 +366,6 @@ namespace te
 					/// </summary>
 					static constexpr size_t TlsPeekBufferSize = 16384;
 
-					static const std::string DoubleCRLF;
 
 					/// <summary>
 					/// The mechanism provided in openSSL for parsing the TLS client hello and
@@ -859,10 +860,34 @@ namespace te
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
-						if ((!error || (error.value() == boost::asio::error::eof)) && bytesTransferred > 0)
+						if ((!error || (error == boost::asio::error::eof || (error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ))))
 						{
+							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+
+							if (closeAfter)
+							{
+								m_shouldTerminate = true;
+							}
+
 							if (m_response->Parse(bytesTransferred))
 							{
+								if (wasSslShortRead && !m_response->IsPayloadComplete())
+								{
+									// This is a security threat if WE TREAT THIS LIKE IT'S NORMAL.
+
+									// If wasSslShortRead == true, but the payload is deemed complete, then
+									// we simply have a dumb server that didn't do a clean TLS shutdown.
+									ReportInfo(u8"In TlsCapableHttpBridge::OnUpstreamHeaders(const boost::system::error_code&, const size_t) - Got TLS short read and payload IS NOT complete. Aborting.");
+									Kill();
+									return;
+								}
+
+								if (wasSslShortRead)
+								{
+									ReportWarning(u8"In TlsCapableHttpBridge::OnUpstreamHeaders(const boost::system::error_code&, const size_t) - Got TLS short read, but payload is complete. The naughty server did not do a proper TLS shutdown.");
+								}
+
 								if (!m_response->HeadersComplete())
 								{
 									boost::asio::async_read(
@@ -920,6 +945,14 @@ namespace te
 
 								// Sigh, also remove declaration of any alternative protocol
 								m_response->RemoveHeader(util::http::headers::AltSvc);
+
+								// Firefox developers are bunch of double talking liars, and claim that you
+								// can disable public key pinning. However, for their buddies who must
+								// pay them off or something, this isn't true. It's enforced no matter
+								// what do you. So what's the solution? We strip the headers from
+								// the client altogether.
+								m_response->RemoveHeader(util::http::headers::PublicKeyPins);
+								m_response->RemoveHeader(util::http::headers::PublicKeyPinsReportOnly);
 
 								// Set m_keepAlive to what the server has specified. The client may have requested it, but
 								// ultimately it's up to the server how it's going to serve us.
@@ -1046,16 +1079,34 @@ namespace te
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
-
-						// We don't need to do any blocking or block checks in this method, to determine if the
-						// request itself should be blocked. This should have already been done as soon as the
-						// upstream headers were read, since all data that can possibly be used to determine
-						// if a block should take place would have been available there. So if we're even in this
-						// far, we only look for HTML content we can run CSS selectors on.
-						if ((!error || (error.value() == boost::asio::error::eof)) && bytesTransferred > 0)
+						if ((!error || (error == boost::asio::error::eof || (error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ))))
 						{
+							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+
+							if (closeAfter)
+							{
+								m_shouldTerminate = true;
+							}
+
 							if (m_response->Parse(bytesTransferred))
 							{
+								if (wasSslShortRead && !m_response->IsPayloadComplete())
+								{
+									// This is a security threat if WE TREAT THIS LIKE IT'S NORMAL.
+
+									// If wasSslShortRead == true, but the payload is deemed complete, then
+									// we simply have a dumb server that didn't do a clean TLS shutdown.
+									ReportInfo(u8"In TlsCapableHttpBridge::OnUpstreamRead(const boost::system::error_code&, const size_t) - Got TLS short read and payload IS NOT complete. Aborting.");
+									Kill();
+									return;
+								}
+
+								if (wasSslShortRead)
+								{
+									ReportWarning(u8"In TlsCapableHttpBridge::OnUpstreamRead(const boost::system::error_code&, const size_t) - Got TLS short read, but payload is complete. The naughty remote server did not do a proper TLS shutdown.");
+								}
+
 								if (m_response->IsPayloadComplete() && m_response->GetConsumeAllBeforeSending())
 								{
 									// Response was flagged for further inspection. Supply to ShouldBlock...
@@ -1145,6 +1196,18 @@ namespace te
 						{
 							std::string errMsg(u8"In TlsCapableHttpBridge::OnUpstreamRead(const boost::system::error_code&, const size_t) - Got error:\t");
 							errMsg.append(error.message());
+							
+#ifndef NDEBUG
+							errMsg.append("\tcat name: ");
+							errMsg.append(error.category().name());
+							errMsg.append("\terr val: ");
+							errMsg.append(std::to_string(error.value()));
+							errMsg.append("\terr reason: ");
+							errMsg.append(std::to_string(ERR_GET_REASON(error.value())));
+							errMsg.append("\tbytes trans: ");
+							errMsg.append(std::to_string(bytesTransferred));
+#endif
+
 							ReportError(errMsg);
 						}
 
@@ -1169,6 +1232,16 @@ namespace te
 						#ifndef NDEBUG
 						ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamWrite");
 						#endif // !NDEBUG
+
+						if (m_shouldTerminate)
+						{
+							// The session was flagged to be killed AFTER this write completes.
+							// Exit. This only happens when one end of the connection closed
+							// during a read, but we got data to send to the other end before
+							// this happened.
+							Kill();
+							return;
+						}
 
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
@@ -1288,10 +1361,34 @@ namespace te
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
-						if ((!error || (error.value() == boost::asio::error::eof)) && bytesTransferred > 0)
+						if ((!error || (error == boost::asio::error::eof || (error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ))))
 						{
+							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+
+							if (closeAfter)
+							{
+								m_shouldTerminate = true;
+							}
+
 							if (m_request->Parse(bytesTransferred))
 							{			
+
+								if (wasSslShortRead && !m_request->IsPayloadComplete())
+								{
+									// This is a security threat if WE TREAT THIS LIKE IT'S NORMAL.
+
+									// If wasSslShortRead == true, but the payload is deemed complete, then
+									// we simply have a dumb server that didn't do a clean TLS shutdown.
+									ReportInfo(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Got TLS short read and payload IS NOT complete. Aborting.");
+									Kill();
+									return;
+								}
+
+								if (wasSslShortRead)
+								{
+									ReportWarning(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Got TLS short read, but payload is complete. The naughty client did not do a proper TLS shutdown.");
+								}
 
 								if (!m_request->HeadersComplete())
 								{
@@ -1357,6 +1454,14 @@ namespace te
 
 								// Sigh, also remove declaration of any alternative protocol.
 								m_request->RemoveHeader(util::http::headers::AltSvc);
+
+								// Firefox developers are bunch of double talking liars, and claim that you
+								// can disable public key pinning. However, for their buddies who must
+								// pay them off or something, this isn't true. It's enforced no matter
+								// what do you. So what's the solution? We strip the headers from
+								// the client altogether.
+								m_request->RemoveHeader(util::http::headers::PublicKeyPins);
+								m_request->RemoveHeader(util::http::headers::PublicKeyPinsReportOnly);
 
 								auto hostHeader = m_request->GetHeader(util::http::headers::Host);
 
@@ -1500,10 +1605,34 @@ namespace te
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
-						if ((!error || (error.value() == boost::asio::error::eof)) && bytesTransferred > 0)
+						if ((!error || (error == boost::asio::error::eof || (error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ))))
 						{
+							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+
+							if (closeAfter)
+							{
+								m_shouldTerminate = true;
+							}
+
 							if (m_request->Parse(bytesTransferred))
 							{
+								if (wasSslShortRead && !m_request->IsPayloadComplete())
+								{
+									// This is a security threat if WE TREAT THIS LIKE IT'S NORMAL.
+
+									// If wasSslShortRead == true, but the payload is deemed complete, then
+									// we simply have a dumb server that didn't do a clean TLS shutdown.
+									ReportInfo(u8"In TlsCapableHttpBridge::OnDownstreamRead(const boost::system::error_code&, const size_t) - Got TLS short read and payload IS NOT complete. Aborting.");
+									Kill();
+									return;
+								}
+
+								if (wasSslShortRead)
+								{
+									ReportWarning(u8"In TlsCapableHttpBridge::OnDownstreamRead(const boost::system::error_code&, const size_t) - Got TLS short read, but payload is complete. The naughty client did not do a proper TLS shutdown.");
+								}
+
 								if (m_request->IsPayloadComplete() == false && m_request->GetConsumeAllBeforeSending())
 								{
 									// The client has more to send and it's been flagged for inspection. Must
@@ -1592,6 +1721,16 @@ namespace te
 						#ifndef NDEBUG
 						ReportInfo(u8"TlsCapableHttpBridge::OnDownstreamWrite");
 						#endif // !NDEBUG
+
+						if (m_shouldTerminate)
+						{
+							// The session was flagged to be killed AFTER this write completes.
+							// Exit. This only happens when one end of the connection closed
+							// during a read, but we got data to send to the other end before
+							// this happened.
+							Kill();
+							return;
+						}
 
 						if (m_request && m_request->GetShouldBlock() > 0)
 						{
@@ -1682,6 +1821,8 @@ namespace te
 										return;
 									}
 
+									m_shouldTerminate = false;
+
 									// XXX TODO - This is ugly, our bad design is showing. See notes in the
 									// EventReporter class header.
 									m_request->SetOnInfo(m_onInfo);
@@ -1691,21 +1832,6 @@ namespace te
 									m_response->SetOnWarning(m_onWarning);
 									m_response->SetOnError(m_onError);
 
-									/*
-									boost::asio::async_read_until(
-										m_downstreamSocket,
-										m_request->GetHeaderReadBuffer(),
-										DoubleCRLF,
-										m_downstreamStrand.wrap(
-											std::bind(
-												&TlsCapableHttpBridge::OnDownstreamHeaders,
-												shared_from_this(),
-												std::placeholders::_1,
-												std::placeholders::_2
-												)
-											)
-										);
-									*/
 									TryInitiateHttpTransaction();
 									return;
 								}
@@ -1740,12 +1866,12 @@ namespace te
 					{
 
 						#ifndef NDEBUG
-						ReportInfo(u8"TlsCapableHttpBridge<network::TlsSocket>::OnStreamTimeout");
+							ReportInfo(u8"TlsCapableHttpBridge<network::TlsSocket>::OnStreamTimeout");
 						#endif // !NDEBUG
 
 						if (error)
 						{
-							if (error.value() == boost::asio::error::operation_aborted)
+							if (error == boost::asio::error::operation_aborted)
 							{
 								// Aborts are normal, as pending async_waits are cancelled every time that
 								// the timeout is reset. Therefore, we safely ignore them.
@@ -1760,8 +1886,6 @@ namespace te
 								ReportError(errMessage);
 							}
 						}
-
-						ReportWarning(u8"In TlsCapableHttpBridge<BridgeSocketType>::OnStreamTimeout(const boost::system::error_code&) - Stream timed out.");
 
 						Kill();
 					}					
@@ -1808,7 +1932,7 @@ namespace te
 								if (SSL_set_SSL_CTX(m_downstreamSocket.native_handle(), serverCtx->native_handle()) == serverCtx->native_handle())
 								{
 									// Set timeouts
-									SetStreamTimeout(5000);
+									SetStreamTimeout(20000);
 									//
 									
 									m_downstreamSocket.async_handshake(
@@ -1843,7 +1967,7 @@ namespace te
 								ReportError(errMsg);
 							}
 
-							if (m_upstreamCert != nullptr)
+							if (m_upstreamCert == nullptr)
 							{
 								ReportError(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Upstream cert is nullptr!");
 							}
@@ -1877,21 +2001,6 @@ namespace te
 							SetNoDelay(UpstreamSocket(), true);
 							SetNoDelay(DownstreamSocket(), true);
 
-							/*
-							boost::asio::async_read_until(
-								m_downstreamSocket, 
-								m_request->GetHeaderReadBuffer(), 
-								DoubleCRLF, 
-								m_downstreamStrand.wrap(
-									std::bind(
-										&TlsCapableHttpBridge::OnDownstreamHeaders,
-										shared_from_this(), 
-										std::placeholders::_1, 
-										std::placeholders::_2
-										)
-									)
-								);
-							*/
 							TryInitiateHttpTransaction();
 							return;
 						}
@@ -2217,208 +2326,236 @@ namespace te
 								
 								ReportError(verifyFailedErrorMessage);
 							}
+							else
+							{
+								std::string verifyFailedErrorMessage("In TlsCapableHttpBridge<network::TlsSocket>::VerifyServerCertificateCallback(bool, boost::asio::ssl::verify_context&) - Certificate is null.");
+								ReportError(verifyFailedErrorMessage);
+							}
 
 							m_upstreamCert = nullptr;
 						}
 
 						return verified;
-					}					
+					}
 
-					/// <summary>
-					/// This method is invoked by an initial call to read from the upstream socket,
-					/// and will continue to call itself recurrently after every successful
-					/// asynchronous read of the upstream socket, until the connection is closed. The
-					/// purpose of this method is to continuously poll the upstream socket for data,
-					/// and give it to the downstream socket. This is one of two methods that
-					/// function in this way, one for each socket, and these methods are invoked when
-					/// it has been determined that the connected client and server are communicating
-					/// in a non-http protocol. The reason for these methods is to ensure that
-					/// connectivity is still permitted, rather than simply dropped.
-					/// </summary>
-					/// <param name="error">
-					/// Error code from the asynchronous read which is calling this method as its
-					/// completion handler.
-					/// </param>
-					/// <param name="bytesTransferred">
-					/// The number of bytes transferred in the asynchronous read which is calling
-					/// this method as its completion handler.
-					/// </param>
-					/// <param name="buffer">
-					/// The buffer that the data was read into, if any.
-					/// </param>
-					void OnUpstreamReadVolley(const boost::system::error_code& error, const size_t bytesTransferred, std::shared_ptr< std::array<char, TlsPeekBufferSize> > buffer)
+					void HandleDownstreamPassthrough(std::shared_ptr<std::array<char, 1638400>> buff, const boost::system::error_code& ec, const size_t bytesTransferred)
 					{
-						
-						if (!error && bytesTransferred > 0 && buffer && buffer->data())
-						{
-														
+						//ReportInfo(u8"HandleDownstreamPassthrough");
 
-							boost::asio::async_write(
+						if ((!ec || (ec == boost::asio::error::eof || (ec.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ))))
+						{
+							SetStreamTimeout(15000);
+
+							bool closeAfter = (ec == boost::asio::error::eof) || ((ec.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ));
+
+							if (bytesTransferred > 0)
+							{
+								auto self(shared_from_this());
+
+								boost::asio::async_write(
+									m_upstreamSocket,
+									boost::asio::buffer(buff->data(), bytesTransferred),
+									boost::asio::transfer_exactly(bytesTransferred),
+									m_upstreamStrand.wrap(
+										[this, self, buff, closeAfter](const boost::system::error_code& err, const size_t bytesSent)
+										{
+											if (closeAfter)
+											{
+												ReportInfo(u8"In TlsCapableHttpBridge::HandleDownstreamPassthrough(const boost::system::error_code&) - Connection closed by upstream.");
+												Kill();
+												return;
+											}
+
+											if (!err)
+											{
+												boost::asio::async_read(
+													m_downstreamSocket,
+													boost::asio::buffer(buff->data(), buff->size()),
+													boost::asio::transfer_at_least(1),
+													std::bind(
+														&TlsCapableHttpBridge::HandleDownstreamPassthrough,
+														shared_from_this(),
+														buff,
+														std::placeholders::_1,
+														std::placeholders::_2
+													)
+												);
+											}
+										}
+									)
+								);
+
+								return;
+							}
+
+							if (closeAfter)
+							{
+								ReportInfo(u8"In TlsCapableHttpBridge::HandleDownstreamPassthrough(const boost::system::error_code&) - Connection closed by upstream.");
+								Kill();
+								return;
+							}
+
+							boost::asio::async_read(
 								m_downstreamSocket,
-								boost::asio::buffer(buffer->data(), bytesTransferred),
-								boost::asio::transfer_all(),
-								m_downstreamStrand.wrap(
-									std::bind(
-										&TlsCapableHttpBridge::OnDownstreamWriteVolley,
-										shared_from_this(),
-										std::placeholders::_1,
-										buffer)
+								boost::asio::buffer(buff->data(), buff->size()),
+								boost::asio::transfer_at_least(1),
+								std::bind(
+									&TlsCapableHttpBridge::HandleDownstreamPassthrough,
+									shared_from_this(),
+									buff,
+									std::placeholders::_1,
+									std::placeholders::_2
 								)
 							);
 
-							
 							return;
 						}
+						else
+						{
+							if (ec)
+							{
+								//std::string errMsg(u8"In TlsCapableHttpBridge::HandleDownstreamPassthrough(const boost::system::error_code&) - Got error in handler:\t");
+								//errMsg.append(ec.message());
+								//ReportError(errMsg);
+							}
+						}
 
-						
+						// Let the dealine timer kill us. Just in case the other end of the passthrough
+						// is still working at something.
 						Kill();
 					}
 
-					void OnDownstreamWriteVolley(const boost::system::error_code& error, std::shared_ptr< std::array<char, TlsPeekBufferSize> > buffer)
+					void HandleUpstreamPassthrough(std::shared_ptr<std::array<char, 1638400>> buff, const boost::system::error_code& ec, const size_t bytesTransferred)
 					{
-						
-						// This is called when the write to downstream is done. So, we just start over.
-						if (!error && buffer && buffer->data())
+						//ReportInfo(u8"HandleUpstreamPassthrough");
+
+						if ((!ec || (ec == boost::asio::error::eof || (ec.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ))))
 						{
-							
+							SetStreamTimeout(15000);
+
+							bool closeAfter = (ec == boost::asio::error::eof) || ((ec.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ));
+
+							if (bytesTransferred > 0)
+							{
+								auto self(shared_from_this());
+
+								boost::asio::async_write(
+									m_downstreamSocket,
+									boost::asio::buffer(buff->data(), bytesTransferred),
+									boost::asio::transfer_exactly(bytesTransferred),
+									m_downstreamStrand.wrap(
+										[this, self, buff, closeAfter](const boost::system::error_code& err, const size_t bytesSent)
+										{
+											if (closeAfter)
+											{
+												ReportInfo(u8"In TlsCapableHttpBridge::HandleUpstreamPassthrough(const boost::system::error_code&) - Connection closed by downstream.");
+												Kill();
+												return;
+											}
+
+											if (!err)
+											{
+												boost::asio::async_read(
+													m_upstreamSocket,
+													boost::asio::buffer(buff->data(), buff->size()),
+													boost::asio::transfer_at_least(1),
+													std::bind(
+														&TlsCapableHttpBridge::HandleUpstreamPassthrough,
+														shared_from_this(),
+														buff,
+														std::placeholders::_1,
+														std::placeholders::_2
+													)
+												);
+											}
+										}
+									)
+								);
+
+								return;
+							}
+
+							if (closeAfter)
+							{
+								ReportInfo(u8"In TlsCapableHttpBridge::HandleUpstreamPassthrough(const boost::system::error_code&) - Connection closed by downstream.");
+								Kill();
+								return;
+							}
+
 							boost::asio::async_read(
 								m_upstreamSocket,
-								boost::asio::buffer(buffer->data(), buffer->size()),
+								boost::asio::buffer(buff->data(), buff->size()),
 								boost::asio::transfer_at_least(1),
-								m_upstreamStrand.wrap(
-									std::bind(
-										&TlsCapableHttpBridge::OnUpstreamReadVolley,
-										shared_from_this(),
-										std::placeholders::_1,
-										std::placeholders::_2,
-										buffer)
+								std::bind(
+									&TlsCapableHttpBridge::HandleUpstreamPassthrough,
+									shared_from_this(),
+									buff,
+									std::placeholders::_1,
+									std::placeholders::_2
 								)
 							);
 
-							
 							return;
 						}
-
-						
-						Kill();
-					}
-
-					/// <summary>
-					/// This method is invoked by an initial call to read from the downstream socket,
-					/// and will continue to call itself recurrently after every successful
-					/// asynchronous read of the downstream socket, until the connection is closed. The
-					/// purpose of this method is to continuously poll the downstream socket for data,
-					/// and give it to the upstream socket. This is one of two methods that
-					/// function in this way, one for each socket, and these methods are invoked when
-					/// it has been determined that the connected client and server are communicating
-					/// in a non-http protocol. The reason for these methods is to ensure that
-					/// connectivity is still permitted, rather than simply dropped.
-					/// </summary>
-					/// <param name="error">
-					/// Error code from the asynchronous read which is calling this method as its
-					/// completion handler.
-					/// </param>
-					/// <param name="bytesTransferred">
-					/// The number of bytes transferred in the asynchronous read which is calling
-					/// this method as its completion handler.
-					/// </param>
-					/// <param name="buffer">
-					/// The buffer that the data was read into, if any.
-					/// </param>
-					void OnDownstreamReadVolley(const boost::system::error_code& error, const size_t bytesTransferred, std::shared_ptr< std::array<char, TlsPeekBufferSize> > buffer)
-					{
-						
-
-						if (!error && bytesTransferred > 0 && buffer && buffer->data())
+						else
 						{
-							
-
-							boost::asio::async_write(
-								m_upstreamSocket,
-								boost::asio::buffer(buffer->data(), bytesTransferred),
-								boost::asio::transfer_all(),
-								m_upstreamStrand.wrap(
-									std::bind(
-										&TlsCapableHttpBridge::OnUpstreamWriteVolley,
-										shared_from_this(),
-										std::placeholders::_1,
-										buffer)
-								)
-							);
-							
-							return;
+							if (ec)
+							{
+								//std::string errMsg(u8"In TlsCapableHttpBridge::HandleUpstreamPassthrough(const boost::system::error_code&) - Got error in handler:\t");
+								//errMsg.append(ec.message());
+								//ReportError(errMsg);
+							}
 						}
-						
-						Kill();
-					}	
 
-					void OnUpstreamWriteVolley(const boost::system::error_code& error, std::shared_ptr< std::array<char, TlsPeekBufferSize> > buffer)
-					{
-						
-						// This is called when the write to upstream is done. So, we just start over.
-						if (!error && buffer && buffer->data())
-						{
-							
-							boost::asio::async_read(
-								m_downstreamSocket,
-								boost::asio::buffer(buffer->data(), buffer->size()),
-								boost::asio::transfer_at_least(1),
-								m_downstreamStrand.wrap(
-									std::bind(
-										&TlsCapableHttpBridge::OnDownstreamReadVolley,
-										shared_from_this(),
-										std::placeholders::_1,
-										std::placeholders::_2,
-										buffer)
-								)
-							);
-							
-							return;
-						}
-						
+						// Let the dealine timer kill us. Just in case the other end of the passthrough
+						// is still working at something.
 						Kill();
 					}
 
 					void StartPassthroughVolley(std::shared_ptr<std::array<char, TlsPeekBufferSize>> downstreamBuff, const size_t initialBytes)
 					{	
 						ReportInfo(u8"Starting passthrough.");
-
-						std::shared_ptr<std::array<char, TlsPeekBufferSize>> upstreamBuff = std::make_shared<std::array<char, TlsPeekBufferSize>>();
+						SetStreamTimeout(15000);
 
 						boost::system::error_code err;
 						err.clear();
 
-						OnDownstreamReadVolley(err, initialBytes, downstreamBuff);
+						boost::system::error_code iwe;
+						iwe.clear();
 
-						/*
-						// Just start to read from both sockets and we're done.
-						boost::asio::async_read(
-							m_downstreamSocket,
-							boost::asio::buffer(downstreamBuff->data(), downstreamBuff->size()),
-							boost::asio::transfer_at_least(1),
-							m_downstreamStrand.wrap(
-								std::bind(
-									&TlsCapableHttpBridge::OnDownstreamReadVolley,
-									shared_from_this(),
-									std::placeholders::_1,
-									std::placeholders::_2,
-									downstreamBuff)
-							)
-						);
-						*/
-						boost::asio::async_read(
-							m_upstreamSocket,
-							boost::asio::buffer(upstreamBuff->data(), upstreamBuff->size()),
-							boost::asio::transfer_at_least(1),
-							m_upstreamStrand.wrap(
-								std::bind(
-									&TlsCapableHttpBridge::OnUpstreamReadVolley,
-									shared_from_this(),
-									std::placeholders::_1,
-									std::placeholders::_2,
-									upstreamBuff)
-							)
-						);
+						try
+						{
+							boost::asio::write(m_upstreamSocket, boost::asio::buffer(downstreamBuff->data(), initialBytes), boost::asio::transfer_exactly(initialBytes), iwe);
+						}
+						catch (std::exception& e)
+						{
+							std::string errMsg(u8"In TlsCapableHttpBridge::StartPassthroughVolley(std::shared_ptr<std::array<char, TlsPeekBufferSize>>, const size_t) - Got error while writing initial payload:\t");
+							errMsg.append(e.what());
+							ReportError(errMsg);
+						}
+
+						if (iwe)
+						{
+							std::string errMsg(u8"In TlsCapableHttpBridge::StartPassthroughVolley(std::shared_ptr<std::array<char, TlsPeekBufferSize>>, const size_t) - Got error while writing initial payload:\t");
+							errMsg.append(iwe.message());
+							ReportError(errMsg);
+						}
+
+						try
+						{
+							std::shared_ptr<std::array<char, 1638400>> dsb = std::make_shared< std::array<char, 1638400> >();
+							std::shared_ptr<std::array<char, 1638400>> usb = std::make_shared< std::array<char, 1638400> >();
+
+							HandleDownstreamPassthrough(dsb, err, 0);
+							HandleUpstreamPassthrough(usb, err, 0);
+
+						}
+						catch (std::exception& e)
+						{
+							std::string errMsg(u8"In TlsCapableHttpBridge::StartPassthroughVolley(std::shared_ptr<std::array<char, TlsPeekBufferSize>>, const size_t) - Got errorsss while writing initial payload:\t");
+							errMsg.append(e.what());
+							ReportError(errMsg);
+						}
 					}
 
 					/// <summary>
@@ -2440,8 +2577,6 @@ namespace te
 							SetStreamTimeout(5000);
 
 							std::shared_ptr<std::array<char, TlsPeekBufferSize>> httpPeekBuffer = std::make_shared< std::array<char, TlsPeekBufferSize> >();
-
-							//auto dataAvailable = SocketHasData(DownstreamSocket());
 
 							boost::asio::async_read(
 								m_downstreamSocket,
@@ -2472,7 +2607,7 @@ namespace te
 							
 							// Cancel the stream timeout mechanism before entering starting this process. We're going to need
 							// to possibly leave this cancelled if we're handling a passthrough connection.
-							SetStreamTimeout(-1);
+							SetStreamTimeout(10000);
 							
 							PreviewParser p;
 							std::string parsedHost;
@@ -2499,6 +2634,7 @@ namespace te
 									try
 									{
 										m_request.reset(new http::HttpRequest(httpPeekBuffer->data(), bytesTransferred));
+										m_shouldTerminate = false;
 									}
 									catch (std::exception& e)
 									{
@@ -2515,7 +2651,6 @@ namespace te
 								case PreviewParser::ParseResult::HttpWithUpgrade:
 								{
 									ReportInfo(u8"HTTP with upgrade.");
-									boost::string_ref peekedData(httpPeekBuffer->data(), bytesTransferred);
 
 									// If it's non-TLS, then we need to resolve the host and connect to it
 									// as well. If it is TLS, then we don't care because this is done
@@ -2601,11 +2736,11 @@ namespace te
 																	{
 																		// We managed to connect, do just start to volley.
 																		StartPassthroughVolley(httpPeekBuffer, bytesTransferred);
-
 																		return;
 																	}
 
 																	// Failed to connect.
+																	ReportInfo(u8"Failed to connect");
 																	Kill();
 																}
 															)
@@ -2616,6 +2751,7 @@ namespace te
 
 						
 													// Failed to resolve host.
+													ReportInfo(u8"Failed to resolve");
 													Kill();
 												}
 											)
@@ -2660,9 +2796,6 @@ namespace te
 									{
 										ReportInfo(u8"Not http and is TLS.");
 
-										boost::string_ref peekedData(httpPeekBuffer->data(), bytesTransferred);
-										ReportInfo(peekedData);
-
 										// Check here if already-established host is blocked. In this case, the host would have been
 										// extracted via SNI extension parsing.
 										if (m_upstreamHost.size() > 0)
@@ -2687,7 +2820,8 @@ namespace te
 						}
 
 						
-						Kill();
+						//ReportInfo(u8"Deder");
+						//Kill();
 					}								
 
 					/// <summary>
@@ -2709,6 +2843,10 @@ namespace te
 						{
 							m_streamTimer.expires_at(boost::posix_time::pos_infin);
 							return;
+						}
+						else
+						{
+							m_streamTimer.expires_from_now(boost::posix_time::milliseconds(millisecondsFromNow));
 						}
 
 						m_streamTimer.async_wait(std::bind(&TlsCapableHttpBridge::OnStreamTimeout, shared_from_this(), std::placeholders::_1));
