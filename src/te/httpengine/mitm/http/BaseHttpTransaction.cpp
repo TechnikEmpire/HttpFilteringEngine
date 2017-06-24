@@ -234,7 +234,6 @@ namespace te
 						auto finalSize = m_payload.size();
 						std::string length = std::to_string(finalSize);
 
-						RemoveHeader(util::http::headers::ContentLength);
 						AddHeader(util::http::headers::ContentLength, length);
 					}
 				}
@@ -259,7 +258,6 @@ namespace te
 						auto finalSize = m_payload.size();
 						std::string length = std::to_string(finalSize);
 
-						RemoveHeader(util::http::headers::ContentLength);
 						AddHeader(util::http::headers::ContentLength, length);
 					}
 				}

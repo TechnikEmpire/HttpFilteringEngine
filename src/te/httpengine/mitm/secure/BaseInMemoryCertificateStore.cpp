@@ -20,7 +20,8 @@ namespace te
 		{
 			namespace secure
 			{
-				const std::string BaseInMemoryCertificateStore::ContextCipherList{ u8"HIGH:!SSLv2!SRP:!PSK" };
+				const std::string BaseInMemoryCertificateStore::ContextCipherList{ u8"HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4" }; // u8"HIGH:!aNULL:!MD5:!RC4" // u8"HIGH:!SSLv2!SRP:!PSK"
+				
 
 				BaseInMemoryCertificateStore::BaseInMemoryCertificateStore() :
 					BaseInMemoryCertificateStore(u8"US", u8"HttpFilteringEngine", u8"HttpFilteringEngine")

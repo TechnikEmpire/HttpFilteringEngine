@@ -146,7 +146,7 @@ namespace te
 								ReportWarning(u8"In TlsCapableHttpAcceptor::TlsCapableHttpAcceptor(...) - Cert was supplied to non TLS acceptor.");
 							}
 						#endif
-
+							
 						boost::asio::ip::tcp::endpoint listenerEndpoint(boost::asio::ip::tcp::v6(), port);
 						m_acceptor.open(listenerEndpoint.protocol());
 

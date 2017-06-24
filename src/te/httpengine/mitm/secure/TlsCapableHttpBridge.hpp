@@ -857,6 +857,16 @@ namespace te
 						ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamHeaders");
 						#endif // !NDEBUG
 
+						if (m_shouldTerminate)
+						{
+							// The session was flagged to be killed AFTER this write completes.
+							// Exit. This only happens when one end of the connection closed
+							// during a read, but we got data to send to the other end before
+							// this happened.
+							Kill();
+							return;
+						}
+
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
@@ -872,7 +882,7 @@ namespace te
 
 							if (m_response->Parse(bytesTransferred))
 							{
-								if (wasSslShortRead && !m_response->IsPayloadComplete())
+								if (wasSslShortRead && (!m_response->IsPayloadComplete() || !m_response->HeadersComplete()))
 								{
 									// This is a security threat if WE TREAT THIS LIKE IT'S NORMAL.
 
@@ -888,7 +898,7 @@ namespace te
 									ReportWarning(u8"In TlsCapableHttpBridge::OnUpstreamHeaders(const boost::system::error_code&, const size_t) - Got TLS short read, but payload is complete. The naughty server did not do a proper TLS shutdown.");
 								}
 
-								if (!m_response->HeadersComplete())
+								if (!closeAfter && !m_response->HeadersComplete())
 								{
 									boost::asio::async_read(
 										m_upstreamSocket,
@@ -976,7 +986,7 @@ namespace te
 
 								m_keepAlive = keepAlive;								
 
-								if (m_response->IsPayloadComplete() == false && m_response->GetConsumeAllBeforeSending() == true)
+								if (!closeAfter && m_response->IsPayloadComplete() == false && m_response->GetConsumeAllBeforeSending() == true)
 								{
 									// We need to reinitiate sequential reads of the response
 									// payload until we have all of the response body, as it has
@@ -1076,6 +1086,16 @@ namespace te
 						ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamRead");
 						#endif // !NDEBUG
 
+						if (m_shouldTerminate)
+						{
+							// The session was flagged to be killed AFTER this write completes.
+							// Exit. This only happens when one end of the connection closed
+							// during a read, but we got data to send to the other end before
+							// this happened.
+							Kill();
+							return;
+						}
+
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
@@ -1091,7 +1111,7 @@ namespace te
 
 							if (m_response->Parse(bytesTransferred))
 							{
-								if (wasSslShortRead && !m_response->IsPayloadComplete())
+								if (wasSslShortRead && (!m_response->IsPayloadComplete() || !m_response->HeadersComplete()))
 								{
 									// This is a security threat if WE TREAT THIS LIKE IT'S NORMAL.
 
@@ -1134,7 +1154,7 @@ namespace te
 									}
 								}
 								
-								if (m_response->IsPayloadComplete() == false && m_response->GetConsumeAllBeforeSending() == true)
+								if (!closeAfter && m_response->IsPayloadComplete() == false && m_response->GetConsumeAllBeforeSending() == true)
 								{
 									SetStreamTimeout(5000);
 
@@ -1242,10 +1262,7 @@ namespace te
 							Kill();
 							return;
 						}
-
-						// EOF doesn't necessarily mean something critical happened. Could simply be
-						// that we got the entire valid response, and the server closed the connection
-						// after.
+						
 						if (!error)
 						{
 							if (m_request->IsPayloadComplete() == false)
@@ -1358,6 +1375,16 @@ namespace te
 						ReportInfo(u8"TlsCapableHttpBridge::::OnDownstreamHeaders");
 						#endif // !NDEBUG
 
+						if (m_shouldTerminate)
+						{
+							// The session was flagged to be killed AFTER this write completes.
+							// Exit. This only happens when one end of the connection closed
+							// during a read, but we got data to send to the other end before
+							// this happened.
+							Kill();
+							return;
+						}
+
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
@@ -1374,7 +1401,7 @@ namespace te
 							if (m_request->Parse(bytesTransferred))
 							{			
 
-								if (wasSslShortRead && !m_request->IsPayloadComplete())
+								if (wasSslShortRead && (!m_request->IsPayloadComplete() || !m_request->HeadersComplete()))
 								{
 									// This is a security threat if WE TREAT THIS LIKE IT'S NORMAL.
 
@@ -1390,7 +1417,7 @@ namespace te
 									ReportWarning(u8"In TlsCapableHttpBridge::OnDownstreamHeaders(const boost::system::error_code&, const size_t) - Got TLS short read, but payload is complete. The naughty client did not do a proper TLS shutdown.");
 								}
 
-								if (!m_request->HeadersComplete())
+								if (!closeAfter && !m_request->HeadersComplete())
 								{
 									boost::asio::async_read(
 										m_downstreamSocket,
@@ -1602,6 +1629,16 @@ namespace te
 						ReportInfo(u8"TlsCapableHttpBridge::OnDownstreamRead");
 						#endif // !NDEBUG
 
+						if (m_shouldTerminate)
+						{
+							// The session was flagged to be killed AFTER this write completes.
+							// Exit. This only happens when one end of the connection closed
+							// during a read, but we got data to send to the other end before
+							// this happened.
+							Kill();
+							return;
+						}
+
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
@@ -1617,7 +1654,7 @@ namespace te
 
 							if (m_request->Parse(bytesTransferred))
 							{
-								if (wasSslShortRead && !m_request->IsPayloadComplete())
+								if (wasSslShortRead && (!m_request->IsPayloadComplete() || !m_request->HeadersComplete()))
 								{
 									// This is a security threat if WE TREAT THIS LIKE IT'S NORMAL.
 
@@ -1633,7 +1670,7 @@ namespace te
 									ReportWarning(u8"In TlsCapableHttpBridge::OnDownstreamRead(const boost::system::error_code&, const size_t) - Got TLS short read, but payload is complete. The naughty client did not do a proper TLS shutdown.");
 								}
 
-								if (m_request->IsPayloadComplete() == false && m_request->GetConsumeAllBeforeSending())
+								if (!closeAfter && m_request->IsPayloadComplete() == false && m_request->GetConsumeAllBeforeSending())
 								{
 									// The client has more to send and it's been flagged for inspection. Must
 									// initiate a read again.
