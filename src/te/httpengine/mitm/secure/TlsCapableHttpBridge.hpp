@@ -707,12 +707,8 @@ namespace te
 							this->UpstreamSocket().shutdown(boost::asio::socket_base::shutdown_both, upstreamShutdownErr);
 							this->UpstreamSocket().close(upstreamCloseErr);
 
-							// We set the stream timeout to any negative value to force the stream
-							// to have any pending async_wait's cancelled and the new timeout set to
-							// positive infinity. This way, we don't have any unfinished async calls
-							// on account of the timer that are preserving the lifetime of this object
-							// unnecessarily via the shared_from_this that the handler(s) obtain(ed).
-							SetStreamTimeout(-1);
+							// Force cancel any async waiting of the timer.
+							SetInfiniteStreamTimeout();
 
 							if (downstreamShutdownErr)
 							{
@@ -999,7 +995,7 @@ namespace te
 									{
 										auto readBuffer = m_response->GetReadBuffer();
 
-										SetStreamTimeout(5000);
+										SetStreamTimeout(boost::posix_time::minutes(5));
 
 										boost::asio::async_read(
 											m_upstreamSocket,
@@ -1026,7 +1022,7 @@ namespace te
 								{
 									// We need to write what we have to the client.
 
-									SetStreamTimeout(5000);
+									SetStreamTimeout(boost::posix_time::minutes(5));
 
 									auto writeBuffer = m_response->GetWriteBuffer();
 
@@ -1127,7 +1123,7 @@ namespace te
 									ReportWarning(u8"In TlsCapableHttpBridge::OnUpstreamRead(const boost::system::error_code&, const size_t) - Got TLS short read, but payload is complete. The naughty remote server did not do a proper TLS shutdown.");
 								}
 
-								if (m_response->IsPayloadComplete() && m_response->GetConsumeAllBeforeSending())
+								if (m_request->GetShouldBlock() > -1 && m_response->IsPayloadComplete() && m_response->GetConsumeAllBeforeSending())
 								{
 									// Response was flagged for further inspection. Supply to ShouldBlock...
 									auto shouldBlock = ShouldBlockTransaction(m_request.get(), m_response.get());
@@ -1156,7 +1152,7 @@ namespace te
 								
 								if (!closeAfter && m_response->IsPayloadComplete() == false && m_response->GetConsumeAllBeforeSending() == true)
 								{
-									SetStreamTimeout(5000);
+									SetStreamTimeout(boost::posix_time::minutes(5));
 
 									try
 									{
@@ -1269,7 +1265,7 @@ namespace te
 							{
 								// The client has more to write to the server.
 
-								SetStreamTimeout(5000);
+								SetStreamTimeout(boost::posix_time::minutes(5));
 
 								try
 								{
@@ -1302,7 +1298,7 @@ namespace te
 							{
 								// Client is all done, get the response headers.
 
-								SetStreamTimeout(5000);		
+								SetStreamTimeout(boost::posix_time::minutes(5));
 
 								boost::asio::async_read(
 									m_upstreamSocket,
@@ -1436,6 +1432,7 @@ namespace te
 									return;
 								}
 
+								
 								auto shouldBlockRequest = ShouldBlockTransaction(m_request.get());
 
 								if (shouldBlockRequest)
@@ -1538,7 +1535,7 @@ namespace te
 										// If we're not already connected to a host, then we need to resolve it and
 										// connect to it. This **should** only ever be true in the event that its a 
 										// non-TLS (plain HTTP) connection.
-										SetStreamTimeout(5000);
+										SetStreamTimeout(boost::posix_time::minutes(5));
 
 										m_upstreamHost = hostWithoutPort;
 										boost::asio::ip::tcp::resolver::query query(m_upstreamHost, std::is_same<BridgeSocketType, network::TlsSocket>::value ? "https" : "http");
@@ -1558,31 +1555,70 @@ namespace te
 										return;
 									}
 									
-									// Just write to the server that we're apparently already connected to. We
-									// don't concern ourselves with the ShouldBlock value here on the request.
-									// Once we get the upstream response headers, which gives us data about the
-									// size of a yet-to-be-completed request, we will block if the value was set
-									// here, but not before the http filtering engine reports this data to
-									// any observer(s).
+									if (!closeAfter && m_request->IsPayloadComplete() == false && m_request->GetConsumeAllBeforeSending() == true)
+									{
+										// We need to reinitiate sequential reads of the request
+										// payload until we have all of the request body, as it has
+										// been marked for inspection.
 
-									SetStreamTimeout(5000);
+										// We do this in a try/catch because getting the read buffer for the payload
+										// can throw if the maximum payload size has been reached. This is defined as
+										// a constexpr in BaseHttpTransaction. 
+										try
+										{
+											auto readBuffer = m_request->GetReadBuffer();
 
-									auto writeBuffer = m_request->GetWriteBuffer();
+											SetStreamTimeout(boost::posix_time::minutes(5));
 
-									boost::asio::async_write(
-										m_upstreamSocket,
-										writeBuffer,
-										boost::asio::transfer_all(),
-										m_upstreamStrand.wrap(
-											std::bind(
-												&TlsCapableHttpBridge::OnUpstreamWrite,
-												shared_from_this(),
-												std::placeholders::_1
+											boost::asio::async_read(
+												m_downstreamSocket,
+												readBuffer,
+												boost::asio::transfer_at_least(1),
+												m_upstreamStrand.wrap(
+													std::bind(
+														&TlsCapableHttpBridge::OnDownstreamRead,
+														shared_from_this(),
+														std::placeholders::_1,
+														std::placeholders::_2
+													)
+												)
+											);
+
+											return;
+										}
+										catch (std::exception& e)
+										{
+											ReportError(e.what());
+										}
+									}
+									else
+									{
+										// Just write to the server that we're apparently already connected to. We
+										// don't concern ourselves with the ShouldBlock value here on the request.
+										// Once we get the upstream response headers, which gives us data about the
+										// size of a yet-to-be-completed request, we will block if the value was set
+										// here, but not before the http filtering engine reports this data to
+										// any observer(s).
+
+										SetStreamTimeout(boost::posix_time::minutes(5));
+
+										auto writeBuffer = m_request->GetWriteBuffer();
+
+										boost::asio::async_write(
+											m_upstreamSocket,
+											writeBuffer,
+											boost::asio::transfer_all(),
+											m_upstreamStrand.wrap(
+												std::bind(
+													&TlsCapableHttpBridge::OnUpstreamWrite,
+													shared_from_this(),
+													std::placeholders::_1
 												)
 											)
 										);
 
-									return;
+										return;
+									}
 								}
 								else
 								{
@@ -1675,7 +1711,7 @@ namespace te
 									// The client has more to send and it's been flagged for inspection. Must
 									// initiate a read again.
 
-									SetStreamTimeout(5000);
+									SetStreamTimeout(boost::posix_time::minutes(5));
 
 									try
 									{
@@ -1705,7 +1741,7 @@ namespace te
 									}
 								}
 
-								SetStreamTimeout(5000);
+								SetStreamTimeout(boost::posix_time::minutes(5));
 
 								// Just write whatever we've got to the server.
 								auto writeBuffer = m_request->GetWriteBuffer();
@@ -1791,7 +1827,7 @@ namespace te
 							{
 								// The server has more to write.
 
-								SetStreamTimeout(5000);
+								SetStreamTimeout(boost::posix_time::minutes(5));
 
 								try
 								{
@@ -1844,7 +1880,7 @@ namespace te
 										return;
 									}
 
-									SetStreamTimeout(5000);
+									SetStreamTimeout(boost::posix_time::minutes(5));
 
 									try
 									{
@@ -1969,7 +2005,7 @@ namespace te
 								if (SSL_set_SSL_CTX(m_downstreamSocket.native_handle(), serverCtx->native_handle()) == serverCtx->native_handle())
 								{
 									// Set timeouts
-									SetStreamTimeout(20000);
+									SetStreamTimeout(boost::posix_time::minutes(5));
 									//
 									
 									m_downstreamSocket.async_handshake(
@@ -2381,7 +2417,7 @@ namespace te
 
 						if ((!ec || (ec == boost::asio::error::eof || (ec.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ))))
 						{
-							SetStreamTimeout(15000);
+							SetStreamTimeout(boost::posix_time::minutes(5));
 
 							bool closeAfter = (ec == boost::asio::error::eof) || ((ec.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ));
 
@@ -2468,7 +2504,7 @@ namespace te
 
 						if ((!ec || (ec == boost::asio::error::eof || (ec.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ))))
 						{
-							SetStreamTimeout(15000);
+							SetStreamTimeout(boost::posix_time::minutes(5));
 
 							bool closeAfter = (ec == boost::asio::error::eof) || ((ec.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ));
 
@@ -2552,7 +2588,7 @@ namespace te
 					void StartPassthroughVolley(std::shared_ptr<std::array<char, TlsPeekBufferSize>> downstreamBuff, const size_t initialBytes)
 					{	
 						ReportInfo(u8"Starting passthrough.");
-						SetStreamTimeout(15000);
+						SetStreamTimeout(boost::posix_time::minutes(5));
 
 						boost::system::error_code err;
 						err.clear();
@@ -2611,7 +2647,7 @@ namespace te
 						try
 						{
 							// Allow 5 seconds for a peek read.
-							SetStreamTimeout(5000);
+							SetStreamTimeout(boost::posix_time::minutes(5));
 
 							std::shared_ptr<std::array<char, TlsPeekBufferSize>> httpPeekBuffer = std::make_shared< std::array<char, TlsPeekBufferSize> >();
 
@@ -2644,7 +2680,7 @@ namespace te
 							
 							// Cancel the stream timeout mechanism before entering starting this process. We're going to need
 							// to possibly leave this cancelled if we're handling a passthrough connection.
-							SetStreamTimeout(10000);
+							SetStreamTimeout(boost::posix_time::minutes(5));
 							
 							PreviewParser p;
 							std::string parsedHost;
@@ -2665,7 +2701,7 @@ namespace te
 									// Just go ahead and start officially reading the headers.
 
 									// Set the timeout to something reasonable.
-									SetStreamTimeout(5000);
+									SetStreamTimeout(boost::posix_time::minutes(5));
 
 									// Create a new request for this data and just jump to OnDownstreamHeaders.
 									try
@@ -2698,7 +2734,7 @@ namespace te
 									if (needsResolveAndConnect)
 									{
 										
-										SetStreamTimeout(5000);
+										SetStreamTimeout(boost::posix_time::minutes(5));
 
 										if (parsedHost.size() == 0)
 										{
@@ -2862,31 +2898,29 @@ namespace te
 					}								
 
 					/// <summary>
-					/// Sets or resets the timeout for the bridge's stream operations. If the
-					/// timeout is reached and the completion handler invoked, then the bridge will
-					/// be killed, with both downstream and upstream operations cancelled in an
-					/// asynchrous manner, at which time the bridge's reference count will reach
-					/// zero and the destructor will be called.
+					/// Sets the duration from now when the stream timer should expire.
 					/// </summary>
-					/// <param name="millisecondsFromNow">
-					/// The number of milliseconds from now until the timeout. If any negative value
-					/// is supplied, the timeout will be set to positive infinity, so it never expires.
+					/// <param name="expiry">
+					/// The boost::posix_time::time_duration when the expiry should occur from now.
 					/// </param>
-					void SetStreamTimeout(int millisecondsFromNow)
+					void SetStreamTimeout(const boost::posix_time::time_duration& expiry)
 					{
 						m_streamTimer.cancel();
 
-						if (millisecondsFromNow < 0)
-						{
-							m_streamTimer.expires_at(boost::posix_time::pos_infin);
-							return;
-						}
-						else
-						{
-							m_streamTimer.expires_from_now(boost::posix_time::milliseconds(millisecondsFromNow));
-						}
+						m_streamTimer.expires_from_now(expiry);
 
 						m_streamTimer.async_wait(std::bind(&TlsCapableHttpBridge::OnStreamTimeout, shared_from_this(), std::placeholders::_1));
+					}
+
+					/// <summary>
+					/// Cancels the current stream timer and then sets it to positive infinity.
+					/// </summary>
+					void SetInfiniteStreamTimeout()
+					{
+						m_streamTimer.cancel();
+
+						m_streamTimer.expires_at(boost::posix_time::pos_infin);
+						return;
 					}
 
 					/// <summary>
@@ -2978,7 +3012,7 @@ namespace te
 						bool inspectRequest = request->GetConsumeAllBeforeSending() && request->IsPayloadComplete();
 						bool inspectResponse = (response != nullptr && response->GetConsumeAllBeforeSending() && response->IsPayloadComplete());
 
-						if (inspectRequest || inspectResponse)
+						if ((inspectRequest && !inspectResponse) || (inspectRequest && inspectResponse))
 						{
 							requestPayload = inspectRequest ? request->GetPayload().data() : nullptr;
 							requestPayloadSize = inspectRequest ? request->GetPayload().size() : 0;

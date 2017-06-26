@@ -119,7 +119,7 @@ namespace te
 				{
 					try
 					{
-						SetStreamTimeout(10000);
+						SetStreamTimeout(boost::posix_time::minutes(5));
 	
 						TryInitiateHttpTransaction();
 						return;
@@ -139,7 +139,7 @@ namespace te
 				{					
 					try
 					{
-						SetStreamTimeout(10000);
+						SetStreamTimeout(boost::posix_time::minutes(5));
 
 						// Start a peek read on the connected secure client, so we can attempt to extract the
 						// SNI hostname in the handler without screwing up the pending handshake.
@@ -276,7 +276,7 @@ namespace te
 
 					if (!error)
 					{						
-						SetStreamTimeout(20000);
+						SetStreamTimeout(boost::posix_time::minutes(5));
 
 						m_upstreamSocket.set_verify_mode(boost::asio::ssl::verify_peer | boost::asio::ssl::verify_fail_if_no_peer_cert);
 
@@ -338,7 +338,7 @@ namespace te
 
 					if (!error)
 					{
-						SetStreamTimeout(5000);
+						SetStreamTimeout(boost::posix_time::minutes(5));
 
 						auto ep = *endpointIterator;
 
@@ -397,7 +397,7 @@ namespace te
 
 					if (!error)
 					{
-						SetStreamTimeout(5000);
+						SetStreamTimeout(boost::posix_time::minutes(5));
 
 						SSL_set_tlsext_host_name(m_upstreamSocket.native_handle(), m_upstreamHost.c_str());
 
