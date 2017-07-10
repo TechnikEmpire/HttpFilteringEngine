@@ -853,6 +853,7 @@ namespace te
 						ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamHeaders");
 						#endif // !NDEBUG
 
+						/*
 						if (m_shouldTerminate)
 						{
 							// The session was flagged to be killed AFTER this write completes.
@@ -862,12 +863,19 @@ namespace te
 							Kill();
 							return;
 						}
+						*/
 
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
 						if ((!error || (error == boost::asio::error::eof || (error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ))))
 						{
+							if (bytesTransferred <= 0)
+							{
+								Kill();
+								return;
+							}
+
 							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
 							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
 
@@ -1082,6 +1090,7 @@ namespace te
 						ReportInfo(u8"TlsCapableHttpBridge::OnUpstreamRead");
 						#endif // !NDEBUG
 
+						/*
 						if (m_shouldTerminate)
 						{
 							// The session was flagged to be killed AFTER this write completes.
@@ -1091,12 +1100,19 @@ namespace te
 							Kill();
 							return;
 						}
+						*/
 
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
 						if ((!error || (error == boost::asio::error::eof || (error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ))))
 						{
+							if (bytesTransferred <= 0)
+							{
+								Kill();
+								return;
+							}
+
 							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
 							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
 
@@ -1371,6 +1387,7 @@ namespace te
 						ReportInfo(u8"TlsCapableHttpBridge::::OnDownstreamHeaders");
 						#endif // !NDEBUG
 
+						/*
 						if (m_shouldTerminate)
 						{
 							// The session was flagged to be killed AFTER this write completes.
@@ -1380,12 +1397,19 @@ namespace te
 							Kill();
 							return;
 						}
+						*/
 
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
 						if ((!error || (error == boost::asio::error::eof || (error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ))))
 						{
+							if (bytesTransferred <= 0)
+							{
+								Kill();
+								return;
+							}
+
 							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
 							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
 
@@ -1665,6 +1689,7 @@ namespace te
 						ReportInfo(u8"TlsCapableHttpBridge::OnDownstreamRead");
 						#endif // !NDEBUG
 
+						/*
 						if (m_shouldTerminate)
 						{
 							// The session was flagged to be killed AFTER this write completes.
@@ -1674,12 +1699,19 @@ namespace te
 							Kill();
 							return;
 						}
+						*/
 
 						// EOF doesn't necessarily mean something critical happened. Could simply be
 						// that we got the entire valid response, and the server closed the connection
 						// after.
 						if ((!error || (error == boost::asio::error::eof || (error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ))))
 						{
+							if (bytesTransferred <= 0)
+							{
+								Kill();
+								return;
+							}
+
 							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
 							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
 
@@ -2415,7 +2447,8 @@ namespace te
 					{
 						//ReportInfo(u8"HandleDownstreamPassthrough");
 
-						if ((!ec || (ec == boost::asio::error::eof || (ec.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ))))
+						//if ((!ec || (ec == boost::asio::error::eof || (ec.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ))))
+						if(!ec)
 						{
 							SetStreamTimeout(boost::posix_time::minutes(5));
 
@@ -2434,8 +2467,8 @@ namespace te
 										{
 											if (closeAfter)
 											{
-												ReportInfo(u8"In TlsCapableHttpBridge::HandleDownstreamPassthrough(const boost::system::error_code&) - Connection closed by upstream.");
-												Kill();
+												ReportInfo(u8"In TlsCapableHttpBridge::HandleDownstreamPassthrough(const boost::system::error_code&) - Connection closed by downstream.");
+												//Kill();
 												return;
 											}
 
@@ -2463,8 +2496,8 @@ namespace te
 
 							if (closeAfter)
 							{
-								ReportInfo(u8"In TlsCapableHttpBridge::HandleDownstreamPassthrough(const boost::system::error_code&) - Connection closed by upstream.");
-								Kill();
+								ReportInfo(u8"In TlsCapableHttpBridge::HandleDownstreamPassthrough(const boost::system::error_code&) - Connection closed by downstream.");
+								//Kill();
 								return;
 							}
 
@@ -2502,7 +2535,8 @@ namespace te
 					{
 						//ReportInfo(u8"HandleUpstreamPassthrough");
 
-						if ((!ec || (ec == boost::asio::error::eof || (ec.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ))))
+						//if ((!ec || (ec == boost::asio::error::eof || (ec.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ))))
+						if (!ec)
 						{
 							SetStreamTimeout(boost::posix_time::minutes(5));
 
@@ -2521,8 +2555,8 @@ namespace te
 										{
 											if (closeAfter)
 											{
-												ReportInfo(u8"In TlsCapableHttpBridge::HandleUpstreamPassthrough(const boost::system::error_code&) - Connection closed by downstream.");
-												Kill();
+												ReportInfo(u8"In TlsCapableHttpBridge::HandleUpstreamPassthrough(const boost::system::error_code&) - Connection closed by upstream.");
+												//Kill();
 												return;
 											}
 
@@ -2550,8 +2584,8 @@ namespace te
 
 							if (closeAfter)
 							{
-								ReportInfo(u8"In TlsCapableHttpBridge::HandleUpstreamPassthrough(const boost::system::error_code&) - Connection closed by downstream.");
-								Kill();
+								ReportInfo(u8"In TlsCapableHttpBridge::HandleUpstreamPassthrough(const boost::system::error_code&) - Connection closed by upstream.");
+								//Kill();
 								return;
 							}
 

@@ -20,7 +20,7 @@ namespace te
 		{
 			namespace secure
 			{
-				const std::string BaseInMemoryCertificateStore::ContextCipherList{ u8"HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4" }; // u8"HIGH:!aNULL:!MD5:!RC4" // u8"HIGH:!SSLv2!SRP:!PSK"
+				const std::string BaseInMemoryCertificateStore::ContextCipherList{ u8"HIGH:!SSLv2:!SSLv3:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4" }; // u8"HIGH:!aNULL:!MD5:!RC4" // u8"HIGH:!SSLv2!SRP:!PSK"
 				
 
 				BaseInMemoryCertificateStore::BaseInMemoryCertificateStore() :
@@ -251,12 +251,14 @@ namespace te
 							);
 
 
+						/*
 						if (SSL_CTX_set_cipher_list(ctx->native_handle(), ContextCipherList.c_str()) != 1)
 						{
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
 							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to set context cipher list.");
-						}						
+						}
+						*/
 
 						if (SSL_CTX_use_certificate(ctx->native_handle(), spoofedCert) != 1)
 						{

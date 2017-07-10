@@ -687,7 +687,9 @@ namespace te
 					/// </summary>
 					std::string m_lastHeader;
 
-					bool m_lastHeaderFresh = false;
+					bool m_lastHeaderValueFresh = false;
+
+					bool m_lastHeaderFieldFresh = false;
 
 					std::vector<char> m_buffer;
 

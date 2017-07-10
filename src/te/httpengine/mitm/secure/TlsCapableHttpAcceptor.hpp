@@ -307,10 +307,12 @@ namespace te
 							}
 						}
 
+						/*
 						if (SSL_CTX_set_cipher_list(m_clientContext.native_handle(), BaseInMemoryCertificateStore::ContextCipherList.c_str()) != 1)
 						{
 							ReportWarning(u8"In TlsCapableHttpAcceptor::InitContexts() - Failed to cet client context cipher list.");
 						}
+						*/
 
 						if (X509_VERIFY_PARAM_set_flags(m_clientContext.native_handle()->param, X509_V_FLAG_TRUSTED_FIRST) != 1)
 						{

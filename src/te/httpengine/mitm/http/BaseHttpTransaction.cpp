@@ -816,7 +816,8 @@ namespace te
 						trans->m_headersSent = false;
 						trans->m_headersComplete = false;
 						trans->m_lastHeader = std::string("");
-						trans->m_lastHeaderFresh = false;
+						trans->m_lastHeaderValueFresh = false;
+						trans->m_lastHeaderFieldFresh = false;
 						
 					}
 					else
@@ -965,9 +966,18 @@ namespace te
 						{
 							throw std::runtime_error(u8"In BaseHttpTransaction::OnHeaderField() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
-
-						trans->m_lastHeader = std::string(at, length);
-						trans->m_lastHeaderFresh = true;
+						
+						if (trans->m_lastHeaderFieldFresh)
+						{
+							trans->m_lastHeader = std::string(at, length);
+							trans->m_lastHeaderFieldFresh = false;
+						}
+						else
+						{
+							trans->m_lastHeader.append(std::string(at, length));
+						}
+						
+						trans->m_lastHeaderValueFresh = true;
 
 						if (length == 0)
 						{
@@ -997,13 +1007,15 @@ namespace te
 							throw std::runtime_error(u8"In BaseHttpTransaction::OnHeaderValue() - http_parser->data is nullptr when it should contain a pointer the http_parser's owning BaseHttpTransaction object.");
 						}
 
+						trans->m_lastHeaderFieldFresh = true;
+
 						if (trans->m_lastHeader.length() > 0)
 						{	
-							if (trans->m_lastHeaderFresh)
+							if (trans->m_lastHeaderValueFresh)
 							{
 								std::string headerValue(at, length);
 								trans->AddHeader(trans->m_lastHeader, headerValue, false);			
-								trans->m_lastHeaderFresh = false;
+								trans->m_lastHeaderValueFresh = false;
 							}
 							else
 							{
@@ -1013,8 +1025,9 @@ namespace te
 								auto range = trans->m_headers.equal_range(trans->m_lastHeader); 
 								
 								if (range.first != range.second)
-								{
+								{	
 									auto appender = std::prev(range.second);
+									
 									// Ordering is supposed to be guaranteed. This must be it.
 									appender->second.append(std::string(at, length));
 								}
