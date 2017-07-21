@@ -34,6 +34,9 @@
 #include "../../BaseDiverter.hpp"
 
 #include <cstdint>
+#include <climits>
+#include <array>
+#include <atomic>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -165,6 +168,19 @@ namespace te
 					virtual const bool IsRunning() const;
 
 				protected:
+
+					// These will track process ID's and the full process name
+					// for a newly stored PID ONLY when a new outbound connection
+					// is detected. This way we hammer the TCP/IP table
+					// of the OS as little as is physically possible.
+					//
+					// We have to do some dirty pathenthesis here because Windows is smart (sarcasm)
+					// and their min/max macros conflict with numeric_limits.
+					std::array<std::atomic_uint64_t, (std::numeric_limits<uint16_t>::max)()> m_v4pidMap = {};
+					std::array<std::atomic_uint64_t, (std::numeric_limits<uint16_t>::max)()> m_v6pidMap = {};
+
+					std::array<std::atomic_bool, (std::numeric_limits<uint16_t>::max)()> m_v4Shouldfilter = {};
+					std::array<std::atomic_bool, (std::numeric_limits<uint16_t>::max)()> m_v6Shouldfilter = {};
 
 					/// <summary>
 					/// Constructs a new WinDiverter used for diverting network traffic on Windows

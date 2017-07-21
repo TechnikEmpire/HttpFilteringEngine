@@ -870,14 +870,14 @@ namespace te
 						// after.
 						if ((!error || (error == boost::asio::error::eof || (error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ))))
 						{
-							if (bytesTransferred <= 0)
+							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+
+							if (closeAfter && !wasSslShortRead && bytesTransferred <= 0)
 							{
 								Kill();
 								return;
 							}
-
-							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
-							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
 
 							if (closeAfter)
 							{
@@ -1107,14 +1107,14 @@ namespace te
 						// after.
 						if ((!error || (error == boost::asio::error::eof || (error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ))))
 						{
-							if (bytesTransferred <= 0)
+							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+
+							if (closeAfter && !wasSslShortRead && bytesTransferred <= 0)
 							{
 								Kill();
 								return;
 							}
-
-							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
-							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
 
 							if (closeAfter)
 							{
@@ -1404,14 +1404,14 @@ namespace te
 						// after.
 						if ((!error || (error == boost::asio::error::eof || (error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ))))
 						{
-							if (bytesTransferred <= 0)
+							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+
+							if (closeAfter && !wasSslShortRead && bytesTransferred <= 0)
 							{
 								Kill();
 								return;
 							}
-
-							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
-							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
 
 							if (closeAfter)
 							{
@@ -1706,14 +1706,14 @@ namespace te
 						// after.
 						if ((!error || (error == boost::asio::error::eof || (error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ))))
 						{
-							if (bytesTransferred <= 0)
+							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
+
+							if (closeAfter && !wasSslShortRead && bytesTransferred <= 0)
 							{
 								Kill();
 								return;
 							}
-
-							bool closeAfter = (error == boost::asio::error::eof) || ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
-							bool wasSslShortRead = ((error.category() == boost::asio::error::get_ssl_category()) && (ERR_GET_REASON(error.value()) == SSL_R_SHORT_READ));
 
 							if (closeAfter)
 							{
@@ -2027,7 +2027,7 @@ namespace te
 							catch (std::exception& e)
 							{
 								serverCtx = nullptr;
-								std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\t");
+								std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - While spoofing, got error:\t");
 								errMessage.append(e.what());
 								ReportError(errMessage);
 							}
@@ -2110,7 +2110,7 @@ namespace te
 							return;
 						}
 
-						std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\t");
+						std::string errMessage(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnDownstreamHandshake(const boost::system::error_code&) - Got error:\t");
 						errMessage.append(error.message());
 						ReportError(errMessage);
 

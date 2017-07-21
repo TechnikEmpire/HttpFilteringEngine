@@ -284,12 +284,15 @@ namespace te
 						m_defaultServerContext.set_default_verify_paths();
 						m_clientContext.set_default_verify_paths();
 
+						//m_defaultServerContext.set_verify_mode(boost::asio::ssl::context::verify_peer | boost::asio::ssl::context::verify_fail_if_no_peer_cert);
+
 						if (m_caBundleAbsolutePath.compare(u8"none") != 0)
 						{
 							ReportInfo(u8"User specified an absolute path to ca-bundle for the client context. Attempting to load...");
 							
 							boost::system::error_code loadRootsError;							
 
+							m_clientContext.set_verify_mode(boost::asio::ssl::context::verify_peer);
 							m_clientContext.load_verify_file(m_caBundleAbsolutePath, loadRootsError);
 
 							if (loadRootsError)

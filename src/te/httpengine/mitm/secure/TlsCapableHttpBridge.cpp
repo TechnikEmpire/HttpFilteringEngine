@@ -278,8 +278,6 @@ namespace te
 					{						
 						SetStreamTimeout(boost::posix_time::minutes(5));
 
-						m_upstreamSocket.set_verify_mode(boost::asio::ssl::verify_peer | boost::asio::ssl::verify_fail_if_no_peer_cert);
-
 						boost::system::error_code scerr;
 
 						// Verification callback does not require a shared_ptr for the bind, because the async_handshake

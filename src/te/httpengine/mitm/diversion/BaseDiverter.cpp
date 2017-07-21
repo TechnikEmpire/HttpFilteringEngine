@@ -61,6 +61,7 @@ namespace te
 				{
 					switch (bytes[0])
 					{
+						case 127:
 						case 10:
 						{
 							return true;
