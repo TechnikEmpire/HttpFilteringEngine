@@ -180,7 +180,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;HTTP_FILTERING_ENGINE_USE_EX;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;HTTP_FILTERING_ENGINE_USE_EX;HTTP_FE_BLOCK_TOR;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -225,7 +225,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;HTTP_FILTERING_ENGINE_USE_EX;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;HTTP_FILTERING_ENGINE_USE_EX;HTTP_FE_BLOCK_TOR;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -270,7 +270,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;HTTP_FILTERING_ENGINE_USE_EX;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;HTTP_FILTERING_ENGINE_USE_EX;HTTP_FE_BLOCK_TOR;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -315,7 +315,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;HTTP_FILTERING_ENGINE_USE_EX;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;HTTP_FILTERING_ENGINE_USE_EX;HTTP_FE_BLOCK_TOR;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -359,7 +359,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x86|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;HTTP_FILTERING_ENGINE_USE_EX;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;HTTP_FILTERING_ENGINE_USE_EX;BOOST_AUTO_LINK_NOMANGLE;HTTP_FE_BLOCK_TOR;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -403,7 +403,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x64|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;BOOST_AUTO_LINK_NOMANGLE;HTTP_FILTERING_ENGINE_USE_EX;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;BOOST_AUTO_LINK_NOMANGLE;HTTP_FE_BLOCK_TOR;HTTP_FILTERING_ENGINE_USE_EX;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -447,7 +447,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x86|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;HTTP_FILTERING_ENGINE_USE_EX;BOOST_AUTO_LINK_NOMANGLE;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;HTTP_FILTERING_ENGINE_USE_EX;BOOST_AUTO_LINK_NOMANGLE;HTTP_FE_BLOCK_TOR;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -491,7 +491,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release x64|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;BOOST_AUTO_LINK_NOMANGLE;HTTP_FILTERING_ENGINE_USE_EX;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0600;BOOST_AUTO_LINK_NOMANGLE;HTTP_FE_BLOCK_TOR;HTTP_FILTERING_ENGINE_USE_EX;BOOST_ASIO_SEPARATE_COMPILATION;BOOST_ALL_DYN_LINK;HTTP_FILTERING_ENGINE_EXPORT;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
