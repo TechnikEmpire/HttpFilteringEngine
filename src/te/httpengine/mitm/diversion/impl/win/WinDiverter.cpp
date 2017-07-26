@@ -273,33 +273,13 @@ namespace te
 								continue;
 							}
 
-							// XXX TODO - Had to set this timeout VERY high when I was diverting
-							// DNS once upon a time, perhaps this isn't the case since we're
-							// sticking to TCP. Never figured out why I had to do this in the
-							// first place.
-							auto result = WaitForSingleObject(recvEvent, 5000);
-
-							if (result != WAIT_OBJECT_0)
+							
+							while (WaitForSingleObject(recvEvent, 1000) == WAIT_TIMEOUT)
 							{
-								if (result != WAIT_TIMEOUT)
-								{
-									// We don't care if it's a timeout. Thread will resume.
-									std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, got error:\t");
-									errMessage.append(std::to_string(GetLastError()));
-									ReportError(errMessage);
-								}
-								/*
-								else
-								{
-									ReportError(u8"In WinDiverter::RunDiversion(LPVOID) - Call to WinDivert RecvEx timed out.");
-								}
-								*/
 
-								CloseHandle(recvEvent);
-								continue;
 							}
 
-							if (!GetOverlappedResult(divertHandle, &recvOverlapped, &recvAsyncIoLen, TRUE))
+							if (!GetOverlappedResult(divertHandle, &recvOverlapped, &recvAsyncIoLen, FALSE))
 							{
 								std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert RecvEx, while fetching overlapped result, got error:\t");
 								errMessage.append(std::to_string(GetLastError()));
@@ -346,21 +326,29 @@ namespace te
 
 									if (m_v4pidMap[tcpHeader->SrcPort] == m_thisPid)
 									{
+										// System process. Don't even bother.
 										m_v4Shouldfilter[tcpHeader->SrcPort] = false;
 									}
 									else
 									{
-										auto procPath = GetPacketProcessBinaryPath(m_v4pidMap[tcpHeader->SrcPort].load());
-
-										if (procPath.size() == 0)
+										if (m_v4pidMap[tcpHeader->SrcPort] == 4)
 										{
-											// This is something we couldn't get a handle on. Since we can't do that
-											// that's probably a bad sign (SYSTEM process maybe?), don't filter it.
 											m_v4Shouldfilter[tcpHeader->SrcPort] = false;
 										}
 										else
 										{
-											m_v4Shouldfilter[tcpHeader->SrcPort] = m_firewallCheckCb(procPath.c_str(), procPath.size());
+											auto procPath = GetPacketProcessBinaryPath(m_v4pidMap[tcpHeader->SrcPort].load());
+
+											if (procPath.size() == 0)
+											{
+												// This is something we couldn't get a handle on. Since we can't do that
+												// that's probably a bad sign (SYSTEM process maybe?), don't filter it.
+												m_v4Shouldfilter[tcpHeader->SrcPort] = false;
+											}
+											else
+											{
+												m_v4Shouldfilter[tcpHeader->SrcPort] = m_firewallCheckCb(procPath.c_str(), procPath.size());
+											}
 										}
 									}
 								}
@@ -375,17 +363,26 @@ namespace te
 									}
 									else
 									{
-										auto procPath = GetPacketProcessBinaryPath(m_v6pidMap[tcpHeader->SrcPort].load());
-										if (procPath.size() == 0)
+										if (m_v6pidMap[tcpHeader->SrcPort] == 4)
 										{
-											// This is something we couldn't get a handle on. Since we can't do that
-											// that's probably a bad sign (SYSTEM process maybe?), don't filter it.
+											// System process. Don't even bother.
 											m_v6Shouldfilter[tcpHeader->SrcPort] = false;
 										}
 										else
 										{
-											m_v6Shouldfilter[tcpHeader->SrcPort] = m_firewallCheckCb(procPath.c_str(), procPath.size());
+											auto procPath = GetPacketProcessBinaryPath(m_v6pidMap[tcpHeader->SrcPort].load());
+											if (procPath.size() == 0)
+											{
+												// This is something we couldn't get a handle on. Since we can't do that
+												// that's probably a bad sign (SYSTEM process maybe?), don't filter it.
+												m_v6Shouldfilter[tcpHeader->SrcPort] = false;
+											}
+											else
+											{
+												m_v6Shouldfilter[tcpHeader->SrcPort] = m_firewallCheckCb(procPath.c_str(), procPath.size());
+											}
 										}
+										
 									}
 								}
 							}
@@ -601,10 +598,7 @@ namespace te
 				{
 					if (processId == 4)
 					{
-						// OS process. We need to do this, otherwise OpenProcess will fail and we'll get
-						// nothing. We still want to filter OS processes, because on systems like Windows 10,
-						// there are... shudders... ads BUILT IN to the OS. By allowing us to filter proc ID 4,
-						// we can block ad and tracking requests made by the OS. GG Microbros. Goml. Nt. etc.
+						// OS process.
 						return std::string(u8"SYSTEM");
 					}
 

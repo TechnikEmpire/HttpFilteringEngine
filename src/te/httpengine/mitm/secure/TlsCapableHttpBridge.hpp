@@ -2468,7 +2468,7 @@ namespace te
 											if (closeAfter)
 											{
 												ReportInfo(u8"In TlsCapableHttpBridge::HandleDownstreamPassthrough(const boost::system::error_code&) - Connection closed by downstream.");
-												//Kill();
+												Kill();
 												return;
 											}
 
@@ -2497,7 +2497,7 @@ namespace te
 							if (closeAfter)
 							{
 								ReportInfo(u8"In TlsCapableHttpBridge::HandleDownstreamPassthrough(const boost::system::error_code&) - Connection closed by downstream.");
-								//Kill();
+								Kill();
 								return;
 							}
 
@@ -2526,8 +2526,6 @@ namespace te
 							}
 						}
 
-						// Let the dealine timer kill us. Just in case the other end of the passthrough
-						// is still working at something.
 						Kill();
 					}
 
@@ -2556,7 +2554,7 @@ namespace te
 											if (closeAfter)
 											{
 												ReportInfo(u8"In TlsCapableHttpBridge::HandleUpstreamPassthrough(const boost::system::error_code&) - Connection closed by upstream.");
-												//Kill();
+												Kill();
 												return;
 											}
 
@@ -2585,7 +2583,7 @@ namespace te
 							if (closeAfter)
 							{
 								ReportInfo(u8"In TlsCapableHttpBridge::HandleUpstreamPassthrough(const boost::system::error_code&) - Connection closed by upstream.");
-								//Kill();
+								Kill();
 								return;
 							}
 
@@ -2614,8 +2612,6 @@ namespace te
 							}
 						}
 
-						// Let the dealine timer kill us. Just in case the other end of the passthrough
-						// is still working at something.
 						Kill();
 					}
 

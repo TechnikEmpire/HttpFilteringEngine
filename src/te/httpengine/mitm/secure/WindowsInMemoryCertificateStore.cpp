@@ -66,6 +66,8 @@ namespace te
 
 				bool WindowsInMemoryCertificateStore::EstablishOsTrust()
 				{
+					RevokeOsTrust();
+
 					HCERTSTORE hSysStore = CertOpenStore(CERT_STORE_PROV_SYSTEM, 0, NULL, CERT_SYSTEM_STORE_LOCAL_MACHINE, L"ROOT");
 
 					bool caAreadyGenerated = (m_thisCa != nullptr);
