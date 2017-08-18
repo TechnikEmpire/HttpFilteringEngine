@@ -212,41 +212,11 @@ namespace te
 
 					bool isLocalIpv4 = false;
 
-					/*
-					// Rather than creating a structures to be shared across all thread that track
-					// which apps have firewall permissions, we simple create one per-thread. We waste
-					// a little bit of space, but we avoid the headaches of synchronization. Note
-					// however that this convenience will have to go once we implement things like
-					// port independent protocol mapping, and proper flow tracking, which is needed
-					// to ensure we supply filtering to traffic other than port 80 and 443.
-
-					// So presently, rather than doing proper flow tracking and such, we kind of just do
-					// a dirty little hack. We keep track of "flows" only by destination local port, then
-					// every couple of seconds we re-check the process ID bound to the port to make sure
-					// that we're still serving a process other than our own. Plus, we also make sure we're
-					// still serving the same process that we got the binary name of, checked the firewall
-					// status of etc, before caching it here.
-					//
-					// The benefit here is that we don't have to keep hammering the kernel for TCP and TCP6 tables
-					// which contain process information about ports, just to avoid accidently intercepting our
-					// own traffic. Just by caching for a second or two, we cut CPU usage down to nil. Without
-					// it, you'll see the CPU get eaten alive while streaming video or something.
-					std::unordered_map<uint16_t, ProcessNfo> tcpIPv4PidLastCheck;
-					std::unordered_map<uint16_t, ProcessNfo> tcpIPv6PidLastCheck;
-					*/
-
 					while (m_running)
 					{
 						recvLength = 0;
 						memset(&addr, 0, sizeof(addr));
-
-						// WinDivert has a recv and send overload that uses overlapped IO to provide nonblocking
-						// recv and send functions that can be manually waited and timed out. These overloads
-						// have an "ex" suffix.
-						//
-						// Enabling this is optional at compile time. While I much prefer the idea of being able
-						// to guarantee a thread is never going to be chocking indefinitely on a recv, I've
-						// experienced... unstable results using the recvex function.
+					
 #ifdef HTTP_FILTERING_ENGINE_USE_EX
 
 						recvAsyncIoLen = 0;
@@ -319,8 +289,7 @@ namespace te
 							if (tcpHeader != nullptr && tcpHeader->Syn > 0)
 							{
 								// Brand new outbound connection. Grab the PID of the process
-								// holding this port and map it.
-								
+								// holding this port and map it.								
 								if (ipV4Header != nullptr)
 								{
 									m_v4pidMap[tcpHeader->SrcPort] = GetPacketProcess(tcpHeader->SrcPort, ipV4Header->SrcAddr, &ipv4TcpTable, ipv4TcpTableSize);
