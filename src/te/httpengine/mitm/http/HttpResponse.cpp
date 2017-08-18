@@ -67,17 +67,26 @@ namespace te
 
 					m_statusString.clear();
 
-					if (m_httpVersion == HttpProtocolVersion::HTTP1)
+					switch (m_httpVersion)
+					{
+					case HttpProtocolVersion::HTTP1:
 					{
 						m_statusString.append(u8"HTTP/1.0 ");
 					}
-					else if (m_httpVersion == HttpProtocolVersion::HTTP1_1)
+					break;
+
+					case HttpProtocolVersion::HTTP1_1:
+					default:
 					{
 						m_statusString.append(u8"HTTP/1.1 ");
 					}
-					else if (m_httpVersion == HttpProtocolVersion::HTTP2)
+					break;
+
+					case HttpProtocolVersion::HTTP2:
 					{
 						m_statusString.append(u8"HTTP/2.0 ");
+					}
+					break;
 					}
 
 					m_statusString.append(std::to_string(code));
@@ -119,6 +128,8 @@ namespace te
 
 				int HttpResponse::OnStatus(http_parser* parser, const char *at, size_t length)
 				{
+					// XXX TODO - Is it possible for this callback to be called
+					// multiple times in one response?
 					if (parser != nullptr)
 					{
 						HttpResponse* trans = static_cast<HttpResponse*>(parser->data);

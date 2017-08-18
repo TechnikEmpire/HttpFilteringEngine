@@ -84,17 +84,26 @@ namespace te
 
 					ret.append(m_requestURI);
 
-					if (m_httpVersion == HttpProtocolVersion::HTTP1)
+					switch (m_httpVersion)
 					{
-						ret.append(u8" HTTP/1.0");
-					}
-					else if (m_httpVersion == HttpProtocolVersion::HTTP1_1)
-					{
-						ret.append(u8" HTTP/1.1");
-					}
-					else if (m_httpVersion == HttpProtocolVersion::HTTP2)
-					{
-						ret.append(u8" HTTP/2.0");
+						case HttpProtocolVersion::HTTP1:
+						{
+							ret.append(u8" HTTP/1.0");
+						}
+						break;
+
+						case HttpProtocolVersion::HTTP1_1:
+						default:
+						{
+							ret.append(u8" HTTP/1.1");
+						}
+						break;
+
+						case HttpProtocolVersion::HTTP2:						
+						{
+							ret.append(u8" HTTP/2.0");
+						}
+						break;
 					}
 
 					for (auto header = m_headers.begin(); header != m_headers.end(); ++header)

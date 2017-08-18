@@ -121,6 +121,12 @@
     <Filter Include="Source Files\http_parser">
       <UniqueIdentifier>{c7db9451-5965-4e46-b88a-50eb518bf694}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\cpprestsdk">
+      <UniqueIdentifier>{ceb76be3-1314-4544-8d83-86e5139f607b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\cpprestsdk">
+      <UniqueIdentifier>{4f0dbcad-9dd2-4ec2-88d0-b9db517d6c3d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -180,6 +186,9 @@
     <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.hpp">
       <Filter>Header Files\te\httpengine</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\contrib\cpprestsdk\src\http\client\x509_cert_utilities.h">
+      <Filter>Header Files\cpprestsdk</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp">
@@ -223,6 +232,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.cpp">
       <Filter>Source Files\te\httpengine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\contrib\cpprestsdk\src\http\client\x509_cert_utilities.cpp">
+      <Filter>Source Files\cpprestsdk</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

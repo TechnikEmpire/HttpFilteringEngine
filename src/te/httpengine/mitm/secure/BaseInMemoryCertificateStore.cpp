@@ -168,7 +168,6 @@ namespace te
 							case GEN_DNS:
 							{
 								std::string dnsNameString(reinterpret_cast<char*>(ASN1_STRING_data(currentName->d.dNSName)));
-
 								auto len = ASN1_STRING_length(currentName->d.dNSName);
 
 								if (len == dnsNameString.size())

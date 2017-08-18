@@ -292,9 +292,10 @@ namespace te
 							
 							boost::system::error_code loadRootsError;							
 
-							m_clientContext.set_verify_mode(boost::asio::ssl::context::verify_peer);
+							
+							m_clientContext.set_verify_mode(boost::asio::ssl::context::verify_peer | boost::asio::ssl::context::verify_fail_if_no_peer_cert);							
 							m_clientContext.load_verify_file(m_caBundleAbsolutePath, loadRootsError);
-
+							
 							if (loadRootsError)
 							{
 								// XXX TODO - Should we throw or something here? I think maybe not, since failing to load

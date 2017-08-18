@@ -2399,49 +2399,7 @@ namespace te
 					/// <returns>
 					/// True if the certificate has been verified, false otherwise.
 					/// </returns>
-					bool VerifyServerCertificateCallback(bool preverified, boost::asio::ssl::verify_context& ctx)
-					{
-
-						#ifndef NDEBUG
-						ReportInfo(u8"TlsCapableHttpBridge<network::TlsSocket>::VerifyServerCertificateCallback");
-						#endif // !NDEBUG
-
-						boost::asio::ssl::rfc2818_verification v(m_upstreamHost);
-
-						bool verified = v(preverified, ctx);
-
-						// Keep a ptr to the most recently verified cert in the chain. The last time
-						// this is set, it should be the cert we want to spoof.
-						X509* curCert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-
-						if (verified)
-						{
-							m_upstreamCert = curCert;
-						}
-						else
-						{
-							if (curCert != nullptr)
-							{
-								char subjectName[MaxDomainNameSize];
-								X509_NAME_oneline(X509_get_subject_name(curCert), subjectName, MaxDomainNameSize);
-								
-								std::string verifyFailedErrorMessage("In TlsCapableHttpBridge<network::TlsSocket>::VerifyServerCertificateCallback(bool, boost::asio::ssl::verify_context&) - Cert for ");																
-								verifyFailedErrorMessage.append(subjectName);
-								verifyFailedErrorMessage.append(u8" failed verification.");
-								
-								ReportError(verifyFailedErrorMessage);
-							}
-							else
-							{
-								std::string verifyFailedErrorMessage("In TlsCapableHttpBridge<network::TlsSocket>::VerifyServerCertificateCallback(bool, boost::asio::ssl::verify_context&) - Certificate is null.");
-								ReportError(verifyFailedErrorMessage);
-							}
-
-							m_upstreamCert = nullptr;
-						}
-
-						return verified;
-					}
+					bool VerifyServerCertificateCallback(bool preverified, boost::asio::ssl::verify_context& ctx);
 
 					void HandleDownstreamPassthrough(std::shared_ptr<std::array<char, 1638400>> buff, const boost::system::error_code& ec, const size_t bytesTransferred)
 					{

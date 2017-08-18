@@ -6,6 +6,7 @@
 */
 
 #include "TlsCapableHttpBridge.hpp"
+#include <http/client/x509_cert_utilities.h>
 #include <stdexcept>
 
 namespace te
@@ -280,14 +281,10 @@ namespace te
 
 						boost::system::error_code scerr;
 
-						// Verification callback does not require a shared_ptr for the bind, because the async_handshake
-						// completion handler will "out-live" the verification callback, so it will hold the shared_ptr
-						// that will ensure this object survives the async handshake.
-
 						m_upstreamSocket.set_verify_callback(
 							std::bind(
 								&TlsCapableHttpBridge::VerifyServerCertificateCallback, 
-								this, 
+								shared_from_this(),
 								std::placeholders::_1, 
 								std::placeholders::_2
 								), 
@@ -441,6 +438,34 @@ namespace te
 					Kill();
 				}
 				
+				template<>
+				bool TlsCapableHttpBridge<network::TcpSocket>::VerifyServerCertificateCallback(bool preverified, boost::asio::ssl::verify_context& ctx)
+				{
+					// Do nothing.
+				}
+
+				template<>
+				bool TlsCapableHttpBridge<network::TlsSocket>::VerifyServerCertificateCallback(const bool preverified, boost::asio::ssl::verify_context& ctx)
+				{	
+
+					#ifndef NDEBUG
+					ReportInfo(u8"TlsCapableHttpBridge<network::TlsSocket>::VerifyServerCertificateCallback");
+					#endif // !NDEBUG
+
+					auto res = web::http::client::details::verify_cert_chain_platform_specific(ctx, m_upstreamHost);
+					if (res)
+					{
+						X509* curCert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+						m_upstreamCert = curCert;
+					}
+					else
+					{
+						m_upstreamCert = nullptr;
+					}
+
+					return res;
+				}
+
 			} /* namespace secure */
 		} /* namespace mitm */
 	} /* namespace httpengine */

@@ -761,6 +761,10 @@ namespace te
 						errorMessage.append(http_errno_description(HTTP_PARSER_ERRNO(parser)));
 						ReportError(errorMessage);						
 						free(parser);
+
+						auto body = std::string(finalVec.data());
+						ReportError(body);
+
 						return false;
 					}
 

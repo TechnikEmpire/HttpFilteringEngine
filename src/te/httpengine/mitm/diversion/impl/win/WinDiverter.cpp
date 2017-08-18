@@ -135,9 +135,10 @@ namespace te
 
 						auto numLogicalCores = std::thread::hardware_concurrency();
 
-						// XXX TODO - Magic number, arbitrary number for deciding threads. Need an option to
-						// allow users to configure number of threads used for diversion.
-						for (unsigned int i = 0; i < numLogicalCores * 3; ++i)
+						// We use one thread per logical core. Not sure about WinDivert internals,
+						// but there's some documentation about Windows that states that for overlapped
+						// IO we should be using 1 thread per logical core max and no more.
+						for (unsigned int i = 0; i < numLogicalCores; ++i)
 						{
 							m_diversionThreads.emplace_back(std::thread{ &WinDiverter::RunDiversion, this, static_cast<LPVOID>(m_diversionHandle) });
 						}
@@ -576,10 +577,14 @@ namespace te
 							// XXX TODO - Perhaps report warning instead? This isn't exactly critical. Maybe a single
 							// packet gets lost, maybe it completes under the hood. Either way we can do nothing, and
 							// this should be expected to happen at least once.
+							//
+							// Update - Disabling this but leaving it here. This floods our logs when we block internet
+							// on purpose.
+							/*
 							std::string errMessage("In WinDiverter::RunDiversion(LPVOID) - During call to WinDivert SendEx, got error:\t");
 							errMessage.append(std::to_string(GetLastError()));
 							ReportError(errMessage);
-							continue;
+							*/
 						}
 					}// while (m_running)
 
