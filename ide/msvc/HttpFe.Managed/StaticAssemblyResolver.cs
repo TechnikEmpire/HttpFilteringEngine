@@ -42,26 +42,7 @@ namespace HttpFe.Managed
             {
                 Console.WriteLine(e.Message);
             }
-
-            //AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
         }
-
-        /*
-        private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
-        {
-            var baseDir = Directory.GetParent(typeof(StaticAssemblyResolver).Assembly.Location).FullName;
-
-            var assemblyPath = Path.Combine(baseDir, args.Name.Split(',').First() + ".dll");
-
-            if(!File.Exists(assemblyPath))
-            {
-                Console.WriteLine(assemblyPath);
-                throw new ReflectionTypeLoadException(new[] { args.GetType() }, new[] { new FileNotFoundException(assemblyPath) });
-            }   
-
-            return Assembly.LoadFrom(assemblyPath);
-        }
-        */
 
         /// <summary>
         /// Gets a new instance of a trainer from the dynamically resolved mixed managed C++/CLI library. 

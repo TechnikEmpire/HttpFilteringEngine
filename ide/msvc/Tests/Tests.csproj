@@ -12,6 +12,8 @@
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -39,6 +41,14 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="HttpFe.Common, Version=1.1.6.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\HttpFilteringEngine.1.1.6\lib\HttpFe.Common.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="HttpFe.Managed, Version=1.1.6.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\HttpFilteringEngine.1.1.6\lib\HttpFe.Managed.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -55,21 +65,19 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="app.manifest" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\HttpFe.Common\HttpFe.Common.csproj">
-      <Project>{64938257-0baa-4e25-9f44-715ff8c9828c}</Project>
-      <Name>HttpFe.Common</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\HttpFe.Managed\HttpFe.Managed.csproj">
-      <Project>{0940a14e-98a1-44ed-b6f0-a9370610a761}</Project>
-      <Name>HttpFe.Managed</Name>
-    </ProjectReference>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>xcopy /D /Y /S /E "$(SolutionDir)..\..\build\HttpFe.Managed\$(Configuration)\*.*" "$(TargetDir)"</PostBuildEvent>
   </PropertyGroup>
+  <Import Project="..\packages\HttpFilteringEngine.1.1.6\build\HttpFilteringEngine.targets" Condition="Exists('..\packages\HttpFilteringEngine.1.1.6\build\HttpFilteringEngine.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\HttpFilteringEngine.1.1.6\build\HttpFilteringEngine.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\HttpFilteringEngine.1.1.6\build\HttpFilteringEngine.targets'))" />
+  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
