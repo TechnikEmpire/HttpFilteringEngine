@@ -1,6 +1,9 @@
 # Http Filtering Engine
 Transparent filtering TLS proxy that exposes a simple API for filtering of HTTP/S transactions. The engine handles the interception and processing of HTTP/S transactions transparently, and exposes those transactions to the user for optional inspection, with the option to supply your own generated content as HTTP responses. Simply put, this library is the foundation for a modern web content filter.
 
+## Nuget  
+You can get HttpFilteringEngine integrated into your .NET application via [nuget](https://www.nuget.org/packages/HttpFilteringEngine). The nuget package uses an AnyCPU proxy to dynamically load the appropriate mixed-managed DLL's at runtime.
+
 ## Features
  - Transparent TLS capable proxy. This works via automatic packet capture and diversion via the [WinDivert](https://github.com/basil00/Divert) driver and library.
  
