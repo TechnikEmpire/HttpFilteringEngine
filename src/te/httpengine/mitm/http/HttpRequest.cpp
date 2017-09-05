@@ -75,7 +75,7 @@ namespace te
 					m_requestMethod = method;
 				}
 
-				std::string HttpRequest::HeadersToString() const
+				std::string HttpRequest::HeadersToString()
 				{
 					std::string ret;
 
@@ -116,7 +116,7 @@ namespace te
 					return ret;
 				}
 
-				std::vector<char> HttpRequest::HeadersToVector() const
+				std::vector<char> HttpRequest::HeadersToVector()
 				{
 					std::string headersAsString = HeadersToString();
 

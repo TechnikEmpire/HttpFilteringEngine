@@ -97,28 +97,12 @@ namespace Te {
 			return false;
 		}
 
-		void Engine::Start()
-		{
-			if (m_handle != nullptr)
-			{
-				fe_ctl_start(m_handle);
-			}
-		}
-
-		void Engine::Stop()
-		{
-			if (m_handle != nullptr)
-			{
-				fe_ctl_stop(m_handle);
-			}
-		}
-
-		array<System::Byte>^ Engine::GetRootCaPEM()
+		array<System::Byte>^ Engine::RootCaPEM::get()
 		{
 			if (m_handle != nullptr)
 			{
 				char* buff;
-				size_t bsize;				
+				size_t bsize;
 				fe_ctl_get_rootca_pem(m_handle, &buff, &bsize);
 
 				if (bsize > 0)
@@ -137,6 +121,22 @@ namespace Te {
 
 			return gcnew array<System::Byte>(0);
 		}
+
+		void Engine::Start()
+		{
+			if (m_handle != nullptr)
+			{
+				fe_ctl_start(m_handle);
+			}
+		}
+
+		void Engine::Stop()
+		{
+			if (m_handle != nullptr)
+			{
+				fe_ctl_stop(m_handle);
+			}
+		}		
 
 		void Engine::Init()
 		{

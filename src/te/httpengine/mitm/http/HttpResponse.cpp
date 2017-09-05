@@ -7,6 +7,8 @@
 
 #include "HttpResponse.hpp"
 
+#include <iostream>
+
 namespace te
 {
 	namespace httpengine
@@ -18,6 +20,8 @@ namespace te
 
 				HttpResponse::HttpResponse()
 				{
+					std::cout << "HttpResponse() " << std::endl;
+
 					m_httpParserSettings.on_status = &OnStatus;
 
 					// Why do we do this? Apparently, in our tests, sometimes methods that ought not
@@ -26,6 +30,7 @@ namespace te
 					// resulting in random crashed.
 					m_httpParserSettings.on_url = [](http_parser* parser, const char *at, size_t length)->int
 					{
+						std::cout << "on_url called: " << std::string(at, length) << std::endl;
 						return 0; 
 					};
 
@@ -69,24 +74,24 @@ namespace te
 
 					switch (m_httpVersion)
 					{
-					case HttpProtocolVersion::HTTP1:
-					{
-						m_statusString.append(u8"HTTP/1.0 ");
-					}
-					break;
+						case HttpProtocolVersion::HTTP1:
+						{
+							m_statusString.append(u8"HTTP/1.0 ");
+						}
+						break;
 
-					case HttpProtocolVersion::HTTP1_1:
-					default:
-					{
-						m_statusString.append(u8"HTTP/1.1 ");
-					}
-					break;
+						case HttpProtocolVersion::HTTP1_1:
+						default:
+						{
+							m_statusString.append(u8"HTTP/1.1 ");
+						}
+						break;
 
-					case HttpProtocolVersion::HTTP2:
-					{
-						m_statusString.append(u8"HTTP/2.0 ");
-					}
-					break;
+						case HttpProtocolVersion::HTTP2:
+						{
+							m_statusString.append(u8"HTTP/2.0 ");
+						}
+						break;
 					}
 
 					m_statusString.append(std::to_string(code));
@@ -103,14 +108,27 @@ namespace te
 					m_statusString = status;
 				}
 
-				std::string HttpResponse::HeadersToString() const
+				std::string HttpResponse::HeadersToString()
 				{
 					std::string ret;
+
+					if (m_statusString.length() <= 0)
+					{
+						// Manually invoke OnStatus because http_parser has a bug
+						// in it.
+						// https://github.com/nodejs/http-parser/issues/384
+						// Basically, if the server omits the status text, then
+						// http_parser will never invoke the OnStatus callback,
+						// even though it did indeed parse the status without
+						// error.
+						OnStatus(m_httpParser, nullptr, 0);					
+					}
 
 					ret.append(m_statusString);					
 
 					for (auto header = m_headers.begin(); header != m_headers.end(); ++header)
 					{
+						
 						ret.append(u8"\r\n").append(header->first).append(u8": ").append(header->second);
 					}
 
@@ -119,7 +137,7 @@ namespace te
 					return ret;
 				}
 
-				std::vector<char> HttpResponse::HeadersToVector() const
+				std::vector<char> HttpResponse::HeadersToVector()
 				{
 					std::string headersAsString = HeadersToString();
 
@@ -127,7 +145,7 @@ namespace te
 				}
 
 				int HttpResponse::OnStatus(http_parser* parser, const char *at, size_t length)
-				{
+				{	
 					// XXX TODO - Is it possible for this callback to be called
 					// multiple times in one response?
 					if (parser != nullptr)
@@ -395,7 +413,7 @@ namespace te
 						return std::string(u8"Network connect timeout error");
 
 					default:
-						return std::string();
+						throw std::exception("Unknown status code");
 					}
 				}
 

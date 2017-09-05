@@ -201,7 +201,7 @@ namespace te
 					/// std::string populated with the complete, formatted transaction 
 					/// headers.
 					/// </returns>
-					virtual std::string HeadersToString() const = 0;
+					virtual std::string HeadersToString() = 0;
 
 					/// <summary> 
 					/// Convenience function for formatting the transaction headers into a
@@ -211,7 +211,7 @@ namespace te
 					/// std::vector char populated with the complete formatted transaction 
 					/// headers. 
 					/// </returns>
-					virtual std::vector<char> HeadersToVector() const = 0;
+					virtual std::vector<char> HeadersToVector() = 0;
 
 					/// <summary>
 					/// Force the transaction to parse its content. This method absolutely must be

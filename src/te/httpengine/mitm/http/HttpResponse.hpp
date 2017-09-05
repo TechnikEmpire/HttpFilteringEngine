@@ -126,7 +126,7 @@ namespace te
 					/// std::string populated with the complete, formatted transaction 
 					/// headers.
 					/// </returns>
-					virtual std::string HeadersToString() const;
+					virtual std::string HeadersToString();
 
 					/// <summary> 
 					/// Convenience function for formatting the transaction headers into a
@@ -136,7 +136,7 @@ namespace te
 					/// std::vector char populated with the complete formatted transaction 
 					/// headers. 
 					/// </returns>
-					virtual std::vector<char> HeadersToVector() const;
+					virtual std::vector<char> HeadersToVector();
 
 				protected:
 

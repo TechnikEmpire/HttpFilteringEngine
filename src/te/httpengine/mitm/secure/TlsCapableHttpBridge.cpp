@@ -442,6 +442,7 @@ namespace te
 				bool TlsCapableHttpBridge<network::TcpSocket>::VerifyServerCertificateCallback(bool preverified, boost::asio::ssl::verify_context& ctx)
 				{
 					// Do nothing.
+					return false;
 				}
 
 				template<>

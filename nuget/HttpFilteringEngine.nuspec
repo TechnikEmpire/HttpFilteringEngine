@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>HttpFilteringEngine</id>
+    <version>1.1.3</version>
+    <title>HttpFilteringEngine</title>
+    <authors>TechnikEmpire</authors>
+	<releaseNotes>Synchronized internal assembly versions.</releaseNotes>
+    <owners>TechnikEmpire</owners>
+	<projectUrl>https://github.com/TechnikEmpire/HttpFilteringEngine</projectUrl>
+	<requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <licenseUrl>https://www.mozilla.org/en-US/MPL/2.0/</licenseUrl>    
+    <description>HttpFilteringEngine is a transparent filtering proxy engine.</description>
+	<summary>Transparent intercepting HTTPS capable proxy that exposes a simple API for inspecting, modifying, permitting or blocking HTTP requests and responses.</summary>
+    <copyright>Copyright 2017 Jesse Nicholson</copyright>
+    <tags>HTTP proxy filtering-proxy filter content-filter</tags>
+	<dependencies>		
+    </dependencies>	
+	<references>
+		<reference file="HttpFe.Common.dll" />
+		<reference file="HttpFe.Managed.dll" />
+	</references>
+  </metadata>  
+  <files>
+	
+	<file src="HttpFilteringEngine.targets" target="build\HttpFilteringEngine.targets"/>
+	
+	<file src="..\build\HttpFe.Common\Release\HttpFe.Common.dll" target="lib\HttpFe.Common.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\HttpFe.Managed.dll" target="lib\HttpFe.Managed.dll"/>
+	
+	<file src="..\build\HttpFe.Managed\Release\x86\boost_bzip2.dll" target="build\x86\boost_bzip2.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x86\boost_date_time.dll" target="build\x86\boost_date_time.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x86\boost_iostreams.dll" target="build\x86\boost_iostreams.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x86\boost_system.dll" target="build\x86\boost_system.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x86\boost_zlib.dll" target="build\x86\boost_zlib.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x86\HttpFilteringEngine.dll" target="build\x86\HttpFilteringEngine.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x86\libeay32.dll" target="build\x86\libeay32.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x86\ssleay32.dll" target="build\x86\ssleay32.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x86\WinDivert.dll" target="build\x86\WinDivert.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x86\WinDivert32.sys" target="build\x86\WinDivert32.sys"/>
+	<file src="..\build\HttpFe.Managed\Release\x86\WinDivert64.sys" target="build\x86\WinDivert64.sys"/>
+	
+	<file src="..\build\HttpFe.Managed\Release\x64\boost_bzip2.dll" target="build\x64\boost_bzip2.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x64\boost_date_time.dll" target="build\x64\boost_date_time.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x64\boost_iostreams.dll" target="build\x64\boost_iostreams.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x64\boost_system.dll" target="build\x64\boost_system.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x64\boost_zlib.dll" target="build\x64\boost_zlib.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x64\HttpFilteringEngine.dll" target="build\x64\HttpFilteringEngine.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x64\libeay32.dll" target="build\x64\libeay32.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x64\ssleay32.dll" target="build\x64\ssleay32.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x64\WinDivert.dll" target="build\x64\WinDivert.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\x64\WinDivert64.sys" target="build\x64\WinDivert64.sys"/>
+  </files>
+</package>
