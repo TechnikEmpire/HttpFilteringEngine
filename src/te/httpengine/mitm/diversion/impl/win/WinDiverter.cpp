@@ -204,6 +204,8 @@ namespace te
 
 					std::array<uint8_t, 4> ipv4Copy;
 
+					bool modifiedPacket = false;
+
 #ifdef HTTP_FILTERING_ENGINE_USE_EX
 					OVERLAPPED recvOverlapped;
 					HANDLE recvEvent = nullptr;
@@ -216,6 +218,7 @@ namespace te
 					{
 						recvLength = 0;
 						memset(&addr, 0, sizeof(addr));
+						modifiedPacket = false;
 					
 #ifdef HTTP_FILTERING_ENGINE_USE_EX
 
@@ -245,10 +248,7 @@ namespace te
 							}
 
 							
-							while (WaitForSingleObject(recvEvent, 1000) == WAIT_TIMEOUT)
-							{
-
-							}
+							while (WaitForSingleObject(recvEvent, 1000) == WAIT_TIMEOUT);
 
 							if (!GetOverlappedResult(divertHandle, &recvOverlapped, &recvAsyncIoLen, FALSE))
 							{
@@ -260,7 +260,6 @@ namespace te
 								continue;
 							}
 
-							// Success at long last!
 							recvLength = recvAsyncIoLen;
 							CloseHandle(recvEvent);
 						}
@@ -334,13 +333,14 @@ namespace te
 									else
 									{
 										if (m_v6pidMap[tcpHeader->SrcPort] == 4)
-										{
+										{	
 											// System process. Don't even bother.
 											m_v6Shouldfilter[tcpHeader->SrcPort] = false;
 										}
 										else
 										{
 											auto procPath = GetPacketProcessBinaryPath(m_v6pidMap[tcpHeader->SrcPort].load());
+
 											if (procPath.size() == 0)
 											{
 												// This is something we couldn't get a handle on. Since we can't do that
@@ -348,7 +348,7 @@ namespace te
 												m_v6Shouldfilter[tcpHeader->SrcPort] = false;
 											}
 											else
-											{
+											{	
 												m_v6Shouldfilter[tcpHeader->SrcPort] = m_firewallCheckCb(procPath.c_str(), procPath.size());
 											}
 										}
@@ -394,6 +394,8 @@ namespace te
 								// do this check and let these through, we would break such connections.
 								if (m_v4Shouldfilter[tcpHeader->SrcPort])
 								{
+									modifiedPacket = true;
+
 									ipv4Copy[0] = ipV4Header->DstAddr & 0xFF;
 									ipv4Copy[1] = (ipV4Header->DstAddr >> 8) & 0xFF;
 									ipv4Copy[2] = (ipV4Header->DstAddr >> 16) & 0xFF;
@@ -428,6 +430,8 @@ namespace te
 								{
 									if (tcpHeader->SrcPort == m_httpListenerPort || tcpHeader->SrcPort == m_httpsListenerPort)
 									{
+										modifiedPacket = true;
+
 										// Means that the data is originating from our proxy in response
 										// to a client's request, which means it was originally meant to
 										// go somewhere else. We need to reorder the data such as the
@@ -453,6 +457,8 @@ namespace te
 									}
 									else if (tcpHeader->DstPort == StandardHttpPort || tcpHeader->DstPort == StandardHttpsPort)
 									{
+										modifiedPacket = true;
+
 										// This means outbound traffic has been captured that we know for sure is
 										// not coming from our proxy in response to a client, but we don't know that it
 										// isn't the upstream portion of our proxy trying to fetch a response on behalf
@@ -486,6 +492,8 @@ namespace te
 								{
 									if (tcpHeader->SrcPort == m_httpListenerPort || tcpHeader->SrcPort == m_httpsListenerPort)
 									{
+										modifiedPacket = true;
+
 										uint32_t dstAddr[4];
 										dstAddr[0] = ipV6Header->DstAddr[0];
 										dstAddr[1] = ipV6Header->DstAddr[1];
@@ -510,6 +518,8 @@ namespace te
 									{
 										if (m_v6Shouldfilter[tcpHeader->SrcPort])
 										{
+											modifiedPacket = true;
+
 											uint32_t dstAddr[4];
 
 											dstAddr[0] = ipV6Header->DstAddr[0];
@@ -539,7 +549,15 @@ namespace te
 						payloadBuffer = nullptr;
 						payloadLength = 0;
 
-						WinDivertHelperCalcChecksums(readBuffer.data(), recvLength, 0);
+						if (modifiedPacket)
+						{
+							WinDivertHelperCalcChecksums(readBuffer.data(), recvLength, 0);
+						}
+						else
+						{
+							WinDivertHelperCalcChecksums(readBuffer.data(), recvLength, WINDIVERT_HELPER_NO_REPLACE);
+						}
+						
 
 						if (!WinDivertSendEx(divertHandle, readBuffer.data(), recvLength, 0, &addr, nullptr, nullptr))
 						{
@@ -653,7 +671,7 @@ namespace te
 						{
 							// The reason why we accept zero as the address is that it is equal to "0.0.0.0:PORT", so
 							// it counts.
-							if ((*table)->table[i].dwLocalAddr == 0 || localV4Address == 0 || (*table)->table[i].dwLocalAddr == localV4Address)
+							if ((*table)->table[i].dwLocalAddr == localV4Address) // (*table)->table[i].dwLocalAddr == 0 && localV4Address == 0 || 
 							{
 								// See https://msdn.microsoft.com/en-us/library/windows/desktop/aa366909(v=vs.85).aspx
 								// Upper bits may contain junk data.
@@ -733,36 +751,21 @@ namespace te
 						dwRetVal = GetTcp6Table2(*table, &currentTableSize, FALSE);
 					}
 
-					uint64_t p1 = ((static_cast<uint64_t>(localV6Address[0]) << 32) | (localV6Address[1]));
-					uint64_t p2 = ((static_cast<uint64_t>(localV6Address[2]) << 32) | (localV6Address[3]));
-
 					if (dwRetVal == NO_ERROR)
 					{
 						// Table members, spare things like dwOwningPid, are in network order aka big endian.
 						for (DWORD i = 0; i < (*table)->dwNumEntries; ++i)
 						{
-							uint64_t pp1 = (
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[0]) << 48) |
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[1]) << 32) |
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[2]) << 16) |
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[3]))
-								);
-
-							uint64_t pp2 = (
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[4]) << 48) |
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[5]) << 32) |
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[6]) << 16) |
-								(static_cast<uint64_t>((*table)->table[i].LocalAddr.u.Word[7]))
-								);
+							auto oPtr = (uint32_t*)((*table)->table[i].LocalAddr.u.Byte);
 
 							// The reason why we accept zero as the address is that it is equal to "[::]:PORT", so
 							// it counts.
-							if ((pp1 == 0 && pp2 == 0) || (pp1 == p1 && pp2 == p2))
+							if (std::memcmp(localV6Address, oPtr, 4) == 0)
 							{
 								// See https://msdn.microsoft.com/en-us/library/windows/desktop/aa366909(v=vs.85).aspx
 								// Upper bits may contain junk data.
 								if (((*table)->table[i].dwLocalPort & 0xFFFF) == localPort)
-								{
+								{	
 									return (*table)->table[i].dwOwningPid;
 								}
 							}

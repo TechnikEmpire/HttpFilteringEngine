@@ -899,7 +899,7 @@ namespace te
 
 								if (wasSslShortRead)
 								{
-									ReportWarning(u8"In TlsCapableHttpBridge::OnUpstreamHeaders(const boost::system::error_code&, const size_t) - Got TLS short read, but payload is complete. The naughty server did not do a proper TLS shutdown.");
+									ReportWarning(u8"In TlsCapableHttpBridge::OnUpstreamHeaders(const boost::system::error_code&, const size_t) - Got TLS short read, but payload is complete. The server did not do a proper TLS shutdown.");
 								}
 
 								if (!closeAfter && !m_response->HeadersComplete())
@@ -2070,6 +2070,13 @@ namespace te
 								std::string errMsg(u8"In TlsCapableHttpBridge<network::TlsSocket>::OnUpstreamHandshake(const boost::system::error_code&) - Got error:\t");
 								errMsg.append(error.message());
 								ReportError(errMsg);
+
+								bool wasSSlError = (error.category() == boost::asio::error::get_ssl_category());
+
+								if (wasSSlError)
+								{
+									ReportError(u8"Was TLS error.");
+								}
 							}
 
 							if (m_upstreamCert == nullptr)
@@ -2316,8 +2323,9 @@ namespace te
 											m_upstreamHostPort = 443;
 
 											try
-											{
+											{	
 												boost::asio::ip::tcp::resolver::query query(m_upstreamHost, "https");
+												
 												m_resolver.async_resolve(
 													query, 
 													m_upstreamStrand.wrap(

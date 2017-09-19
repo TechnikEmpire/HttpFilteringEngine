@@ -2,10 +2,10 @@
 <package >
   <metadata>
     <id>HttpFilteringEngine</id>
-    <version>1.1.6</version>
+    <version>2.0.1</version>
     <title>HttpFilteringEngine</title>
     <authors>TechnikEmpire</authors>
-	<releaseNotes>Removed obsolete code to dynamically resolve assemblies.</releaseNotes>
+	<releaseNotes>Forced .NET framework version to 4.6. Fixed IPV6 filtering so it now functions.</releaseNotes>
     <owners>TechnikEmpire</owners>
 	<projectUrl>https://github.com/TechnikEmpire/HttpFilteringEngine</projectUrl>
 	<requireLicenseAcceptance>true</requireLicenseAcceptance>
@@ -25,8 +25,8 @@
 	
 	<file src="HttpFilteringEngine.targets" target="build\HttpFilteringEngine.targets"/>
 	
-	<file src="..\build\HttpFe.Common\Release\HttpFe.Common.dll" target="lib\HttpFe.Common.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\HttpFe.Managed.dll" target="lib\HttpFe.Managed.dll"/>
+	<file src="..\build\HttpFe.Common\Release\HttpFe.Common.dll" target="lib\net46\HttpFe.Common.dll"/>
+	<file src="..\build\HttpFe.Managed\Release\HttpFe.Managed.dll" target="lib\net46\HttpFe.Managed.dll"/>
 	
 	<file src="..\build\HttpFe.Managed\Release\x86\boost_bzip2.dll" target="build\x86\boost_bzip2.dll"/>
 	<file src="..\build\HttpFe.Managed\Release\x86\boost_date_time.dll" target="build\x86\boost_date_time.dll"/>

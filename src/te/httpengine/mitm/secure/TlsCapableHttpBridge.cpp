@@ -292,7 +292,7 @@ namespace te
 							);
 
 						if (!scerr)
-						{
+						{	
 							m_upstreamSocket.async_handshake(
 								network::TlsSocket::client, 
 								m_upstreamStrand.wrap(
@@ -335,7 +335,7 @@ namespace te
 					{
 						SetStreamTimeout(boost::posix_time::minutes(5));
 
-						auto ep = *endpointIterator;
+						//auto ep = *endpointIterator;
 
 						// Perhaps client requested a port other than 80. We should have already parsed
 						// this before initiating the resolve of the upstream host, so that this information
@@ -348,9 +348,15 @@ namespace te
 						// something unknown to me (I vaguely remember the details) which has a list of port
 						// numbers associated with specific services. So by default, every iterator result
 						// here should be preconfigured to port 80.
-						if (m_upstreamHostPort != 0 && ep.endpoint().port() != m_upstreamHostPort)
+						if (m_upstreamHostPort != 0)
 						{
-							ep.endpoint().port(m_upstreamHostPort);
+							auto epClone = endpointIterator;
+							boost::asio::ip::tcp::resolver::iterator end;
+							while (epClone != end)
+							{
+								epClone->endpoint().port(m_upstreamHostPort);
+								++epClone;
+							}							
 						}
 
 						// XXX TODO. The correct thing to do here is keep the iterator somehow, then in
@@ -360,6 +366,15 @@ namespace te
 						// only take a crack at connecting to the first A record entry resolved, then
 						// quit if that first record does not work.
 
+						boost::asio::async_connect(
+							m_upstreamSocket,
+							endpointIterator,
+							std::bind(
+								&TlsCapableHttpBridge::OnUpstreamConnect,
+								shared_from_this(),
+								std::placeholders::_1
+							));
+						/*
 						m_upstreamSocket.async_connect(
 							ep, 
 							m_upstreamStrand.wrap(
@@ -370,7 +385,7 @@ namespace te
 									)
 								)
 							);
-
+							*/
 						return;
 					}
 					else
@@ -413,8 +428,58 @@ namespace te
 						// Care therefore needs to be taken, or a more robust system needs to be put in
 						// place starting at the diversion level.
 
+						if (m_upstreamHostPort != 0)
+						{
+							auto epClone = endpointIterator;
+							boost::asio::ip::tcp::resolver::iterator end;
+							while (epClone != end)
+							{
+								epClone->endpoint().port(m_upstreamHostPort);
+
+								std::string epstr;
+								epstr.append(epClone->endpoint().address().to_string());
+								epstr.append(":");
+								epstr.append(std::to_string(epClone->endpoint().port()));
+								epstr.append(" hostname: ");
+								epstr.append(epClone->host_name());
+								epstr.append(" protocol: ");
+								epstr.append(std::to_string(epClone->endpoint().protocol().family()));
+								ReportInfo(epstr);
+
+								++epClone;
+							}
+						}
+						else
+						{
+							auto epClone = endpointIterator;
+							boost::asio::ip::tcp::resolver::iterator end;
+							while (epClone != end)
+							{
+								std::string epstr;
+								epstr.append(epClone->endpoint().address().to_string());
+								epstr.append(":");
+								epstr.append(std::to_string(epClone->endpoint().port()));
+								epstr.append(" hostname: ");
+								epstr.append(epClone->host_name());
+								epstr.append(" protocol: ");
+								epstr.append(std::to_string(epClone->endpoint().protocol().family()));
+								ReportInfo(epstr);
+								++epClone;
+							}
+						}
+
 						boost::asio::ip::tcp::endpoint requestedEndpoint = *endpointIterator;
 
+						boost::asio::async_connect(
+							m_upstreamSocket.lowest_layer(),
+							endpointIterator,
+							std::bind(
+								&TlsCapableHttpBridge::OnUpstreamConnect,
+								shared_from_this(),
+								std::placeholders::_1
+							));
+
+						/*
 						m_upstreamSocket.lowest_layer().async_connect(
 							boost::asio::ip::tcp::endpoint(requestedEndpoint.address(), m_upstreamHostPort),
 							m_upstreamStrand.wrap(
@@ -425,7 +490,7 @@ namespace te
 									)
 								)
 							);
-
+						*/
 						return;
 					}
 					else

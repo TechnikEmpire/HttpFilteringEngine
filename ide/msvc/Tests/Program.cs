@@ -17,6 +17,12 @@ namespace Tests
 
         private static void Main(string[] args)
         {
+            Console.CancelKeyPress += (sender, eArgs) =>
+            {
+                Console.WriteLine("Ctrl+C detected. Terminating.");
+                s_running = false;
+            };
+
             try
             {
                 RunProgram();
@@ -32,18 +38,12 @@ namespace Tests
                 }
             }
 
-            Console.WriteLine("Press any key to exist.");
+            Console.WriteLine("Press any key to exit.");
             Console.ReadKey();
         }
 
         private static void RunProgram()
         {
-            Console.CancelKeyPress += (sender, eArgs) =>
-            {
-                Console.WriteLine("Ctrl+C detected. Terminating.");
-                s_running = false;
-            };
-
             using(var engine = new HttpFilteringEngine(FirewallCheck, OnHttpMessageBegin, OnHttpMessageEnd, 0, 0, 0))
             {
                 engine.OnInfo += OnInfo;
@@ -54,7 +54,8 @@ namespace Tests
                 s_running = true;
 
                 while(s_running)
-                    ;
+                {
+                }                    
 
                 engine.Stop();
             }
