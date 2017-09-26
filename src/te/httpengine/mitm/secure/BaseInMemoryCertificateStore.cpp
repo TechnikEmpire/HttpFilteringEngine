@@ -275,24 +275,7 @@ namespace te
 
 						SSL_CTX_set_options(ctx->native_handle(), SSL_OP_CIPHER_SERVER_PREFERENCE);
 
-						EC_KEY* tmpNegotiationEcKey;
-
-						if (nullptr == (tmpNegotiationEcKey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1)))
-						{
-							EVP_PKEY_free(spoofedCertKeypair);
-							X509_free(spoofedCert);
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to allocate server context temporary negotiation EC key.");
-						}
-
-						if (EC_KEY_generate_key(tmpNegotiationEcKey) != 1)
-						{
-							EC_KEY_free(tmpNegotiationEcKey);
-							EVP_PKEY_free(spoofedCertKeypair);
-							X509_free(spoofedCert);
-							throw std::runtime_error(u8"In BaseInMemoryCertificateStore::GetServerContext(std::string, X509*) - Failed to generate server context temporary negotiation EC key.");
-						}
-
-						SSL_CTX_set_tmp_ecdh(ctx->native_handle(), tmpNegotiationEcKey);
+						SSL_CTX_set_ecdh_auto(ctx->native_handle(), 1);
 
 						bool atLeastOneInsert = false;
 
@@ -318,8 +301,7 @@ namespace te
 						{
 							// In this case, either the user has made an error and is duplicating data, or perhaps
 							// something more dirty is going on, where we have spoofed a certificate that is lying
-							// about its SN and or SAN's.
-							EC_KEY_free(tmpNegotiationEcKey);
+							// about its SN and or SAN's.							
 							EVP_PKEY_free(spoofedCertKeypair);
 							X509_free(spoofedCert);
 							delete ctx;

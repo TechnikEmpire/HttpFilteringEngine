@@ -8,19 +8,20 @@
 using HttpFe.Common;
 using HttpFe.Managed;
 using System;
+using System.Threading;
 
 namespace Tests
 {
     internal class Program
     {
-        private static volatile bool s_running = false;
+        private static ManualResetEvent s_rstEvent = new ManualResetEvent(false);
 
         private static void Main(string[] args)
         {
             Console.CancelKeyPress += (sender, eArgs) =>
             {
                 Console.WriteLine("Ctrl+C detected. Terminating.");
-                s_running = false;
+                s_rstEvent.Set();
             };
 
             try
@@ -51,11 +52,7 @@ namespace Tests
                 engine.OnError += OnError;
 
                 engine.Start();
-                s_running = true;
-
-                while(s_running)
-                {
-                }                    
+                s_rstEvent.WaitOne();
 
                 engine.Stop();
             }

@@ -17,6 +17,12 @@ namespace te
 		{
 			namespace secure
 			{	
+				template <typename T>
+				std::unordered_map<std::string, std::unique_ptr<boost::asio::ssl::context>, util::hash::ICaseStringHash, util::hash::ICaseStringEquality>  TlsCapableHttpBridge<T>::s_clientContexts;
+
+				template <typename T>
+				std::atomic_flag TlsCapableHttpBridge<T>::s_clientContextLock = ATOMIC_FLAG_INIT;
+
 				TlsCapableHttpBridge<network::TcpSocket>::TlsCapableHttpBridge(
 					boost::asio::io_service* service,
 					BaseInMemoryCertificateStore* certStore,
@@ -101,6 +107,7 @@ namespace te
 					m_request.reset(new http::HttpRequest());
 					m_response.reset(new http::HttpResponse());
 
+					// Init TLS peek buffer.
 					m_tlsPeekBuffer.reset(new std::array<char, TlsPeekBufferSize>());	
 
 					// XXX TODO - This is ugly, our bad design is showing. See notes in the
@@ -172,6 +179,60 @@ namespace te
 				boost::asio::ip::tcp::socket& TlsCapableHttpBridge<network::TcpSocket>::DownstreamSocket()
 				{
 					return m_downstreamSocket;
+				}
+
+				template<class BridgeSocketType>
+				const void TlsCapableHttpBridge<BridgeSocketType>::InitClientContext(TlsCapableHttpBridge<BridgeSocketType>* bridgeCtx, boost::asio::ssl::stream<boost::asio::ip::tcp::socket>& sslStream, const std::string& hostname)
+				{
+					while (s_clientContextLock.test_and_set(std::memory_order_acquire))
+					{
+						cpu_relax();
+					}
+
+					auto existingCtx = s_clientContexts.find(hostname);
+					if (existingCtx != s_clientContexts.end())
+					{
+						std::unique_ptr<boost::asio::ssl::context>& uPtr = existingCtx->second;
+						
+						SSL_set_SSL_CTX(sslStream.native_handle(), uPtr->native_handle());
+					}
+					else
+					{
+						std::unique_ptr<boost::asio::ssl::context> newContext;
+						newContext.reset(new boost::asio::ssl::context(sslStream.get_io_service(), boost::asio::ssl::context::sslv23_client));
+
+						newContext->set_verify_mode(boost::asio::ssl::context::verify_peer | boost::asio::ssl::context::verify_fail_if_no_peer_cert);
+
+						SSL_CTX_set_cipher_list(newContext->native_handle(), u8"HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4");
+
+						SSL_CTX_set_ecdh_auto(newContext->native_handle(), 1);
+
+						auto defaultContext = SSL_get_SSL_CTX(sslStream.native_handle());
+						
+						if (defaultContext != nullptr)
+						{
+							auto defaultCertStore = SSL_CTX_get_cert_store(defaultContext);
+
+							if (defaultCertStore != nullptr)
+							{
+								SSL_CTX_set_cert_store(newContext->native_handle(), defaultCertStore);
+							}
+							else
+							{
+								bridgeCtx->ReportError(u8"In TlsCapableHttpBridge<BridgeSocketType>::InitClientContext(boost::asio::ssl::stream<boost::asio::ip::tcp::socket>&, const std::string&) - Failed to get default certificate store.");
+							}
+						}
+						else
+						{
+							bridgeCtx->ReportError(u8"In TlsCapableHttpBridge<BridgeSocketType>::InitClientContext(boost::asio::ssl::stream<boost::asio::ip::tcp::socket>&, const std::string&) - Failed to get default client context.");
+						}
+
+						SSL_set_SSL_CTX(sslStream.native_handle(), newContext->native_handle());
+
+						s_clientContexts.emplace(hostname, std::move(newContext));
+					}
+
+					s_clientContextLock.clear(std::memory_order_release);
 				}
 
 				template<>
@@ -407,6 +468,9 @@ namespace te
 
 					if (!error)
 					{
+						// Set up our host specific client context.
+						InitClientContext(this, m_upstreamSocket, m_upstreamHost);
+
 						SetStreamTimeout(boost::posix_time::minutes(5));
 
 						SSL_set_tlsext_host_name(m_upstreamSocket.native_handle(), m_upstreamHost.c_str());

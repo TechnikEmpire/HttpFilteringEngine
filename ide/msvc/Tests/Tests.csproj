@@ -59,6 +59,16 @@
     <None Include="App.config" />
     <None Include="app.manifest" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HttpFe.Common\HttpFe.Common.csproj">
+      <Project>{64938257-0baa-4e25-9f44-715ff8c9828c}</Project>
+      <Name>HttpFe.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\HttpFe.Managed\HttpFe.Managed.csproj">
+      <Project>{0940a14e-98a1-44ed-b6f0-a9370610a761}</Project>
+      <Name>HttpFe.Managed</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>xcopy /D /Y /S /E "$(SolutionDir)..\..\build\HttpFe.Managed\$(Configuration)\*.*" "$(TargetDir)"</PostBuildEvent>

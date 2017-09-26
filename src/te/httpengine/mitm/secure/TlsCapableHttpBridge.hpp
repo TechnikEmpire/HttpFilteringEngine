@@ -17,6 +17,8 @@
 #include "../http/HttpResponse.hpp"
 #include "../../util/cb/EventReporter.hpp"
 #include "../../../util/http/KnownHttpHeaders.hpp"
+#include "../../util/hash/StringHashUtils.hpp"
+
 #include <memory>
 #include <atomic>
 #include <type_traits>
@@ -25,13 +27,13 @@
 
 	#if BOOST_ARCH_X86_32
 		#ifdef _MSC_VER
-			#define cpu_relax() _mm_pause()
+			#define cpu_relax() YieldProcessor()
 		#else
 			#define cpu_relax() asm volatile("pause" ::: "memory")
 		#endif
 	#elif BOOST_ARCH_X86_64
 		#ifdef _MSC_VER
-			#define cpu_relax() _mm_pause()
+			#define cpu_relax() YieldProcessor()
 		#else
 			#define cpu_relax() asm volatile("pause" ::: "memory")
 		#endif
@@ -397,6 +399,29 @@ namespace te
 					/// non-tls bridges.
 					/// </summary>
 					std::unique_ptr< std::array<char, TlsPeekBufferSize> > m_tlsPeekBuffer = nullptr;
+
+					/// <summary>
+					/// We keep host specific contexts here globally.
+					/// </summary>	
+					static std::unordered_map<std::string, std::unique_ptr<boost::asio::ssl::context>, util::hash::ICaseStringHash, util::hash::ICaseStringEquality> s_clientContexts;
+
+					/// <summary>
+					/// Part of spinlock for getting host specific client context.
+					/// </summary>
+					static std::atomic_flag s_clientContextLock;
+
+					/// <summary>
+					/// Called once we discover the SNI hostname for a TLS connection. This will
+					/// either retrieve an existing context, or create and retrieve a context,
+					/// tailored to the host in question.
+					/// </summary>
+					/// <param name="sslStream">
+					/// A reference to the SSL stream to configure the context of.
+					/// </param>
+					/// <param name="hostname">
+					/// The hostname.
+					/// </param>
+					static const void InitClientContext(TlsCapableHttpBridge<BridgeSocketType>* bridgeCtx, boost::asio::ssl::stream<boost::asio::ip::tcp::socket>& sslStream, const std::string& hostname);
 
 					/// <summary>
 					/// Tells the minimum length that a peek read must be in order to even reach

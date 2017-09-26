@@ -127,6 +127,9 @@
     <Filter Include="Header Files\cpprestsdk">
       <UniqueIdentifier>{4f0dbcad-9dd2-4ec2-88d0-b9db517d6c3d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\te\httpengine\util\hash">
+      <UniqueIdentifier>{e858d8bc-1735-4271-b0f2-155dc53f2a87}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -188,6 +191,9 @@
     </ClInclude>
     <ClInclude Include="..\..\contrib\cpprestsdk\src\http\client\x509_cert_utilities.h">
       <Filter>Header Files\cpprestsdk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\util\hash\StringHashUtils.hpp">
+      <Filter>Header Files\te\httpengine\util\hash</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
