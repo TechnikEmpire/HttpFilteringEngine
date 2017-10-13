@@ -284,6 +284,9 @@ namespace te
 						m_defaultServerContext.set_default_verify_paths();
 						m_clientContext.set_default_verify_paths();
 
+                        SSL_CTX_set_ecdh_auto(m_defaultServerContext.native_handle(), 1);
+                        SSL_CTX_set_ecdh_auto(m_clientContext.native_handle(), 1);
+
 						//m_defaultServerContext.set_verify_mode(boost::asio::ssl::context::verify_peer | boost::asio::ssl::context::verify_fail_if_no_peer_cert);
 
 						if (m_caBundleAbsolutePath.compare(u8"none") != 0)

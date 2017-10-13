@@ -23,6 +23,12 @@ namespace te
 				template <typename T>
 				std::atomic_flag TlsCapableHttpBridge<T>::s_clientContextLock = ATOMIC_FLAG_INIT;
 
+                template <typename T>
+                constexpr uint32_t TlsCapableHttpBridge<T>::s_streamChannelMultiplier = 10;
+
+                template <typename T>
+                util::cb::CStreamCopyUtilContainer<std::is_same<T, network::TlsSocket>::value, TlsCapableHttpBridge<T>::s_streamChannelMultiplier> TlsCapableHttpBridge<T>::s_streamCopyContainer;
+
 				TlsCapableHttpBridge<network::TcpSocket>::TlsCapableHttpBridge(
 					boost::asio::io_service* service,
 					BaseInMemoryCertificateStore* certStore,
@@ -54,7 +60,6 @@ namespace te
 					m_request.reset(new http::HttpRequest());
 					m_response.reset(new http::HttpResponse());
 					
-
 					// XXX TODO - This is ugly, our bad design is showing. See notes in the
 					// EventReporter class header.
 					m_request->SetOnInfo(m_onInfo);
@@ -201,11 +206,24 @@ namespace te
 						std::unique_ptr<boost::asio::ssl::context> newContext;
 						newContext.reset(new boost::asio::ssl::context(sslStream.get_io_service(), boost::asio::ssl::context::sslv23_client));
 
+                        newContext->set_options(
+                            boost::asio::ssl::context::no_compression |
+                            boost::asio::ssl::context::default_workarounds |
+                            boost::asio::ssl::context::no_sslv2 |
+                            boost::asio::ssl::context::no_sslv3
+                        );
+
 						newContext->set_verify_mode(boost::asio::ssl::context::verify_peer | boost::asio::ssl::context::verify_fail_if_no_peer_cert);
 
 						SSL_CTX_set_cipher_list(newContext->native_handle(), u8"HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4");
 
 						SSL_CTX_set_ecdh_auto(newContext->native_handle(), 1);
+
+                        if (X509_VERIFY_PARAM_set_flags(newContext->native_handle()->param, X509_V_FLAG_TRUSTED_FIRST) != 1)
+                        {
+                            // XXX TODO
+                            // No context from which to call ReportX methods because we're a static function here.
+                        }
 
 						auto defaultContext = SSL_get_SSL_CTX(sslStream.native_handle());
 						
@@ -469,7 +487,7 @@ namespace te
 					if (!error)
 					{
 						// Set up our host specific client context.
-						InitClientContext(this, m_upstreamSocket, m_upstreamHost);
+						//InitClientContext(this, m_upstreamSocket, m_upstreamHost);
 
 						SetStreamTimeout(boost::posix_time::minutes(5));
 

@@ -9,10 +9,6 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
     <Filter Include="Header Files\te">
       <UniqueIdentifier>{ec17d511-d726-44bb-a084-c0b03edce58e}</UniqueIdentifier>
     </Filter>
@@ -130,11 +126,11 @@
     <Filter Include="Header Files\te\httpengine\util\hash">
       <UniqueIdentifier>{e858d8bc-1735-4271-b0f2-155dc53f2a87}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\te\httpengine\util\cb">
+      <UniqueIdentifier>{b81bbb18-2eec-4c9d-a1b0-095079835ddc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="resource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\mitm\http\BaseHttpTransaction.hpp">
       <Filter>Header Files\te\httpengine\mitm\http</Filter>
     </ClInclude>
@@ -186,20 +182,17 @@
     <ClInclude Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpAcceptor.hpp">
       <Filter>Header Files\te\httpengine\mitm\secure</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.hpp">
-      <Filter>Header Files\te\httpengine</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\contrib\cpprestsdk\src\http\client\x509_cert_utilities.h">
       <Filter>Header Files\cpprestsdk</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\te\httpengine\util\hash\StringHashUtils.hpp">
       <Filter>Header Files\te\httpengine\util\hash</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\te\httpengine\util\cb\StreamCopyUtils.hpp">
+      <Filter>Header Files\te\httpengine\util\cb</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AssemblyInfo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\http\BaseHttpTransaction.cpp">
       <Filter>Source Files\te\httpengine\mitm\http</Filter>
     </ClCompile>
@@ -236,21 +229,8 @@
     <ClCompile Include="..\..\deps\http-parser\http_parser.c">
       <Filter>Source Files\http_parser</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.cpp">
-      <Filter>Source Files\te\httpengine</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\contrib\cpprestsdk\src\http\client\x509_cert_utilities.cpp">
       <Filter>Source Files\cpprestsdk</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="app.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="app.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
   </ItemGroup>
 </Project>

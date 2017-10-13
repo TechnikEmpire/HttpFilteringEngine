@@ -274,13 +274,13 @@ namespace te
 			static void DummyOnMessageBeginCallback(
 				const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
 				const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
-				uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength
+				uint32_t* nextAction, CustomResponseStreamWriter responseWriter
 			);
 
 			static void DummyOnMessageEndCallback(
 				const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
 				const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
-				bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength
+				bool* shouldBlock, CustomResponseStreamWriter responseWriter
 			);
 
 		};

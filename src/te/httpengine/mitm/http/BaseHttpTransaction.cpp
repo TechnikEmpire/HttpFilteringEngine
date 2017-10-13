@@ -309,7 +309,7 @@ namespace te
 					os << u8"\r\nExpires: ";
 					std::chrono::system_clock::time_point epoch;
 					std::time_t epoch_t = std::chrono::system_clock::to_time_t(epoch);
-					os << std::ctime(&epoch_t);
+					os << std::ctime(&epoch_t);                    
 					os << u8"\r\nContent-Length: 0\r\n\r\n";
 
 					std::string fs = os.str();

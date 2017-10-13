@@ -16,6 +16,7 @@
 #include "../http/HttpRequest.hpp"
 #include "../http/HttpResponse.hpp"
 #include "../../util/cb/EventReporter.hpp"
+#include "../../util/cb/StreamCopyUtils.hpp"
 #include "../../../util/http/KnownHttpHeaders.hpp"
 #include "../../util/hash/StringHashUtils.hpp"
 
@@ -400,6 +401,8 @@ namespace te
 					/// </summary>
 					std::unique_ptr< std::array<char, TlsPeekBufferSize> > m_tlsPeekBuffer = nullptr;
 
+					std::atomic_uint32_t m_thisTransactionId;
+
 					/// <summary>
 					/// We keep host specific contexts here globally.
 					/// </summary>	
@@ -409,6 +412,21 @@ namespace te
 					/// Part of spinlock for getting host specific client context.
 					/// </summary>
 					static std::atomic_flag s_clientContextLock;
+
+                    /// <summary>
+                    /// The multiplier that determines the total number of stream channels that can be used concurrently. The
+                    /// actual number of channels will be 1000 * s_streamChannelMultiplier.
+                    /// At this value, 20K channels will be created. 10K for the TLS template, 10K for the non-TLS.
+                    /// Due to implementation constraints, this means that we are guaranteed to have 7294 channels
+                    /// between the oldest acquired and newest acquired channels.
+                    /// </summary>
+                    static constexpr size_t s_streamChannelMultiplier = 10;
+
+                    /// <summary>
+                    /// This holds a global set of stream channels that enable library users to stream blocked data
+                    /// back into responses rather than pinning pointers and passing them around.
+                    /// </summary>
+                    static util::cb::CStreamCopyUtilContainer<std::is_same<BridgeSocketType, network::TlsSocket>::value, s_streamChannelMultiplier> s_streamCopyContainer;
 
 					/// <summary>
 					/// Called once we discover the SNI hostname for a TLS connection. This will
@@ -428,12 +446,6 @@ namespace te
 					/// the extensions area of a potentially accurate TLS client hello.
 					/// </summary>
 					static constexpr size_t MinTlsHelloLength = 43;
-
-					/// <summary>
-					/// Used for extracting certificate name information on certificates passing
-					/// through the verification phase.
-					/// </summary>
-					static constexpr size_t MaxDomainNameSize = 1000;
 
 					/// <summary>
 					/// Indicates whether or not ::Kill() has already successfully run and initiated the shutdown.
@@ -2770,7 +2782,7 @@ namespace te
 										// Find out if a custom port is being used and pass it
 										// to our resolve handler so we can adjust where we're
 										// connecting to on resolve.
-										size_t customPort = 0;
+										uint16_t customPort = 0;
 
 										if (portPos != std::string::npos)
 										{
@@ -2913,8 +2925,6 @@ namespace te
 							}
 						}
 
-						
-						//ReportInfo(u8"Deder");
 						//Kill();
 					}								
 
@@ -3025,10 +3035,12 @@ namespace te
 						uint32_t responsePayloadSize = 0;
 
 
-						uint32_t nextAction = 0;
-						char* customBlockResponse = nullptr;
+						uint32_t nextAction = 0;						
 						bool shouldBlock = false;
-						uint32_t customBlockResponseLen = 0;
+
+						std::vector<char> customBlockResponse;
+						
+                        const auto myStreamChannel = s_streamCopyContainer.ClaimNextChannel(&customBlockResponse);                        
 
 						bool inspectRequest = request->GetConsumeAllBeforeSending() && request->IsPayloadComplete();
 						bool inspectResponse = (response != nullptr && response->GetConsumeAllBeforeSending() && response->IsPayloadComplete());
@@ -3046,15 +3058,14 @@ namespace te
 								requestPayload, requestPayloadSize,
 								responseHeaders.c_str(), responseHeaders.size(),
 								responsePayload, responsePayloadSize,
-								&shouldBlock, &customBlockResponse, &customBlockResponseLen);
+								&shouldBlock, myStreamChannel.GetWriter()
+                            );
 
 							if (shouldBlock)
 							{
-								if (customBlockResponse != nullptr)
-								{	
-									std::vector<char> customPayloadVec(customBlockResponse, customBlockResponse + customBlockResponseLen);
-									delete[] customBlockResponse;									
-									request->SetPayload(customPayloadVec, true);
+								if (customBlockResponse.size() > 0)
+								{									
+									request->SetPayload(std::move(customBlockResponse), true);
 									return true;
 								}
 								else
@@ -3074,7 +3085,7 @@ namespace te
 								nullptr, 0, 
 								responseHeaders.c_str(), responseHeaders.size(),
 								nullptr, 0,
-								&nextAction, &customBlockResponse, &customBlockResponseLen
+								&nextAction, myStreamChannel.GetWriter()
 							);
 
 							switch (nextAction)
@@ -3114,11 +3125,9 @@ namespace te
 								case 2:
 								{
 									// Block.
-									if (customBlockResponse != nullptr)
+									if (customBlockResponse.size() > 0)
 									{	
-										std::vector<char> customPayloadVec(customBlockResponse, customBlockResponse + customBlockResponseLen);
-										delete[] customBlockResponse;
-										request->SetPayload(customPayloadVec, true);										
+										request->SetPayload(std::move(customBlockResponse), true);										
 									}
 									else
 									{	

@@ -36,66 +36,55 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A91768BF-1314-41FE-9E6F-A4B4D3A777B4}</ProjectGuid>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
-    <Keyword>ManagedCProj</Keyword>
-    <RootNamespace>libhttpfilteringengine</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug x86|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
-    <CLRSupport>false</CLRSupport>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug x64|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
-    <CLRSupport>false</CLRSupport>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release x86|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
-    <CLRSupport>false</CLRSupport>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release x64|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
-    <CLRSupport>false</CLRSupport>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug x86|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
-    <CLRSupport>false</CLRSupport>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug x64|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
-    <CLRSupport>false</CLRSupport>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release x86|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
-    <CLRSupport>false</CLRSupport>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release x64|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
-    <CLRSupport>false</CLRSupport>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -184,7 +173,6 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;$(ProjectDir)..\..\contrib\cpprestsdk\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <ExceptionHandling>Async</ExceptionHandling>
@@ -199,6 +187,11 @@
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <DisableSpecificWarnings>4275;4251</DisableSpecificWarnings>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <AdditionalOptions>/Qpar-report:2 /Qvec-report:2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>Debug</GenerateDebugInformation>
@@ -207,6 +200,7 @@
       <AdditionalLibraryDirectories>..\..\deps\boost\stage\msvc\$(Configuration)\lib;..\..\deps\openssl\msvc\$(Configuration)\lib;..\..\deps\windivert\msvc\$(PlatformTarget);..\..\deps\gq\build\msvc\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <SubSystem>NotSet</SubSystem>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
@@ -229,7 +223,6 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;$(ProjectDir)..\..\contrib\cpprestsdk\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <ExceptionHandling>Async</ExceptionHandling>
@@ -244,6 +237,11 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <DisableSpecificWarnings>4275;4251</DisableSpecificWarnings>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <AdditionalOptions>/Qpar-report:2 /Qvec-report:2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>Debug</GenerateDebugInformation>
@@ -253,6 +251,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
       <TargetMachine>MachineX64</TargetMachine>
+      <SubSystem>NotSet</SubSystem>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
@@ -275,7 +274,6 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;$(ProjectDir)..\..\contrib\cpprestsdk\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <ExceptionHandling>Async</ExceptionHandling>
@@ -290,6 +288,10 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <DisableSpecificWarnings>4275;4251</DisableSpecificWarnings>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>Debug</GenerateDebugInformation>
@@ -299,6 +301,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
       <TargetMachine>MachineX86</TargetMachine>
+      <SubSystem>NotSet</SubSystem>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
@@ -321,7 +324,6 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;$(ProjectDir)..\..\contrib\cpprestsdk\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <ExceptionHandling>Async</ExceptionHandling>
@@ -336,6 +338,10 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <DisableSpecificWarnings>4275;4251</DisableSpecificWarnings>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>Debug</GenerateDebugInformation>
@@ -344,6 +350,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <AdditionalLibraryDirectories>..\..\deps\boost\stage\msvc\$(Configuration)\lib;..\..\deps\openssl\msvc\$(Configuration)\lib;..\..\deps\windivert\msvc\$(PlatformTarget);..\..\deps\gq\build\msvc\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <SubSystem>NotSet</SubSystem>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
@@ -365,7 +372,6 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;$(ProjectDir)..\..\contrib\cpprestsdk\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <ExceptionHandling>Async</ExceptionHandling>
@@ -378,8 +384,12 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <StringPooling>true</StringPooling>
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <DisableSpecificWarnings>4275;4251</DisableSpecificWarnings>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <AdditionalOptions>/Qpar-report:2 /Qvec-report:2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>No</GenerateDebugInformation>
@@ -388,6 +398,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <AdditionalLibraryDirectories>..\..\deps\boost\stage\msvc\$(Configuration)\lib;..\..\deps\openssl\msvc\$(Configuration)\lib;..\..\deps\windivert\msvc\$(PlatformTarget);..\..\deps\gq\build\msvc\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <SubSystem>NotSet</SubSystem>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
@@ -409,7 +420,6 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;$(ProjectDir)..\..\contrib\cpprestsdk\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <ExceptionHandling>Async</ExceptionHandling>
@@ -422,8 +432,12 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <StringPooling>true</StringPooling>
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <DisableSpecificWarnings>4275;4251</DisableSpecificWarnings>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <AdditionalOptions>/Qpar-report:2 /Qvec-report:2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>No</GenerateDebugInformation>
@@ -433,6 +447,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
       <TargetMachine>MachineX64</TargetMachine>
+      <SubSystem>NotSet</SubSystem>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
@@ -454,7 +469,6 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;$(ProjectDir)..\..\contrib\cpprestsdk\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <ExceptionHandling>Async</ExceptionHandling>
@@ -467,8 +481,11 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <StringPooling>true</StringPooling>
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <DisableSpecificWarnings>4275;4251</DisableSpecificWarnings>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>No</GenerateDebugInformation>
@@ -478,6 +495,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
       <TargetMachine>MachineX86</TargetMachine>
+      <SubSystem>NotSet</SubSystem>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
@@ -499,7 +517,6 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\deps\http-parser;$(ProjectDir)..\..\deps\boost;$(ProjectDir)..\..\deps\windivert\msvc\include;$(ProjectDir)..\..\deps\openssl\msvc\$(Configuration)\include;$(ProjectDir)..\..\deps\gq\build\msvc\include;$(ProjectDir)..\..\contrib\cpprestsdk\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <ExceptionHandling>Async</ExceptionHandling>
@@ -512,8 +529,11 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <StringPooling>true</StringPooling>
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <DisableSpecificWarnings>4275;4251</DisableSpecificWarnings>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>No</GenerateDebugInformation>
@@ -522,6 +542,7 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
       <AdditionalLibraryDirectories>..\..\deps\boost\stage\msvc\$(Configuration)\lib;..\..\deps\openssl\msvc\$(Configuration)\lib;..\..\deps\windivert\msvc\$(PlatformTarget);..\..\deps\gq\build\msvc\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <SubSystem>NotSet</SubSystem>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y "$(ProjectDir)..\..\deps\boost\stage\msvc\$(Configuration)\lib\boost_zlib.dll" "$(OutDir)"
@@ -537,15 +558,9 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\..\contrib\cpprestsdk\src\http\client\x509_cert_utilities.h" />
     <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineControl.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineCAPI.h" />
-    <ClInclude Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\BaseDiverter.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\DiversionControl.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\mitm\diversion\impl\win\WinDiverter.hpp" />
@@ -559,34 +574,16 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
     <ClInclude Include="..\..\src\te\httpengine\network\SocketTypes.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\util\cb\EngineCallbackTypes.h" />
     <ClInclude Include="..\..\src\te\httpengine\util\cb\EventReporter.hpp" />
+    <ClInclude Include="..\..\src\te\httpengine\util\cb\StreamCopyUtils.hpp" />
     <ClInclude Include="..\..\src\te\httpengine\util\hash\StringHashUtils.hpp" />
     <ClInclude Include="..\..\src\te\util\http\KnownHttpHeaders.hpp" />
     <ClInclude Include="..\..\src\te\util\string\StringRefUtil.hpp" />
-    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\contrib\cpprestsdk\src\http\client\x509_cert_utilities.cpp" />
     <ClCompile Include="..\..\deps\http-parser\http_parser.c" />
     <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineControl.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineCAPI.cpp">
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x64|Win32'">false</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x86|Win32'">false</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug x64|Win32'">false</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug x86|Win32'">false</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x64|x64'">false</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x86|x64'">false</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug x64|x64'">false</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug x86|x64'">false</CompileAsManaged>
-    </ClCompile>
-    <ClCompile Include="..\..\src\te\httpengine\HttpFilteringEngineManaged.cpp">
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x64|Win32'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x86|Win32'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug x64|Win32'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug x86|Win32'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x64|x64'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x86|x64'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug x64|x64'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug x86|x64'">true</CompileAsManaged>
     </ClCompile>
     <ClCompile Include="..\..\src\te\httpengine\mitm\diversion\BaseDiverter.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\mitm\diversion\DiversionControl.cpp" />
@@ -597,27 +594,6 @@ xcopy /Y "$(ProjectDir)..\..\deps\windivert\msvc\x64\*.sys" "$(OutDir)"</Command
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\BaseInMemoryCertificateStore.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\TlsCapableHttpBridge.cpp" />
     <ClCompile Include="..\..\src\te\httpengine\mitm\secure\WindowsInMemoryCertificateStore.cpp" />
-    <ClCompile Include="AssemblyInfo.cpp">
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x64|Win32'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x86|Win32'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug x64|Win32'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug x86|Win32'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x64|x64'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release x86|x64'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug x64|x64'">true</CompileAsManaged>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug x86|x64'">true</CompileAsManaged>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="app.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="app.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="HttpFe.Common\HttpFe.Common.csproj">
-      <Project>{64938257-0baa-4e25-9f44-715ff8c9828c}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -98,12 +98,12 @@ namespace te
 
 			if (!m_onMessageBegin)
 			{
-				m_onMessageBegin = std::bind(&HttpFilteringEngineControl::DummyOnMessageBeginCallback, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9, std::placeholders::_10, std::placeholders::_11);
+				m_onMessageBegin = std::bind(&HttpFilteringEngineControl::DummyOnMessageBeginCallback, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9, std::placeholders::_10);
 			}
 
 			if (!m_onMessageEnd)
 			{
-				m_onMessageEnd = std::bind(&HttpFilteringEngineControl::DummyOnMessageEndCallback, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9, std::placeholders::_10, std::placeholders::_11);
+				m_onMessageEnd = std::bind(&HttpFilteringEngineControl::DummyOnMessageEndCallback, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9, std::placeholders::_10);
 			}
 		}
 
@@ -259,7 +259,7 @@ namespace te
 		void HttpFilteringEngineControl::DummyOnMessageBeginCallback(
 			const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
 			const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
-			uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength
+			uint32_t* nextAction, CustomResponseStreamWriter responseWriter
 		)
 		{
 			// Do nothing, say nothing, tell no one.
@@ -268,7 +268,7 @@ namespace te
 		void HttpFilteringEngineControl::DummyOnMessageEndCallback(
 			const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
 			const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
-			bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength
+			bool* shouldBlock, CustomResponseStreamWriter responseWriter
 		)
 		{
 			// Do nothing, say nothing, tell no one.

@@ -2,10 +2,10 @@
 <package >
   <metadata>
     <id>HttpFilteringEngine</id>
-    <version>2.0.2</version>
+    <version>3.0.3</version>
     <title>HttpFilteringEngine</title>
     <authors>TechnikEmpire</authors>
-	<releaseNotes>We now create an isolated, unique TLS context for every unique host connected to.</releaseNotes>
+	<releaseNotes>Single .NET managed wrapper. C/C++ code is now fully native and we use PInvoke for the managed size. Interface now provides a per-connection stream writer delegate where clients can stream custom block responses of arbitrary sizes inside filtering callbacks.</releaseNotes>
     <owners>TechnikEmpire</owners>
 	<projectUrl>https://github.com/TechnikEmpire/HttpFilteringEngine</projectUrl>
 	<requireLicenseAcceptance>true</requireLicenseAcceptance>
@@ -14,41 +14,37 @@
 	<summary>Transparent intercepting HTTPS capable proxy that exposes a simple API for inspecting, modifying, permitting or blocking HTTP requests and responses.</summary>
     <copyright>Copyright 2017 Jesse Nicholson</copyright>
     <tags>HTTP proxy filtering-proxy filter content-filter</tags>
-	<dependencies>		
-    </dependencies>	
 	<references>
-		<reference file="HttpFe.Common.dll" />
-		<reference file="HttpFe.Managed.dll" />
-	</references>
+		<reference file="HttpFilteringEngineManaged.dll" />
+	</references>	
   </metadata>  
   <files>
 	
 	<file src="HttpFilteringEngine.targets" target="build\HttpFilteringEngine.targets"/>
 	
-	<file src="..\build\HttpFe.Common\Release\HttpFe.Common.dll" target="lib\net46\HttpFe.Common.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\HttpFe.Managed.dll" target="lib\net46\HttpFe.Managed.dll"/>
+	<file src="..\build\HttpFilteringEngineManaged\Release\HttpFilteringEngineManaged.dll" target="lib\net45\HttpFilteringEngineManaged.dll"/>
 	
-	<file src="..\build\HttpFe.Managed\Release\x86\boost_bzip2.dll" target="build\x86\boost_bzip2.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x86\boost_date_time.dll" target="build\x86\boost_date_time.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x86\boost_iostreams.dll" target="build\x86\boost_iostreams.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x86\boost_system.dll" target="build\x86\boost_system.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x86\boost_zlib.dll" target="build\x86\boost_zlib.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x86\HttpFilteringEngine.dll" target="build\x86\HttpFilteringEngine.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x86\libeay32.dll" target="build\x86\libeay32.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x86\ssleay32.dll" target="build\x86\ssleay32.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x86\WinDivert.dll" target="build\x86\WinDivert.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x86\boost_bzip2.dll" target="build\x86\boost_bzip2.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x86\boost_date_time.dll" target="build\x86\boost_date_time.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x86\boost_iostreams.dll" target="build\x86\boost_iostreams.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x86\boost_system.dll" target="build\x86\boost_system.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x86\boost_zlib.dll" target="build\x86\boost_zlib.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x86\HttpFilteringEngine.dll" target="build\x86\HttpFilteringEngine.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x86\libeay32.dll" target="build\x86\libeay32.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x86\ssleay32.dll" target="build\x86\ssleay32.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x86\WinDivert.dll" target="build\x86\WinDivert.dll"/>
 	
-	<file src="..\build\HttpFe.Managed\Release\x86\WinDivert32.sys" target="build\WinDivert32.sys"/>
-	<file src="..\build\HttpFe.Managed\Release\x86\WinDivert64.sys" target="build\WinDivert64.sys"/>
+	<file src="..\build\libHttpFilteringEngine\Release x86\WinDivert32.sys" target="build\WinDivert32.sys"/>
+	<file src="..\build\libHttpFilteringEngine\Release x86\WinDivert64.sys" target="build\WinDivert64.sys"/>
 	
-	<file src="..\build\HttpFe.Managed\Release\x64\boost_bzip2.dll" target="build\x64\boost_bzip2.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x64\boost_date_time.dll" target="build\x64\boost_date_time.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x64\boost_iostreams.dll" target="build\x64\boost_iostreams.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x64\boost_system.dll" target="build\x64\boost_system.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x64\boost_zlib.dll" target="build\x64\boost_zlib.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x64\HttpFilteringEngine.dll" target="build\x64\HttpFilteringEngine.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x64\libeay32.dll" target="build\x64\libeay32.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x64\ssleay32.dll" target="build\x64\ssleay32.dll"/>
-	<file src="..\build\HttpFe.Managed\Release\x64\WinDivert.dll" target="build\x64\WinDivert.dll"/>	
+	<file src="..\build\libHttpFilteringEngine\Release x64\boost_bzip2.dll" target="build\x64\boost_bzip2.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x64\boost_date_time.dll" target="build\x64\boost_date_time.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x64\boost_iostreams.dll" target="build\x64\boost_iostreams.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x64\boost_system.dll" target="build\x64\boost_system.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x64\boost_zlib.dll" target="build\x64\boost_zlib.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x64\HttpFilteringEngine.dll" target="build\x64\HttpFilteringEngine.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x64\libeay32.dll" target="build\x64\libeay32.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x64\ssleay32.dll" target="build\x64\ssleay32.dll"/>
+	<file src="..\build\libHttpFilteringEngine\Release x64\WinDivert.dll" target="build\x64\WinDivert.dll"/>	
   </files>
 </package>

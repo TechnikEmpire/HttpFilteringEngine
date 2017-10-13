@@ -5,14 +5,11 @@
 * file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 
-
 #pragma once
 
 #ifdef __cplusplus
 	#include <cstdint>
 	#include <functional>
-#else
-	// XXX TODO What to include for C? 
 #endif //#ifdef __cplusplus
 
 /// <summary>
@@ -37,18 +34,20 @@ typedef bool(*FirewallCheckCallback)(const char* binaryAbsolutePath, const size_
 /// When constructing a new instance of the Engine, these callbacks should be provided to the
 /// construction mechanism.
 /// </summary>
-typedef void(*ReportMessageCallback)(const char* message, const size_t messageLength);
+typedef void(*ReportMessageCallback)(const char* message, const uint32_t messageLength);
+
+typedef void(*CustomResponseStreamWriter)(const char* data, const uint32_t dataLength);
 
 typedef void(*HttpMessageBeginCallback)(
 	const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength, 
 	const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
-	const uint32_t* nextAction, char** customBlockResponse, const uint32_t* customBlockResponseLength
-			);
+	uint32_t* nextAction, const CustomResponseStreamWriter customBlockResponseStreamWriter
+	);
 
 typedef void(*HttpMessageEndCallback)(
 	const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength, 
 	const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
-	bool* shouldBlock, char** customBlockResponse, const uint32_t* customBlockResponseLength
+	bool* shouldBlock, const CustomResponseStreamWriter customBlockResponseStreamWriter
 	);
 
 #ifdef __cplusplus
@@ -67,13 +66,13 @@ namespace te
 				using HttpMessageBeginCheckFunction = std::function<void(
 					const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
 					const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
-					uint32_t* nextAction, char** customBlockResponse, uint32_t* customBlockResponseLength
+					uint32_t* nextAction, const CustomResponseStreamWriter customBlockResponseStreamWriter
 					)>;
 
 				using HttpMessageEndCheckFunction = std::function<void(
 					const char* requestHeaders, const uint32_t requestHeadersLength, const char* requestBody, const uint32_t requestBodyLength,
 					const char* responseHeaders, const uint32_t responseHeadersLength, const char* responseBody, const uint32_t responseBodyLength,
-					bool* shouldBlock, char** customBlockResponse, uint32_t* customBlockResponseLength
+					bool* shouldBlock, const CustomResponseStreamWriter customBlockResponseStreamWriter
 					)>;
 
 			} /* namespace cb */

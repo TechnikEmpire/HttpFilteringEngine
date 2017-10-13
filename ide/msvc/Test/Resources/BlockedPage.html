@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<!--
+    * Copyright © 2017 Jesse Nicholson
+    * This Source Code Form is subject to the terms of the Mozilla Public
+    * License, v. 2.0. If a copy of the MPL was not distributed with this
+    * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Page Blocked</title>
+
+    <style>
+        body {
+            background-color: transparent;
+            margin: 0px;
+        }
+
+        div#wrapper {
+            display: table;
+            text-align: center;
+            color: #647687;
+            height: 0px;
+            position: absolute;
+            overflow: visible;
+            display: block;
+            width: 100%;
+            left: 0px;
+            top: 50%;
+        }
+
+        div#center {
+            background-color: transparent;
+            overflow: hidden;
+            position: absolute;
+            left: 50%;
+            margin-left: -200px;
+            width: 400px;
+            height: 300px;
+            top: -150px;
+        }
+
+        div#center > child {
+            display: table-cell;
+            text-align: center;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+
+<body id="home">
+
+    <div id="wrapper">
+        <div id="center">
+            <h1>Content Blocked</h1>
+            <p>This content has been blocked based on current settings.</p>
+        </div>
+    </div>
+
+    <script>
+        document.onreadystatechange = function () {
+
+            function inIframe() {
+                try {
+                    return window.self !== window.top;
+                } catch (e) {
+                    return true;
+                }
+            }
+
+            if (document.readyState.toUpperCase() == "complete".toUpperCase()) {
+
+                if (inIframe()) {
+                    document.getElementById('wrapper').setAttribute("display", "none");
+                } else {
+                    console.log('nope');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

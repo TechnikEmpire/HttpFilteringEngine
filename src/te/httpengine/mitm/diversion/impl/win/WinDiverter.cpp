@@ -135,6 +135,8 @@ namespace te
 
 						auto numLogicalCores = std::thread::hardware_concurrency();
 
+                        m_running = true;
+
 						// We use one thread per logical core. Not sure about WinDivert internals,
 						// but there's some documentation about Windows that states that for overlapped
 						// IO we should be using 1 thread per logical core max and no more.
@@ -142,8 +144,6 @@ namespace te
 						{
 							m_diversionThreads.emplace_back(std::thread{ &WinDiverter::RunDiversion, this, static_cast<LPVOID>(m_diversionHandle) });
 						}
-
-						m_running = true;
 					}
 				}
 
@@ -457,7 +457,7 @@ namespace te
 									}
 									else if (tcpHeader->DstPort == StandardHttpPort || tcpHeader->DstPort == StandardHttpsPort)
 									{
-										modifiedPacket = true;
+										
 
 										// This means outbound traffic has been captured that we know for sure is
 										// not coming from our proxy in response to a client, but we don't know that it
@@ -471,6 +471,8 @@ namespace te
 
 										if (m_v4Shouldfilter[tcpHeader->SrcPort])
 										{
+                                            modifiedPacket = true;
+
 											// If the process was identified as a process that is permitted to access the
 											// internet, and is not a system process or ourselves, then we divert its packets
 											// back inbound to the local machine, changing the destination port appropriately.

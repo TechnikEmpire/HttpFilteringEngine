@@ -5,9 +5,7 @@
 * file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 
-
 #pragma once
-
 
 #include "util/cb/EngineCallbackTypes.h"
 
@@ -32,27 +30,6 @@ typedef void* PVOID;
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
-	/*
-	struct HttpFilteringEngineCtl;
-	typedef struct HttpFilteringEngineCtl HttpFilteringEngineCtl;
-	typedef HttpFilteringEngineCtl* PVOID;
-	typedef PVOID* PPVOID;
-	*/
-	
-	//#pragma managed(push, off)
-
-	/*
-	struct HttpFilteringEngineCtl;
-	typedef struct HttpFilteringEngineCtl* PVOID;
-	typedef PVOID* PPVOID;
-	*/
-	//#pragma managed(pop)
-
-	// Woa, major change in coding here. This guy can't even stay consistent with his coding
-	// convention. Tsk Tsk, shake head, etc. Even though looking at those thin little underscores
-	// are like razor blades sliding across my eyeballs as I scan the screen reading them, some of
-	// the names used in the C API are very long. Very long names are the Achilles' heel of camel case.
 
 	/// <summary>
 	/// Creates a new instance of the HttpFilteringEngineCtl class, which manages the operation of
