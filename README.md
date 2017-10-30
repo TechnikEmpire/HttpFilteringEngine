@@ -1,3 +1,7 @@
+# No Longer Maintained
+
+This repository is no longer maintained.
+
 # Http Filtering Engine
 Transparent filtering TLS proxy that exposes a simple API for filtering of HTTP/S transactions. The engine handles the interception and processing of HTTP/S transactions transparently, and exposes those transactions to the user for optional inspection, with the option to supply your own generated content as HTTP responses. Simply put, this library is the foundation for a modern web content filter.
 
