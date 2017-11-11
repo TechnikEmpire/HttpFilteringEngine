@@ -1,6 +1,13 @@
 # No Longer Maintained
 
-This repository is no longer maintained.
+This repository is no longer maintained. In order to continue marching forward with the goal of creating a cross platform, easily extensible and easy to use filtering local proxy, I have migrated efforts to the .NET platform via .NET core. Leveraging open source Microsoft technologies, I was able to reproduce the entirety of the functionality of this project (over 10K LOC) in roughly 1500 LOC in a week or so, versus years of R&D for this project. While this project has been vital and a good experiment in the study of TLS/SSL and HTTP, these facts are a testament to the dramatic relief in maintenance burden that the new projects bring.
+
+You can find relevant replacement projects here:
+
+[CitadelCore](https://github.com/TechnikEmpire/CitadelCore) <--- Base proxy engine.
+
+[CitadelCore.Windows](https://github.com/TechnikEmpire/CitadelCore.Windows) <--- Platform specific implementation for Windows.
+
 
 # Http Filtering Engine
 Transparent filtering TLS proxy that exposes a simple API for filtering of HTTP/S transactions. The engine handles the interception and processing of HTTP/S transactions transparently, and exposes those transactions to the user for optional inspection, with the option to supply your own generated content as HTTP responses. Simply put, this library is the foundation for a modern web content filter.
